@@ -4,6 +4,12 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## Unreleased
 
+### Added
+- `from_queryset` packs a Django queryset without model instances or dicts.
+- `default=` on `from_cursor` and `from_queryset` converts dates, decimals, UUIDs and bytes.
+- The core crate's LZ4 and Zstandard dependencies are behind a default-on `baselines` feature, so
+  bindings and WebAssembly builds carry no C code.
+
 ### Fixed
 - Subclasses of `Table` keep their type and attributes through pickling and `from_bytes`.
 - Tests no longer depend on the platform's default text encoding; CI runs on Windows.

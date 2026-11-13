@@ -12,7 +12,7 @@ import os as _os
 from collections.abc import MutableSequence as _MutableSequence
 from ._packmem import _Table, Selection, Row
 
-__all__ = ["Table", "View", "Row", "load_jsonl", "load_json", "from_records", "from_cursor", "read_csv"]
+__all__ = ["Table", "View", "Row", "load_jsonl", "load_json", "from_records", "from_cursor", "from_queryset", "read_csv"]
 __version__ = "0.1.0"
 
 
@@ -285,14 +285,30 @@ def from_records(records, hint="balanced"):
     return Table(records, hint=hint)
 
 
-def from_cursor(cursor, hint="balanced"):
+def from_cursor(cursor, hint="balanced", default=None):
     """Pack the remaining rows of a DB-API cursor (sqlite3, psycopg, ...) without building a dict per row.
 
     Replaces `[dict(zip(names, row)) for row in cursor]`. Column names come from `cursor.description`.
-    Values must be None, bool, int, float, str or JSON-like; convert dates and decimals in the query.
+    Values must be None, bool, int, float, str or JSON-like. `default` is called for any other value
+    (dates, decimals, UUIDs, bytes) and must return one of those, as with `json.dumps(default=...)`;
+    `default=str` stores them as text.
     """
     t = Table(hint=hint)
-    t._t.extend_rows([d[0] for d in cursor.description], cursor)
+    t._t.extend_rows([d[0] for d in cursor.description], cursor, default)
+    return t
+
+
+def from_queryset(queryset, fields=None, hint="balanced", default=None):
+    """Pack a Django queryset without building model instances or dicts.
+
+    Replaces `list(queryset.values(*fields))`. `fields` defaults to the model's concrete columns.
+    Rows are streamed with `values_list(...).iterator()`. See `from_cursor` for `default`.
+    """
+    if fields is None:
+        fields = [f.attname for f in queryset.model._meta.concrete_fields]
+    fields = list(fields)
+    t = Table(hint=hint)
+    t._t.extend_rows(fields, queryset.values_list(*fields).iterator(), default)
     return t
 
 

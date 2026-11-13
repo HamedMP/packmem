@@ -583,11 +583,13 @@ impl PyTable {
         })
     }
     /// Rows given as sequences of values aligned with `names` (what a DB-API cursor yields): no dict is built per row.
+    #[pyo3(signature = (names, rows, default = None))]
     fn extend_rows(
         &mut self,
         py: Python<'_>,
         names: Vec<String>,
         rows: &Bound<'_, PyAny>,
+        default: Option<Bound<'_, PyAny>>,
     ) -> PyResult<usize> {
         // resolve the columns once; every row then writes by position
         let cols: Vec<usize> = names.iter().map(|n| self.t.col_for(n)).collect();
@@ -604,7 +606,11 @@ impl PyTable {
                     if v.is_exact_instance_of::<PyString>() {
                         s.t.put_str_cell(c, v.downcast::<PyString>()?)?
                     } else {
-                        s.t.put_at(c, to_cell(v)?)
+                        let cell = match (to_cell(v), &default) {
+                            (Err(_), Some(f)) => to_cell(&f.call1((v,))?)?,
+                            (r, _) => r?,
+                        };
+                        s.t.put_at(c, cell)
                     }
                     i += 1;
                     Ok(())

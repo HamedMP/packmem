@@ -65,6 +65,7 @@ Filters: `col=value`, `col__prefix`, `col__contains`, `col__gt`, `col__gte`, `co
 | `list(csv.DictReader(f))` | `packmem.read_csv(path)` or `packmem.Table(csv.DictReader(f))` |
 | `[dict(r) for r in cursor]` | `packmem.Table(cursor)` |
 | `[dict(zip(names, r)) for r in cursor]` | `packmem.from_cursor(cursor)` (any DB-API cursor) |
+| `list(queryset.values())` (Django) | `packmem.from_queryset(queryset)` |
 | any iterable of dicts | `packmem.Table(records)` |
 
 ## What to expect

@@ -50,5 +50,8 @@ jobs:
       - run: python python/tests/test_packmem.py
       - run: python python/tests/test_paths.py
       - run: pip install hypothesis && python python/tests/test_properties.py
+      - name: Django loader
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.13'
+        run: pip install django && python python/tests/test_paths.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with: { name: "wheel-${{ matrix.os }}-py${{ matrix.python }}", path: python/dist }

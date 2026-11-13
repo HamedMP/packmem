@@ -169,6 +169,15 @@ def test_from_cursor():
     want = [dict(zip(("id", "name", "v", "note"), row)) for row in data]
     assert list(t) == want and t.columns == ["id", "name", "v", "note"] and t.count(name="n3") == sum(1 for w in want if w["name"] == "n3")
     assert list(packmem.from_cursor(con.execute("select id from t where id < 0"))) == []
+    import datetime, decimal, uuid
+    con.execute("create table d (id integer, at text)")
+    odd = [(1, datetime.date(2026, 1, 2), decimal.Decimal("1.50"), uuid.UUID(int=7), b"\x00\xff")]
+    w = packmem.Table(); w._t.extend_rows(["id", "day", "amount", "uid", "raw"], odd, str)
+    assert list(w) == [{"id": 1, "day": "2026-01-02", "amount": "1.50", "uid": str(uuid.UUID(int=7)), "raw": str(b"\x00\xff")}]
+    w = packmem.Table(); w._t.extend_rows(["id", "day", "amount", "uid", "raw"], odd, lambda v: float(v) if isinstance(v, decimal.Decimal) else str(v))
+    assert w[0]["amount"] == 1.5
+    try: packmem.Table()._t.extend_rows(["id", "day", "amount", "uid", "raw"], odd); raise AssertionError("expected TypeError")
+    except TypeError: pass
     for bad in ([(1, 2, 3)], [(1,)], [(1, object())]):
         u = packmem.Table([{"a": 0, "b": 0}])
         try: u._t.extend_rows(["a", "b"], bad); raise AssertionError("expected an error")
@@ -229,6 +238,41 @@ def test_subclasses_survive_pickling():
     back = pickle.loads(pickle.dumps(l)); assert type(back) is Loose and (back.tag, back.n) == ("x", 3) and list(back) == [{"b": 1}]
     assert type(Examples.from_bytes(e.to_bytes())) is Examples and type(packmem.Table.from_bytes(e.to_bytes())) is packmem.Table
     assert type(pickle.loads(pickle.dumps(packmem.Table([{"a": 1}])))) is packmem.Table
+
+
+
+def test_from_queryset():
+    try:
+        import django
+    except ImportError:
+        return                                   # optional: only runs where Django is installed
+    import datetime, decimal
+    from django.conf import settings
+    if not settings.configured:
+        settings.configure(DATABASES={"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}}, INSTALLED_APPS=[], USE_TZ=False)
+        django.setup()
+    from django.db import connection, models
+
+    class Order(models.Model):
+        customer = models.CharField(max_length=20)
+        qty = models.IntegerField()
+        price = models.DecimalField(max_digits=8, decimal_places=2)
+        day = models.DateField()
+        note = models.TextField(null=True)
+        class Meta:
+            app_label = "packmem_test"
+
+    with connection.schema_editor() as ed:
+        ed.create_model(Order)
+    Order.objects.bulk_create(Order(customer="c%d" % (i % 9), qty=i, price=decimal.Decimal(i) / 4, day=datetime.date(2026, 1, 1 + i % 28), note=None if i % 3 else "n") for i in range(5000))
+    qs = Order.objects.filter(qty__gte=10).order_by("id")
+    t = packmem.from_queryset(qs, fields=["id", "customer", "qty", "note"])
+    assert list(t) == list(qs.values("id", "customer", "qty", "note")) and t.count(customer="c3") == qs.filter(customer="c3").count()
+    full = packmem.from_queryset(qs, default=str)
+    want = [{k: (str(v) if isinstance(v, (decimal.Decimal, datetime.date)) else v) for k, v in row.items()} for row in qs.values()]
+    assert list(full) == want and full.columns == ["id", "customer", "qty", "price", "day", "note"]
+    try: packmem.from_queryset(qs); raise AssertionError("expected TypeError without default")
+    except TypeError: pass
 
 
 if __name__ == "__main__":
