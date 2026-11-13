@@ -149,7 +149,7 @@ jobs:
         with: { name: tarball, path: pkg }
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with: { node-version: 22, registry-url: "https://registry.npmjs.org" }
-      # trusted publishing (OIDC) needs npm 11.5 or later; 11 publishes directly, without staged approval
+      # trusted publishing (OIDC) needs npm 11.5 or later, and the npmjs.com trusted publisher must allow `npm publish`
       - run: npm install -g npm@11
       - name: Publish with provenance
         env:
