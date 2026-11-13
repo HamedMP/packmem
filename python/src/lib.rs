@@ -1,4 +1,5 @@
 //! Python bindings for packmem: a list-of-dicts replacement backed by packed, mutable columns.
+use packmem::csv::{ColType, CsvLoader, CsvOptions};
 use packmem::dynamic::{from_text, to_text, RowVisitor};
 use packmem::{Cell, DynTable, Hint, Num, Pred};
 use pyo3::exceptions::{PyIndexError, PyKeyError, PyTypeError, PyValueError};
@@ -644,6 +645,40 @@ impl PyTable {
                 n += 1
             }
             Ok(n)
+        })
+    }
+    /// Parse a CSV file in native code. Without `infer` every value is a string, as csv.DictReader gives.
+    fn load_csv_path(
+        &mut self,
+        py: Python<'_>,
+        path: &str,
+        delimiter: &str,
+        infer: bool,
+    ) -> PyResult<usize> {
+        let &[delimiter] = delimiter.as_bytes() else {
+            return Err(PyValueError::new_err(
+                "delimiter must be one ASCII character",
+            ));
+        };
+        let mut f = std::fs::File::open(path)?;
+        self.bulk(py, |s| {
+            let opts = CsvOptions {
+                delimiter,
+                default_type: if infer { ColType::Infer } else { ColType::Text },
+                ..Default::default()
+            };
+            let mut loader = CsvLoader::new(opts).map_err(PyValueError::new_err)?;
+            let mut buf = vec![0u8; 1 << 20];
+            loop {
+                let n = std::io::Read::read(&mut f, &mut buf)?;
+                if n == 0 {
+                    break;
+                }
+                loader
+                    .feed(&mut s.t, &buf[..n])
+                    .map_err(PyValueError::new_err)?;
+            }
+            loader.finish(&mut s.t).map_err(PyValueError::new_err)
         })
     }
     /// Parse a JSON-lines file in native code; no Python objects are created per record.

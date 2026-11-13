@@ -22,8 +22,10 @@ pub struct CsvOptions {
     /// Take column names from the first row; otherwise `names` must be given.
     pub header: bool,
     pub names: Vec<String>,
-    /// Per column, by position; columns beyond the list use `Infer`.
+    /// Per column, by position; columns beyond the list use `default_type`.
     pub types: Vec<ColType>,
+    /// Type of columns not covered by `types`. `Text` gives what Python's csv module gives: every value a string.
+    pub default_type: ColType,
     /// An unquoted empty field is null (Postgres `COPY` CSV, where a quoted `""` is the empty string); otherwise it is
     /// the empty string, as Python's csv module reads it.
     pub empty_is_null: bool,
@@ -36,6 +38,7 @@ impl Default for CsvOptions {
             header: true,
             names: vec![],
             types: vec![],
+            default_type: ColType::Infer,
             empty_is_null: false,
         }
     }
@@ -182,7 +185,12 @@ impl CsvLoader {
         let add = || -> Result<(), String> {
             for (i, ((raw, quoted), name)) in fields.into_iter().zip(&names).enumerate() {
                 let c = t.col_for(name);
-                let ty = self.opts.types.get(i).copied().unwrap_or(ColType::Infer);
+                let ty = self
+                    .opts
+                    .types
+                    .get(i)
+                    .copied()
+                    .unwrap_or(self.opts.default_type);
                 // an empty field is null where nulls are unquoted-empty (Postgres), and in any typed non-text column,
                 // where it cannot be a number, a boolean or JSON
                 let typed = matches!(

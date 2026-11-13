@@ -5,6 +5,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 ## Unreleased
 
 ### Added
+- `read_csv` parses UTF-8 files natively and takes `infer=True` for typed columns.
 - `from_queryset` packs a Django queryset without model instances or dicts.
 - `default=` on `from_cursor` and `from_queryset` converts dates, decimals, UUIDs and bytes.
 - The core crate's LZ4 and Zstandard dependencies are behind a default-on `baselines` feature, so

@@ -352,8 +352,24 @@ def load_json(src, hint="balanced"):
     return t
 
 
-def read_csv(path, hint="balanced", **csv_kwargs):
-    """Load a CSV file as records of strings, like list(csv.DictReader(f))."""
+def read_csv(path, hint="balanced", infer=False, **csv_kwargs):
+    """Load a CSV file as records of strings, like list(csv.DictReader(f)).
+
+    `infer=True` turns integer and decimal columns into numbers instead (codes with a leading zero stay text).
+    Plain UTF-8 files are parsed natively; other encodings, csv dialect options and files whose rows vary in
+    length go through csv.DictReader.
+    """
     import csv
-    with open(path, newline="", encoding=csv_kwargs.pop("encoding", "utf-8")) as f:
+    encoding = csv_kwargs.pop("encoding", "utf-8")
+    if encoding.lower().replace("_", "-") in ("utf-8", "utf8") and set(csv_kwargs) <= {"delimiter"}:
+        t = Table(hint=hint)
+        try:
+            t._t.load_csv_path(_os.fspath(path), csv_kwargs.get("delimiter", ","), infer)
+            return t
+        except ValueError:
+            if infer:
+                raise
+    if infer:
+        raise ValueError("infer=True needs a UTF-8 file and no csv dialect options other than delimiter")
+    with open(path, newline="", encoding=encoding) as f:
         return Table(csv.DictReader(f, **csv_kwargs), hint=hint)

@@ -75,6 +75,29 @@ def test_edits_match_a_list(rows, data):
         assert len(got) == len(m) and all(same(dict(sorted(g.items())), dict(sorted(w.items()))) for g, w in zip(got, m)), (op, got, m)
 
 
+
+cell_text = st.text(alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\x00"), max_size=8)
+csv_tables = st.integers(1, 5).flatmap(lambda n: st.tuples(
+    st.lists(st.text(alphabet="abcdefg_", min_size=1, max_size=5), min_size=n, max_size=n, unique=True),
+    st.lists(st.lists(st.one_of(cell_text, st.sampled_from(["", "007", "1", "1.5", "a,b", 'q"q', "x\ny", " "])), min_size=n, max_size=n), max_size=30)))
+
+
+@settings(max_examples=300, deadline=None)
+@given(csv_tables, st.sampled_from([",", "\t", ";"]))
+def test_read_csv_matches_dictreader(table, delimiter):
+    import csv, os, tempfile
+    header, rows = table
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "t.csv")
+        with open(p, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f, delimiter=delimiter); w.writerow(header); w.writerows(rows)
+        with open(p, newline="", encoding="utf-8") as f:
+            want = list(csv.DictReader(f, delimiter=delimiter))
+        got = packmem.read_csv(p, delimiter=delimiter)
+        assert list(got) == want, (list(got), want)
+        if rows: assert got.columns == header
+
+
 if __name__ == "__main__":
     for name, f in list(globals().items()):
         if name.startswith("test_"): f(); print("ok", name)
