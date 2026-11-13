@@ -1,6 +1,6 @@
 {
   "name": "packmem",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An array of records in a fraction of the memory: packed columns you can still index, iterate and append to, filtered and aggregated without unpacking, and written to JSON without building objects.",
   "keywords": [
     "memory",
