@@ -185,3 +185,31 @@ Source: postgres. AMD Ryzen 9 7950X3D 16-Core Processor, 32 cores, Node v24.22.0
 - The baselines are written the way an informed developer would write them. The FastAPI baseline uses
   `json.dumps` directly instead of FastAPI's slower default encoder, and Node uses `JSON.stringify`.
 - The data is read-only during the run. Neither demo mutates records under load.
+
+## Cloudflare Workers
+
+`demos/workers` holds a synthetic web log in a Worker through `packmem/wasm`, built in batches of 10,000 rows, with
+`/stats` (a filtered group count and sum) and `/export` (matching rows streamed as JSON). `MODE=plain` holds the same
+rows as an array of objects; every response is identical between the two.
+
+```sh
+cd demos/workers && npm install
+npx wrangler dev                       # http://localhost:8787/stats?country=SE&path=/api
+node bench.mjs                         # both modes at 200,000 and 1,000,000 rows, 3 runs each
+```
+
+`bench.mjs` runs `wrangler dev`, which runs the Workers runtime (workerd) locally, as a fresh process per run, and
+measures from outside: workerd's resident memory before loading and after loading plus 20 s idle, and client-side
+request times. `bench-worker.js` adds one route that reports packmem's WebAssembly memory. Medians of 3, packmem
+0.1.1 from npm, Apple M4 Pro, load average 3.0 to 5.6 (`results/darwin-arm64.json`):
+
+| Rows | Objects: workerd grew | packmem: WebAssembly memory (packed) | packmem: workerd grew | Build, objects / packmem | Filtered group count | Export of 404s |
+| --- | --- | --- | --- | --- | --- | --- |
+| 200,000 | 25 MB | 4.5 MB (0.69 MB) | 41 MB | 19 ms / 168 ms | 3.0 ms / 2.7 ms | 8.5 ms / 8.6 ms |
+| 1,000,000 | 70 MB | 7.7 MB (3.43 MB) | 50 MB | 72 ms / 772 ms | 11 ms / 7.8 ms | 35 ms / 36 ms |
+
+The objects are all live, so their figure is the data. packmem's own share is its WebAssembly memory, which never
+shrinks once grown. Its workerd growth is larger than that because building the table goes from objects through JSON into
+WebAssembly and leaves garbage, and local workerd offers no way to force a collection; at 200,000 rows that made it
+larger than the objects. Building was about 10 times slower. Local workerd does not enforce the 128 MB limit, so
+this is not a capacity test on Cloudflare.
