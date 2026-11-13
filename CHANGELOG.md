@@ -7,9 +7,10 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 ## 0.1.2 - 2026-11-13
 
 ### Changed
-- Loading text-heavy records is faster: chunks holding megabytes of text are packed on a background thread, and
-  nested JSON values are kept as written instead of being re-serialised. `PACKMEM_LOAD_THREADS=0` turns the
-  thread off.
+- Nested JSON values are kept as written instead of being parsed and re-serialised, which makes records
+  dominated by nested text faster to load and smaller once loaded.
+- `PACKMEM_LOAD_THREADS=1` packs text-heavy chunks on a background thread, about halving the load time of such
+  data. It is off by default because it leaves more memory counted against the process on macOS.
 
 ### Added
 - `fields=` on `load_json` and `load_jsonl` keeps only the named keys; the rest are skipped while parsing.

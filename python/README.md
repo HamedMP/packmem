@@ -150,6 +150,9 @@ Loading from `csv.DictReader` or a database cursor is 1.2 to 1.5 times slower th
   proportional to its size. Row numbers held by a `View` or a lazy row refer to positions, not records.
 - Nested values (lists and dicts inside a record) are stored as JSON text and parsed when read. Their text is kept
   as written, so escapes and number formatting inside them are preserved rather than normalised.
+- Setting `PACKMEM_LOAD_THREADS=1` packs text-heavy chunks on a background thread while parsing continues, which
+  roughly halves the load time of records dominated by long text. It is off by default: the result is identical,
+  but more memory stays counted against the process afterwards on macOS.
 - `load_jsonl` and `load_json` accept what `json.loads` accepts, including `NaN`, `Infinity` and strings
   with lone surrogate escapes.
 - Pickling the flight table gives 8 MB in 3 ms and loads in 1 ms (46 MB, 125 ms and 163 ms for the list).

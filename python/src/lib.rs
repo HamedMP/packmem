@@ -566,14 +566,16 @@ impl PyTable {
     }
     /// Run a bulk load: rows are packed a chunk at a time, and whatever was loaded before an error stays consistent.
     fn bulk<T>(&mut self, py: Python<'_>, f: impl FnOnce(&mut Self) -> PyResult<T>) -> PyResult<T> {
-        // pack finished chunks on spare cores while this thread keeps parsing; the table is not readable until it ends
+        // Packing text-heavy chunks on a background thread makes such loads about twice as fast, but on macOS the
+        // extra buffers stay counted against the process after they are freed. Memory is the point of this library,
+        // so the thread is opt-in: PACKMEM_LOAD_THREADS=1 (or more). The table is not readable until the load ends.
         let spare = std::thread::available_parallelism()
             .map_or(1, |n| n.get())
             .saturating_sub(1);
         let threads = std::env::var("PACKMEM_LOAD_THREADS")
             .ok()
             .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(1);
+            .unwrap_or(0);
         self.t.set_bulk_parallel(threads.min(spare));
         let r = f(self);
         self.t.set_bulk(false);
