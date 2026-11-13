@@ -39,7 +39,7 @@ export function LogoMark({ className }: { className?: string }) {
           height={DOT}
           rx={1.1}
           className="logo-byte fill-primary"
-          style={{ animationDelay: `${i * -0.35}s` }}
+          style={{ animationDelay: `${i * -0.9}s` }}
         />
       ))}
     </svg>

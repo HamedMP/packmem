@@ -58,7 +58,7 @@ export function Backdrop() {
       return {
         x: anywhere ? Math.random() * W : W + Math.random() * W * 0.3,
         y: H * (0.12 + Math.random() * 0.8),
-        v: 18 + Math.random() * 30,
+        v: 9 + Math.random() * 15,
         r: 1 + Math.random() * 2.2,
         seed: Math.random() * 1000,
       }
@@ -80,7 +80,7 @@ export function Backdrop() {
         if (d.x < W * 0.18) Object.assign(d, spawn(false))
         if (d.x >= gateX) {
           // loose records: scattered, drifting, round
-          const wob = Math.sin(t * 0.8 + d.seed) * 6
+          const wob = Math.sin(t * 0.5 + d.seed) * 6
           ctx.globalAlpha = 0.22 + 0.25 * Math.min(1, (W - d.x) / (W * 0.25))
           ctx.fillStyle = colors.fg
           ctx.beginPath()
@@ -100,7 +100,7 @@ export function Backdrop() {
       }
 
       // the block, mouth opening and closing as it eats
-      const open = Math.floor(t * 3.2) % 2 === 0
+      const open = Math.floor(t * 1.25) % 2 === 0
       const shape = open ? OPEN : CLOSED
       const bx = gateX - cell * 3
       const by = cy - band

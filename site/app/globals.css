@@ -147,8 +147,8 @@
 /* the logo eats: mouth dots blink out, bytes slide into the mouth */
 @keyframes logo-chomp { 0%, 49% { opacity: 1 } 50%, 100% { opacity: 0 } }
 @keyframes logo-feed { 0% { transform: translateX(0); opacity: 1 } 80% { opacity: 1 } 100% { transform: translateX(-12px); opacity: 0 } }
-.logo-mouth { animation: logo-chomp 0.62s steps(1) infinite }
-.logo-byte { animation: logo-feed 1.24s linear infinite }
+.logo-mouth { animation: logo-chomp 1.6s steps(1) infinite }
+.logo-byte { animation: logo-feed 3.2s linear infinite }
 @media (prefers-reduced-motion: reduce) {
   .logo-mouth, .logo-byte { animation: none }
 }

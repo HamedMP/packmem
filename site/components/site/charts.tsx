@@ -165,7 +165,7 @@ export function Dumbbell({
   verdict: "memory" | "time"
 }) {
   const f = fmt(unit)
-  const pos = (v: number) => Math.max(0, Math.min(100, log ? logPos(v, lo, hi) : linPos(v, lo, hi)))
+  const pos = (v: number) => Math.round(Math.max(0, Math.min(100, log ? logPos(v, lo, hi) : linPos(v, lo, hi))) * 1e4) / 1e4
   const tick = (t: number, i: number) => (i === ticks.length - 1 ? f(t) : f(t).replace(/ (MB|ms)$/, "")).replace(/\.0( |$)/, "$1")
   return (
     <div className="flex flex-col gap-3">
@@ -186,7 +186,7 @@ export function Dumbbell({
                 {ticks.map((t) => (
                   <span key={t} className="absolute inset-y-0 w-px bg-border" style={{ left: `${pos(t)}%` }} />
                 ))}
-                <span className="absolute top-1/2 h-0.5 -translate-y-1/2 bg-muted-foreground/40" style={{ left: `${Math.min(pa, pb)}%`, width: `${Math.abs(pa - pb)}%` }} />
+                <span className="absolute top-1/2 h-0.5 -translate-y-1/2 bg-muted-foreground/40" style={{ left: `${Math.min(pa, pb)}%`, width: `${Math.round(Math.abs(pa - pb) * 1e4) / 1e4}%` }} />
                 <span className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-series-base ring-2 ring-card" style={{ left: `${pa}%` }} />
                 <span className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-series-pm ring-2 ring-card" style={{ left: `${pb}%` }} />
               </span>

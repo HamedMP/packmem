@@ -1,6 +1,6 @@
 // Every figure on the site comes from the recorded results files in the repository, read at build time.
 import "server-only"
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync } from "node:fs"
 import path from "node:path"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -251,3 +251,38 @@ export const pgLoadNode = {
 }
 
 export const builtOn = new Date().toISOString().slice(0, 10)
+
+// ---------- fine-tuning data loader (indicative; benchmarks/ml_swaps) ----------
+// Qwen3-VL's fine-tuning dataset class with the annotation list swapped for packmem, on the real 665,298-record
+// LLaVA mix, Apple M4 Pro. Read from the per-run outputs behind benchmarks/ml_swaps/qwen3-vl/RESULT.v2.md.
+const ML = "benchmarks/ml_swaps/qwen3-vl/harness/v2/out"
+const mlRuns = (tag: string, arm: "orig" | "repo"): Rec[] => {
+  const dir = file(`${ML}/${tag}`)
+  return existsSync(dir)
+    ? readdirSync(dir).filter((f) => f.startsWith(`${arm}_`) && f.endsWith(".json")).map((f) => json(`${ML}/${tag}/${f}`))
+    : []
+}
+const median = (xs: number[]) => {
+  const s = [...xs].sort((a, b) => a - b)
+  return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2
+}
+const mlArm = (arm: "orig" | "repo") => {
+  const fork = mlRuns("epoch665k_fork", arm)
+  const spawn = mlRuns("epoch665k_spawn", arm)
+  const pickle = mlRuns("pickle665k", arm)
+  if (!fork.length || !spawn.length || !pickle.length) return null
+  return {
+    records: fork[0].n as number,
+    forkPeakMb: median(fork.map((r) => r.main_peak_plus_worker_peaks_mib * 1.048576)),
+    // worker_peak_mb holds MiB despite its name: converted, it matches RESULT.v2.md's 2,829-2,837 MB
+    forkWorkerMb: median(fork.flatMap((r) => r.worker_peak_mb as number[]).map((v) => v * 1.048576)),
+    spawnFirstBatchS: median(spawn.map((r) => r.iter_to_first_batch_s)),
+    pickleMb: median(pickle.map((r) => r.pickle_mb)),
+    buildS: median(fork.map((r) => r.build_s)),
+  }
+}
+export const mlLoader = (() => {
+  const list = mlArm("orig")
+  const packmem = mlArm("repo")
+  return list && packmem ? { list, packmem } : null
+})()

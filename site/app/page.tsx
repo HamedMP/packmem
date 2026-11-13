@@ -5,6 +5,7 @@ import { Backdrop } from "@/components/site/backdrop"
 import { Logo } from "@/components/site/logo"
 import { ThemeToggle } from "@/components/site/theme-toggle"
 import { Dumbbell, Figure, HBars, LogLines, NumbersTable, Stacked } from "@/components/site/charts"
+import { HowItWorks } from "@/components/site/how-it-works"
 import { less, mb, ms, speed } from "@/lib/format"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,12 +13,20 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import * as d from "@/lib/data"
+import { cn } from "@/lib/utils"
 
 const x = (v: number) => `${v >= 10 ? Math.round(v) : v.toFixed(1)}×`
 const range = (xs: number[], digits = 1) => {
   const [lo, hi] = [Math.min(...xs).toFixed(digits), Math.max(...xs).toFixed(digits)]
   return lo === hi ? `about ${lo}` : `${lo} to ${hi}`
 }
+
+const fastapi = d.servers.find((s) => s.f === "fastapi")
+const express = d.servers.find((s) => s.f === "express")
+const jello = d.tools[1]
+const ml = d.mlLoader
+const gb = (v: number) => `${(v / 1000).toFixed(1)} GB`
+const pyBookkeeping = d.composition.find((c) => c.label === "Python")!.parts[0]
 
 function Section({ id, title, children }: { id?: string; title?: string; children: React.ReactNode }) {
   return (
@@ -37,6 +46,24 @@ function Code({ children }: { children: string }) {
     <pre className="overflow-x-auto rounded-lg border bg-muted/60 p-4 font-mono text-[13px] leading-relaxed backdrop-blur-sm">
       <code>{children.trim()}</code>
     </pre>
+  )
+}
+
+function Fit({ title, stat, statSub, tag, wide, children }: { title: string; stat?: string; statSub?: string; tag?: string; wide?: boolean; children: React.ReactNode }) {
+  return (
+    <div className={cn("flex flex-col gap-3", wide && "md:col-span-2")}>
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="font-medium">{title}</h3>
+        {tag && <Badge variant="outline">{tag}</Badge>}
+      </div>
+      {stat && (
+        <div className="flex flex-col">
+          <span className="font-mono text-2xl tracking-tight tabular-nums">{stat}</span>
+          {statSub && <span className="text-xs text-muted-foreground">{statSub}</span>}
+        </div>
+      )}
+      <div className={cn("text-sm leading-relaxed text-muted-foreground", wide ? "grid gap-4 md:grid-cols-2 md:gap-10" : "flex flex-col gap-2")}>{children}</div>
+    </div>
   )
 }
 
@@ -100,12 +127,12 @@ export default function Page() {
           <Logo />
         </a>
         <nav className="flex items-center gap-2">
-          <Button variant="secondary" size="lg" className="hidden bg-secondary/70 backdrop-blur sm:inline-flex" render={<a href="#results" />}>
+          <Button variant="secondary" size="lg" className="hidden bg-secondary/70 backdrop-blur sm:inline-flex" nativeButton={false} render={<a href="#results" />}>
             Results
           </Button>
-          <Button variant="secondary" size="lg" className="gap-2 bg-secondary/70 font-mono text-xs backdrop-blur" render={<a href={d.REPO} />}>
+          <Button variant="secondary" size="lg" className="gap-2 bg-secondary/70 font-mono text-xs backdrop-blur" nativeButton={false} render={<a href={d.REPO} />}>
             <HugeiconsIcon icon={GithubIcon} strokeWidth={2} data-icon="inline-start" />
-            v0.1.0
+            v0.1.1
           </Button>
           <ThemeToggle />
         </nav>
@@ -147,10 +174,10 @@ export default function Page() {
               ))}
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button size="lg" render={<a href="#use" />}>
+              <Button size="lg" nativeButton={false} render={<a href="#use" />}>
                 Use it
               </Button>
-              <Button size="lg" variant="outline" className="bg-background/40 backdrop-blur" render={<a href="#results" />}>
+              <Button size="lg" variant="outline" className="bg-background/40 backdrop-blur" nativeButton={false} render={<a href="#results" />}>
                 See the numbers
                 <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} data-icon="inline-end" />
               </Button>
@@ -181,14 +208,18 @@ export default function Page() {
           {/* ---------- how ---------- */}
           <Section id="how" title="Pack the columns, query them packed">
             <Lead>
-              Each field becomes one column with an encoding picked from a sample of its values. Every encoding keeps fast
+              Each field becomes one column, and every 16,384-row chunk of it gets an encoding picked from a sample of its
+              values, so a column whose values drift changes encoding as it goes. Every encoding keeps fast
               access to a single value, so nothing is unpacked in bulk, and filters run on the encoded form.
             </Lead>
+            <Figure title="From a list of dicts to packed columns" sub="Six real rows of the flights data. The encodings and bit widths are the ones packmem picks for the full table.">
+              <HowItWorks listMb={d.hero.a} packedMb={d.hero.b} records={336_776} />
+            </Figure>
             <div className="grid gap-6 sm:grid-cols-2">
               {[
-                ["Dictionary", "carrier has 16 distinct values in 336,776 rows: store them once, and a 4-bit code per row. Counting UA compares codes."],
-                ["Frame of reference", "distance is stored as the offset from the column minimum in the narrowest width that fits. Sums and range filters run on the narrow codes."],
-                ["Run-length and blocks", "Long runs become one value and an end. Sorted timestamps get a minimum per block, so a time-range count is two binary searches."],
+                ["Dictionary", "carrier has 16 distinct values in 336,776 rows: store them once, and a 4-bit code per row. Counting UA compares codes. A dictionary is kept only where it is smaller than offsets."],
+                ["Frame of reference", "arr_delay is stored as the offset from its minimum in the narrowest width that fits its chunk. Sums and range filters run on the narrow codes."],
+                ["Constants, runs and blocks", "A column with one value (year) is stored once. Long runs become one value and an end. Sorted values get a minimum per block, so a range count is two binary searches."],
                 ["FSST strings", "Frequent substrings become one-byte codes, and each string still decodes on its own."],
               ].map(([h, t]) => (
                 <div key={h} className="flex flex-col gap-1.5">
@@ -318,14 +349,14 @@ export default function Page() {
               </Lead>
               {linuxPy && (
                 <p className="text-base leading-relaxed text-foreground/90">
-                  In Python the gap is wider on Linux: the flights take {mb(linuxPy.packmem)} against {mb(d.hero.b)} on the Mac. About
-                  10 MB of what packmem holds on macOS is load buffers the macOS allocator keeps after loading; glibc returns them.
+                  In Python the gap is wider on Linux: the flights take {mb(linuxPy.packmem)} against {mb(d.hero.b)} on the Mac. About{" "}
+                  {Math.round(d.hero.b - linuxPy.packmem)} MB of what packmem holds on macOS is load buffers the macOS allocator keeps after loading; glibc returns them.
                   {linuxAccess &&
                     ` The costs are wider too: a plain loop over every row is ${speed(linuxAccess.loop.list, linuxAccess.loop.packmem).text} than the list, random rows ${speed(linuxAccess.random.list, linuxAccess.random.packmem).text}${linuxAccess.lazy ? `, and lazy rows ${Math.abs(linuxAccess.lazy / linuxAccess.loop.list - 1) < 0.1 ? "only match" : speed(linuxAccess.loop.list, linuxAccess.lazy).text.replace("about the same", "match")} the list (${ms(linuxAccess.lazy)} against ${ms(linuxAccess.loop.list)})` : ""}.`}
                 </p>
               )}
               <p className="text-base leading-relaxed text-foreground/90">
-                Node keeps plain objects leaner on Linux, so its saving is smaller there. The Postgres rows on Linux need a caveat:
+                Node saves less on Linux than on the Mac. The Postgres rows on Linux need a caveat:
                 {pgSettle
                   ? ` loading from Postgres leaves freed V8 heap pages that V8 keeps for a while before returning them. A table loaded from Postgres on Linux held ${pgSettle.linux.early} MB until ${pgSettle.linux.lateBefore} s after loading and ${pgSettle.linux.settled} MB by ${pgSettle.linux.settledAt} s (on the Mac, ${pgSettle.mac.early} MB falling to ${pgSettle.mac.settled} MB within ${pgSettle.mac.settledAt} s). The servers were measured at 20 seconds, before that point on Linux, so their Postgres figures above are an upper bound.`
                   : " loaded from Postgres, the Node servers on Linux kept more memory at rest than when loaded from the file."}
@@ -377,6 +408,99 @@ export default function Page() {
             </Section>
           )}
 
+          {/* ---------- fit ---------- */}
+          <Section id="fit" title="What it is for">
+            <Lead>
+              packmem is for programs that hold many records in memory and keep using them as records: looking them up,
+              filtering, counting, sending them back out as JSON. That shape is everywhere, and in most of those places
+              memory, not processor time, decides the size of the machine, how many workers fit on it, and whether the data
+              can stay in the process at all.
+            </Lead>
+            <div className="grid gap-x-10 gap-y-10 md:grid-cols-2">
+              {fastapi && express && (
+                <Fit title="Servers that keep a dataset in memory" stat={`${mb(fastapi.a)} → ${mb(fastapi.b)}`} statSub="A whole FastAPI server, settled, holding the flights">
+                  <p>
+                    Load at start-up, then serve filtered pages, counts and exports from memory. Express settled at {mb(express.b)} instead
+                    of {mb(express.a)}, and every response was identical to the plain version. A smaller footprint is a smaller instance,
+                    or more replicas on the same one.
+                  </p>
+                </Fit>
+              )}
+              <Fit title="Scripts and command-line tools" stat={`${mb(jello.a)} → ${mb(jello.b)}`} statSub="Peak memory, jello querying 104 MB of JSON lines">
+                <p>
+                  Tools that parse a whole file into a list and then query it. jello also finished in {jello.tb.toFixed(2)} s instead
+                  of {jello.ta.toFixed(2)} s. Not every tool gets faster: sqlite-utils used less memory but more time.
+                </p>
+              </Fit>
+              {ml && (
+                <Fit wide title="Training data for LLMs and vision-language models" tag="Indicative" stat={`${gb(ml.list.forkPeakMb)} → ${gb(ml.packmem.forkPeakMb)}`} statSub="Parent and 4 data-loader workers, one full shuffled epoch">
+                  <p>
+                    A fine-tuning loader keeps the annotation list in the main process and gives every worker a copy. We swapped that list
+                    for packmem in Qwen3-VL&apos;s fine-tuning dataset class and ran it on the real {ml.list.records.toLocaleString("en-US")}-record
+                    LLaVA mix on an Apple M4 Pro. With spawn workers the first batch arrived in {ml.packmem.spawnFirstBatchS.toFixed(1)} s
+                    instead of {ml.list.spawnFirstBatchS.toFixed(1)} s, because the pickled dataset is {mb(ml.packmem.pickleMb)} instead
+                    of {mb(ml.list.pickleMb)}.
+                  </p>
+                  <p className="text-xs leading-relaxed">
+                    Annotations only: no images, model or GPU. Building the dataset took {(ml.packmem.buildS / ml.list.buildS).toFixed(1)} times
+                    as long, because conversation turns are stored as JSON text. None of the patched repositories has tests for the patched
+                    code, so correctness rests on every record equalling json.load&apos;s output and on identical batch hashes. This is our
+                    patch, not an upstream integration.{" "}
+                    <a className="underline underline-offset-4" href={`${d.REPO}/tree/main/benchmarks/ml_swaps`}>Patches, harness and raw outputs</a>.
+                  </p>
+                </Fit>
+              )}
+              <Fit title="Edge functions and small containers">
+                <p>
+                  A Cloudflare Worker gets 128 MB, WebAssembly included. <code className="font-mono text-xs">packmem/wasm</code> runs the
+                  same table, queries and streamed JSON there, so a reference dataset can ship inside the Worker instead of sitting behind
+                  another network hop. We have not benchmarked it there yet.
+                </p>
+              </Fit>
+              <Fit title="Data processing before the dataframe">
+                <p>
+                  Rows from a database cursor, a CSV file or an API arrive as records, and most pipeline code handles them as records.
+                  <code className="font-mono text-xs"> from_cursor</code>, <code className="font-mono text-xs">read_csv</code> and, in Node,{" "}
+                  <code className="font-mono text-xs">fromPgCopy</code> pack them without a dict or object per row
+                  {d.pgLoadNode.copy && `; COPY loading in Node took ${ms(d.pgLoadNode.copy.packmem_ms)} against ${ms(d.pgLoadNode.copy.plain_ms)} for plain node-postgres rows`}.
+                  When a step turns into analytics over millions of rows, a dataframe is the better tool.
+                </p>
+              </Fit>
+            </div>
+
+            <div className="flex flex-col gap-4 border-l-2 pl-5">
+              <h3 className="text-lg font-medium">What changes when the scaffolding goes</h3>
+              <p className="leading-relaxed text-foreground/90">
+                Most work on memory makes data smaller at rest: compressed files, compressed pages, compact formats on the wire. What
+                remains is the scaffolding a running program builds around every value. In the Python heap we sampled,{" "}
+                {Math.round(pyBookkeeping)}% of the words were zeros, pointers and small integers. packmem never builds it, and the data
+                stays usable as it is.
+              </p>
+              <p className="leading-relaxed text-foreground/90">
+                That moves decisions that are usually settled by buying hardware: the instance a service needs to keep its dataset in
+                memory, whether a lookup table has to move out to Redis, whether a dataset fits in an edge function at all.
+              </p>
+              {ml && (
+                <p className="leading-relaxed text-foreground/90">
+                  For training jobs it matters more, because host memory is multiplied by every process that holds the data. Fork workers
+                  should share the parent&apos;s memory, but Python&apos;s reference counts write to every object a worker touches, so the
+                  shared pages get copied anyway: each fork worker above peaked at {gb(ml.list.forkWorkerMb)} with the list and{" "}
+                  {mb(ml.packmem.forkWorkerMb)} with packmem, whose columns are a few large buffers rather than millions of objects.
+                  On one node with eight ranks of four workers each, that is thirty-two such copies.
+                </p>
+              )}
+              <p className="leading-relaxed text-foreground/90">
+                The rest of an LLM application has the same shape: retrieval chunks and their metadata, evaluation results, agent
+                traces and chat logs, held as lists of JSON records by long-running processes. We have not measured those yet, and
+                one part of them is the weak case today: when most of a record is a nested list of messages, packmem keeps that
+                part as JSON text, so it saves less and loads slower than json.load.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                And where it is the wrong tool, see <a className="underline underline-offset-4" href="#limits">where it loses</a>.
+              </p>
+            </div>
+          </Section>
+
           {/* ---------- limits ---------- */}
           <Section id="limits" title="Where it loses">
             <ul className="flex flex-col gap-4 text-base leading-relaxed text-foreground/90">
@@ -410,7 +534,7 @@ export default function Page() {
               </TabsContent>
               <TabsContent value="node" className="flex flex-col gap-3">
                 <Code>{SNIPPETS.node}</Code>
-                <p className="text-sm text-muted-foreground">An array-like table for Node 20+: list methods, lazy rows, CSV and Postgres COPY loaders, and JSON responses streamed from the columns. The same API runs on Cloudflare Workers through <code className="font-mono text-xs">packmem/wasm</code>. Prebuilt for Linux x86-64 and arm64 (glibc 2.34+), macOS on Apple silicon and Windows x64; other platforms build from source with Rust.</p>
+                <p className="text-sm text-muted-foreground">An array-like table for Node 20+: list methods, lazy rows, CSV and Postgres COPY loaders, and JSON responses streamed from the columns. The same API runs on Cloudflare Workers through <code className="font-mono text-xs">packmem/wasm</code>. Prebuilt for Linux x86-64 and arm64 (glibc 2.17+ and musl), macOS on Apple silicon and Intel, and Windows x64; other platforms build from source with Rust.</p>
               </TabsContent>
               <TabsContent value="rust" className="flex flex-col gap-3">
                 <Code>{SNIPPETS.rust}</Code>
@@ -418,10 +542,10 @@ export default function Page() {
               </TabsContent>
             </Tabs>
             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <Badge variant="secondary">0.1.0 alpha</Badge>
+              <Badge variant="secondary">0.1.1 alpha</Badge>
               On <a className="underline underline-offset-4" href="https://pypi.org/project/packmem/">PyPI</a> and{" "}
-              <a className="underline underline-offset-4" href="https://www.npmjs.com/package/packmem">npm</a>, with prebuilt builds for Linux, macOS on Apple
-              silicon and Windows. Apache-2.0.
+              <a className="underline underline-offset-4" href="https://www.npmjs.com/package/packmem">npm</a>, with prebuilt builds for Linux (glibc and
+              musl), macOS and Windows. Apache-2.0.
             </div>
           </Section>
 
