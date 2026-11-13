@@ -71,10 +71,17 @@ const tools = TOOLS.map(([p, label]) => ({
 }));
 
 const demo = JSON.parse(readFileSync(root("demos/bench/results/darwin-arm64.json"), "utf8"));
+const pgFile = root("demos/bench/results/darwin-arm64-postgres.json");
+const demoPg = existsSync(pgFile) ? JSON.parse(readFileSync(pgFile, "utf8")) : null;
 const FW = [["express", "Express"], ["nextjs", "Next.js"], ["fastapi", "FastAPI"]];
 const dr = (f, m) => demo.results.find((r) => r.framework === f && r.mode === m);
 const servers = FW.map(([f, label]) => ({ label, a: dr(f, "baseline").idle_rss_mb, b: dr(f, "packmem").idle_rss_mb, pa: dr(f, "baseline").peak_rss_mb, pb: dr(f, "packmem").peak_rss_mb }));
 const endpointNames = dr("express", "baseline").endpoints.map((e) => e.name);
+const drPg = (f, m) => demoPg?.results.find((r) => r.framework === f && r.mode === m);
+const serversPg = demoPg
+  ? FW.map(([f, label]) => ({ label, a: drPg(f, "baseline").idle_rss_mb, b: drPg(f, "packmem").idle_rss_mb, pa: drPg(f, "baseline").peak_rss_mb, pb: drPg(f, "packmem").peak_rss_mb, la: drPg(f, "baseline").load_ms, lb: drPg(f, "packmem").load_ms }))
+  : null;
+const settle = demo.results[0].rss_after_load_mb !== undefined;
 
 const hero = { a: med(L.rss_mb), b: med(P.rss_mb) };
 
@@ -239,11 +246,21 @@ const chartTools = figure(
 );
 
 const chartServers = figure(
-  "A web server holding the dataset",
-  "Idle resident memory of the whole server process after loading the 336,776 flights.",
+  "Loaded from a JSON-lines file",
+  `Idle resident memory of the whole server process holding the 336,776 flights${settle ? ", measured after a garbage collection and 20 seconds idle" : ""}.`,
   dumbbell(servers, { unit: mb, aName: "Array of objects / list of dicts", bName: "packmem", lo: 0, hi: 800, ticks: [0, 200, 400, 600, 800], verdict: memVerdict }),
   table(["Framework", "Idle MB before", "Idle MB after", "Peak MB before", "Peak MB after"], servers.map((s) => [s.label, s.a, s.b, s.pa, s.pb])),
 );
+
+const chartServersPg = serversPg
+  ? figure(
+      "Loaded from Postgres",
+      "The same servers reading the flights table from Postgres 17: node-postgres object rows and psycopg dict rows against packmem's cursor loaders. Same measurement.",
+      dumbbell(serversPg, { unit: mb, aName: "Array of objects / list of dicts", bName: "packmem", lo: 0, hi: 800, ticks: [0, 200, 400, 600, 800], verdict: memVerdict }),
+      table(["Framework", "Idle MB before", "Idle MB after", "Peak MB before", "Peak MB after", "Load ms before", "Load ms after"], serversPg.map((s) => [s.label, s.a, s.b, s.pa, s.pb, s.la, s.lb])),
+      `In Node, loading through packmem took about ${(drPg("express", "packmem").load_ms / drPg("express", "baseline").load_ms).toFixed(1)} times as long as the driver's own rows (rows cross into the native code as text). Peak memory while serving was ${Math.min(...serversPg.map((s) => s.pa / s.pb)).toFixed(1)} to ${Math.max(...serversPg.map((s) => s.pa / s.pb)).toFixed(0)} times lower.`,
+    )
+  : "";
 
 function latencyTable() {
   const head = `<tr><th>Endpoint</th>${FW.map(([, l]) => `<th colspan="2">${esc(l)}</th>`).join("")}</tr><tr><th></th>${FW.map(() => "<th>before → after</th><th></th>").join("")}</tr>`;
@@ -324,9 +341,9 @@ rows = packmem.load_jsonl("flights.jsonl")                    # ${mb(hero.b)}`)}
   <p class="kicker">Chapter 4</p>
   <h2>Inside a web server</h2>
   <p>A common shape for internal tools and APIs: load a dataset at start-up, then serve filtered pages, aggregates and exports from memory. We built the same five routes in Express, Next.js and FastAPI and switched how the data is held with one environment variable.</p>
-  ${chartServers}
+  <div class="grid2">${chartServers}${chartServersPg}</div>
   ${latencyTable()}
-  <p>Python gets both: a tenth of the memory and queries tens of times faster than loops over dicts. In Node the gain is memory; V8 already scans objects of one shape quickly, so speed is level, ahead on filters and group-by and level on exports. Exports never build a full-size string, which is why concurrent exports keep their lead.</p>
+  <p>Python gets both: a tenth of the memory and queries tens of times faster than loops over dicts. In Node the gain is mainly memory, and it is largest at peak: V8 already stores objects of one shape compactly, and node-postgres rows are lighter than parsed JSON, so the settled saving is 2 to 4 times. Filters and group-by are faster, single exports are mixed, and concurrent exports hold up better because no full-size string is built per request.</p>
 </section>
 
 <section id="limits">
@@ -336,6 +353,7 @@ rows = packmem.load_jsonl("flights.jsonl")                    # ${mb(hero.b)}`)}
     <li><strong>Plain loops over every row are slower.</strong> Each record is rebuilt as a dict or object on demand: ${speed(L.q["loop over every row"].ms[0], P.q["loop over every row"].ms[0]).text} than the list in Python. Lazy rows fix this for loops that read a few fields; rewriting the loop as a query fixes it entirely.</li>
     <li><strong>Random access to whole rows costs more</strong>: ${speed(L.q["10k random rows as dicts"].ms[0], P.q["10k random rows as dicts"].ms[0]).text} for 10,000 random rows.</li>
     <li><strong>Dataframes still win analytics.</strong> polars loads ${Math.round(med(P.load_s) / med(flights("polars").load_s))} times faster than packmem, and pandas is faster on some float filters (${ms(flights("pandas").q["count dep_delay>60"].ms[0])} against ${ms(P.q["count dep_delay>60"].ms[0])} for delays over 60 minutes). packmem is for code that wants a list, not a dataframe.</li>
+    <li><strong>Loading from Postgres is slower in Node.</strong> Rows cross from the driver into the native code as JSON text, so <code>fromPg</code> takes about 1.8 times as long as a plain query. In Python, <code>from_cursor</code> keeps pace with the driver.</li>
     <li><strong>Small tables gain nothing.</strong> Below about 300 rows packmem uses more memory than the list.</li>
     <li><strong>Sort, insert and delete rebuild the table.</strong> They exist and are tested, but cost time proportional to the table.</li>
     <li><strong>Unchanged programs gain nothing.</strong> You have to swap the container. For code you cannot change, page compression is still the tool, and the two combine.</li>
@@ -375,7 +393,7 @@ let km = t.sum(distance, Some(&ids));`)}</div>
   <h2>How these numbers were made</h2>
   <ul class="method">
     <li>Python and server results: ${esc(machineLine["machdep.cpu.brand_string"] ?? "Apple M4 Pro")}, ${Math.round(Number(machineLine["hw.memsize"] ?? 51539607552) / 2 ** 30)} GB, macOS, Python ${esc(machineLine.python ?? "3.12")}, ${esc(demo.machine.node)}. Medians of fresh processes. The machine was in normal use (load average 3 to 8), so treat differences under about 15% as noise.</li>
-    <li>Memory on macOS is the physical footprint or resident size of the whole process tree; on Linux, resident anonymous memory read from <code>/proc</code>.</li>
+    <li>Memory on macOS is the physical footprint or resident size of the whole process tree; on Linux, resident anonymous memory read from <code>/proc</code>. Server memory is measured after a forced garbage collection and 20 seconds idle, because runtimes hand freed memory back to the system lazily; measured one second after loading, the Node baselines look up to 25% larger.</li>
     <li>The runtime comparison in chapter 1 is older: a 2-core Linux sandbox and a synthetic log. It is not on the same axis as the Mac numbers.</li>
     <li>Every packmem query and response was checked against the plain-container answer.</li>
     <li>Everything is reproducible from the repository: <code>benchmarks/run_all.py</code>, <code>demos/bench/bench.mjs</code>, <code>experiments/</code>. The full write-up is <a href="${REPO}/blob/main/docs/report.md">docs/report.md</a>.</li>
