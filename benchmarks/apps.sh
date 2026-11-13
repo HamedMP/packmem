@@ -12,6 +12,7 @@ for kind in original patched; do
   for rep in 1 2 3; do
     rm -f out-$kind.db
     $py "$here/runapp.py" "sqlite-utils insert flights.json ($kind)" "$bin/sqlite-utils insert out-$kind.db flights flights.json"
+    $py "$here/runapp.py" "sqlite-utils result: schema and contents hash ($kind)" "(sqlite3 out-$kind.db .schema; sqlite3 out-$kind.db 'select * from flights') | shasum | cut -c1-12"
     $py "$here/runapp.py" "jello flights: count delayed over 60 by carrier ($kind)" "$bin/jello -l -c 'c={}
 for r in _:
     if r[\"dep_delay\"] is not None and r[\"dep_delay\"] > 60: c[r[\"carrier\"]] = c.get(r[\"carrier\"], 0) + 1

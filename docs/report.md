@@ -79,7 +79,7 @@ The results reproduce on an Apple M4 Pro with identical query answers and packed
 | Loop all rows as dicts, ms | 41 | 192 | 155 |
 | Loop all rows, lazy rows, ms | n/a | n/a | 25 |
 
-For comparison on the same machine: Arrow-backed pandas held 215 MB and polars 167 MB; polars still loads 6 times faster (0.04 s) and pandas is 3 times faster on the delay filter (0.14 ms). On the nginx logs resident memory went from 57 MB (list) to 11 MB (27 MB before the changes).
+For comparison on the same machine, with default settings and inferred types: Arrow-backed pandas held 215 MB and polars 167 MB (neither was tuned for memory); polars still loads 6 times faster (0.04 s) and pandas is 3 times faster on the delay filter (0.14 ms). On the nginx logs resident memory went from 57 MB (list) to 11 MB (27 MB before the changes).
 
 ### What changed
 

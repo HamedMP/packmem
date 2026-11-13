@@ -148,6 +148,7 @@ def test_json_output():
     v = t.where(s="GET"); want = [x for x in m if x["s"] == "GET"]
     assert v.to_json() == dump(want) and b"".join(v.iter_json(batch=100)) == dump(want)
     assert v.to_json(limit=10, offset=7) == dump(want[7:17]) and dump(v.rows(limit=10, offset=7)) == dump(want[7:17])
+    assert v.to_json(limit=-5) == b"[]" and v.rows(limit=-5) == [] and v.to_json(limit=3, offset=-9) == dump(want[:3]) and b"".join(v.iter_json(batch=0, limit=3)) == dump(want[:3])
     assert v.to_json(offset=10**9) == b"[]" and packmem.Table().to_json() == b"[]" and t.where(s="nope").to_json() == b"[]"
     t.update(3, s="patched", extra={"k": [1, 2.5, None]}); m[3] = {**m[3], "s": "patched", "extra": {"k": [1, 2.5, None]}}
     nested = [{"a": {"x": [1, 2.0, "é", None, True]}, "big": 2**70, "mixed": i if i % 2 else "s"} for i in range(300)]

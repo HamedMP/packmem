@@ -20,6 +20,7 @@ def _json_chunks(n, batch, part):
     if n == 0:
         yield b"[]"
         return
+    batch = max(1, batch)
     for a in range(0, n, batch):
         b = min(a + batch, n)
         yield (b"[" if a == 0 else b",") + part(a, b) + (b"]" if b == n else b"")
@@ -206,7 +207,7 @@ class View:
 
     def rows(self, limit=None, offset=0):
         """Matching records as dicts; `offset` and `limit` page through them."""
-        return self._t.rows(self._sel, limit, offset)
+        return self._t.rows(self._sel, None if limit is None else max(0, limit), max(0, offset))
 
     def to_json(self, limit=None, offset=0):
         """Matching records as one JSON array, in bytes, without building dicts."""
@@ -214,8 +215,9 @@ class View:
 
     def iter_json(self, batch=4096, limit=None, offset=0):
         """The same JSON array yielded in chunks of `batch` records."""
+        offset = max(0, offset)
         n = max(0, len(self._sel) - offset)
-        n = n if limit is None else min(n, limit)
+        n = n if limit is None else max(0, min(n, limit))
         return _json_chunks(n, batch, lambda a, b: self._t.json_sel(self._sel, offset + a, offset + b))
 
     def __iter__(self):

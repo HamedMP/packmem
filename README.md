@@ -17,7 +17,8 @@ library with a Python package on top. Status: **alpha**.
 ## Results
 
 336,776 real flight records (nycflights13, 104 MB as JSON lines) on an Apple M4 Pro, median of
-five fresh processes. Lower is better everywhere.
+five fresh processes. Lower is better everywhere. pandas and polars are run with default
+settings (inferred types); tuning their column types for memory would narrow the gap.
 
 | Holder | Resident MB | Load s | Count by carrier ms | Group by dest ms | Loop over rows ms |
 | --- | --- | --- | --- | --- | --- |
