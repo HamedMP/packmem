@@ -1,0 +1,18 @@
+       13.04 real        17.41 user         2.16 sys
+          5288329216  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+              806502  page reclaims
+                  45  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+               80000  messages sent
+               40000  messages received
+                   4  signals received
+                  10  voluntary context switches
+              158800  involuntary context switches
+        145804792141  instructions retired
+         48916328788  cycles elapsed
+          5240131832  peak memory footprint

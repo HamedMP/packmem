@@ -1,0 +1,12 @@
+[2026-11-13 18:05:51,686] [WARNING] [real_accelerator.py:213:get_accelerator] Setting accelerator to CPU. If you have GPU or other accelerator, we were unable to detect it.
+[2026-11-13 18:05:51,797] [WARNING] [real_accelerator.py:213:get_accelerator] Setting accelerator to CPU. If you have GPU or other accelerator, we were unable to detect it.
+Loading data...
+Loading data...
+[2026-11-13 18:06:12,228] [WARNING] [real_accelerator.py:213:get_accelerator] Setting accelerator to CPU. If you have GPU or other accelerator, we were unable to detect it.
+[2026-11-13 18:06:12,243] [WARNING] [real_accelerator.py:213:get_accelerator] Setting accelerator to CPU. If you have GPU or other accelerator, we were unable to detect it.
+[2026-11-13 18:06:31,210] [WARNING] [real_accelerator.py:213:get_accelerator] Setting accelerator to CPU. If you have GPU or other accelerator, we were unable to detect it.
+[2026-11-13 18:06:31,226] [WARNING] [real_accelerator.py:213:get_accelerator] Setting accelerator to CPU. If you have GPU or other accelerator, we were unable to detect it.
+[2026-11-13 18:06:49,595] [WARNING] [real_accelerator.py:213:get_accelerator] Setting accelerator to CPU. If you have GPU or other accelerator, we were unable to detect it.
+[2026-11-13 18:06:50,201] [WARNING] [real_accelerator.py:213:get_accelerator] Setting accelerator to CPU. If you have GPU or other accelerator, we were unable to detect it.
+[2026-11-13 18:07:08,741] [WARNING] [real_accelerator.py:213:get_accelerator] Setting accelerator to CPU. If you have GPU or other accelerator, we were unable to detect it.
+[2026-11-13 18:07:09,273] [WARNING] [real_accelerator.py:213:get_accelerator] Setting accelerator to CPU. If you have GPU or other accelerator, we were unable to detect it.

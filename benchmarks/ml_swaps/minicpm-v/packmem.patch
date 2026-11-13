@@ -1,0 +1,57 @@
+diff --git a/finetune/dataset.py b/finetune/dataset.py
+index 3d46f16..a141cf0 100644
+--- a/finetune/dataset.py
++++ b/finetune/dataset.py
+@@ -51,15 +51,16 @@ class SupervisedDataset(Dataset):
+ 
+     def __getitem__(self, i) -> Dict[str, torch.Tensor]:
+         try:
+-            if isinstance(self.raw_data[i]["image"], str):
+-                images_dict = { "<image>" : Image.open(self.raw_data[i]["image"]).convert("RGB") }
+-            elif isinstance(self.raw_data[i]["image"], Dict):
++            sample = self.raw_data[i]
++            if isinstance(sample["image"], str):
++                images_dict = { "<image>" : Image.open(sample["image"]).convert("RGB") }
++            elif isinstance(sample["image"], Dict):
+                 ### for multi-images input, the template for every image is <image_xx>, such as <image_00>, <image_01>
+-                images_dict = {img_name : Image.open(img_path).convert("RGB") for img_name, img_path in self.raw_data[i]["image"].items()}
++                images_dict = {img_name : Image.open(img_path).convert("RGB") for img_name, img_path in sample["image"].items()}
+                 
+             ret = preprocess(
+                 images_dict,
+-                self.raw_data[i]["conversations"],
++                sample["conversations"],
+                 self.tokenizer,
+                 self.transform,
+                 query_nums=self.query_nums,
+diff --git a/finetune/finetune.py b/finetune/finetune.py
+index bc18611..e2e9a6c 100644
+--- a/finetune/finetune.py
++++ b/finetune/finetune.py
+@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
+ from functools import partial
+ from typing import Dict, List, Optional, Union, Literal, Tuple
+ from types import MethodType
++
++import packmem
+ from torchvision import transforms
+ 
+ import torch
+@@ -98,7 +100,7 @@ def make_supervised_data_module(
+ 
+     rank0_print("Loading data...")
+ 
+-    train_json = json.load(open(data_args.data_path, "r"))
++    train_json = packmem.load_json(data_args.data_path)
+     train_dataset = dataset_cls(
+         train_json,
+         transform,
+@@ -112,7 +114,7 @@ def make_supervised_data_module(
+     )
+ 
+     if data_args.eval_data_path:
+-        eval_json = json.load(open(data_args.eval_data_path, "r"))
++        eval_json = packmem.load_json(data_args.eval_data_path)
+         eval_dataset = dataset_cls(
+             eval_json,
+             transform,

@@ -1,0 +1,4 @@
+load still 10.49 after 10 min, proceeding 17:19:46
+start 2026-11-13 17:19:46 17:19  up  4:26, 1 user, load averages: 10.13 9.01 7.85
+cfg 0:fork begin 17:19:46 { 10.13 9.01 7.85 }
+aborted 17:20:01 { 9.30 8.88 7.82 }: another project's pnpm build + vitest running

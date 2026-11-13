@@ -1,0 +1,93 @@
+{
+ "tree": "$BENCH/qwen3-vl/repo",
+ "mode": "loader",
+ "datasets": "llava665k",
+ "build_s": 7.944125417001487,
+ "n": 665298,
+ "rss_after_build_mb": 762.085376,
+ "footprint_after_build_mb": 629.45812,
+ "lengths_s": 4.8399545829997805,
+ "modality_lengths_s": 4.750513582999702,
+ "lengths_sha256": "348d788a1eda0c285aa7984187337dcc5aad8ef059bc37a887ca1cb0fb4794e8",
+ "mp_ctx": "fork",
+ "iter_to_first_batch_s": 0.10233066700129712,
+ "worker_footprint_checkpoints_mb": [
+  [
+   0.1,
+   [
+    67,
+    67,
+    68,
+    68
+   ]
+  ],
+  [
+   0.5,
+   [
+    104,
+    103,
+    104,
+    104
+   ]
+  ]
+ ],
+ "worker_footprint_mb": [
+  129.942608,
+  130.663504,
+  130.925648,
+  130.942032
+ ],
+ "worker_rss_mb": [
+  150.388736,
+  151.093248,
+  151.30624,
+  151.339008
+ ],
+ "main_footprint_at_90pct_mb": 701.62976,
+ "main_rss_at_90pct_mb": 835.289088,
+ "total_footprint_mb": 1224.103552,
+ "loader_s": 2.0076400830002967,
+ "iter_to_last_batch_s": 2.003303749999759,
+ "worker_peak_mb": [
+  125.9,
+  126.5,
+  126.8,
+  126.7
+ ],
+ "worker_peak_sum_mb": 506.0,
+ "worker_last_mb": [
+  125.8,
+  126.5,
+  126.8,
+  126.5
+ ],
+ "worker_start_to_first_batch_s": [
+  0.031,
+  0.02,
+  0.021,
+  0.022
+ ],
+ "worker_iter_to_first_batch_s": [
+  0.032,
+  0.032,
+  0.035,
+  0.037
+ ],
+ "worker_iter_to_init_s": [
+  0.029,
+  0.03,
+  0.032,
+  0.034
+ ],
+ "worker_iter_to_create_s": [
+  0.001,
+  0.012,
+  0.014,
+  0.015
+ ],
+ "main_lifetime_peak_mib": 690.5637359619141,
+ "max_concurrent_total_mib": 1174.7554931640625,
+ "main_peak_plus_worker_peaks_mib": 1196.563735961914,
+ "n_samples": 20000,
+ "batches_sha256": "3c98d761142c9abb7ea7a169f03160b374b3e4cfa180c2c45c1ad6eba47f003a"
+}

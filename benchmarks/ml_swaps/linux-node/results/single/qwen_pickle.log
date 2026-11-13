@@ -1,0 +1,1 @@
+{"tree": "$HOME/packmem-bench/linux-node/repos/qwen", "build_s": 7.767547642812133, "n": 665298, "container": "list", "rss_after_build_mib": 2998.2890625, "pickle_bytes": 689756294, "dumps_s": [12.647, 12.811, 12.773], "loads_s": 5.696392544079572, "roundtrip_equal": true, "compare_s": 1.7190173799172044, "maxrss_mib": 6679.28515625}

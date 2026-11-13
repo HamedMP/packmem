@@ -1,0 +1,18 @@
+{
+ "tree": "$HOME/packmem-bench/linux-node/repos/qwen-pm",
+ "build_s": 13.599958294071257,
+ "n": 665298,
+ "container": "Table",
+ "rss_after_build_mib": 591.1796875,
+ "pickle_bytes": 309230279,
+ "dumps_s": [
+  0.908,
+  1.003,
+  0.998
+ ],
+ "loads_s": 0.3903883411549032,
+ "table_nbytes": 310675225,
+ "roundtrip_equal": true,
+ "compare_s": 28.242728686891496,
+ "maxrss_mib": 1474.58203125
+}

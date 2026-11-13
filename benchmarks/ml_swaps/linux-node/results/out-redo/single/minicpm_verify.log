@@ -1,0 +1,3 @@
+[2026-11-13 17:50:46,421] [WARNING] [real_accelerator.py:213:get_accelerator] Setting accelerator to CPU. If you have GPU or other accelerator, we were unable to detect it.
+Loading data...
+{"tree": "$HOME/packmem-bench/linux-node/repos/minicpm", "build_s": 6.374203275889158, "n": 665298, "container": "list", "rows_sha256": "21758dc54526328a384853377fb5982f3bef6d7f7b79ae0875ef4404e65aa8e7"}

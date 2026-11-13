@@ -1,0 +1,18 @@
+{
+ "tree": "$BENCH/qwen3-vl/orig",
+ "mode": "pickle",
+ "datasets": "llava665k",
+ "build_s": 2.5400830830003542,
+ "n": 665298,
+ "rss_after_build_mb": 5251.514368,
+ "footprint_after_build_mb": 5203.300576,
+ "pickle_bytes": 689756296,
+ "pickle_mb": 689.756296,
+ "dumps_s": [
+  3.607,
+  3.419,
+  3.458
+ ],
+ "loads_s": 1.367889582999851,
+ "roundtrip_equal": true
+}

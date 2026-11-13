@@ -1,0 +1,2 @@
+{"tag": "m_forkserver_pm_2x4_r2", "tree": "minicpm-pm", "nproc": 2, "workers": 4, "ctx": "forkserver", "n": 20000, "rc": 0,
+ "wall_s": 133.684937686, "load_start": "52.68 44.38 52.97", "load_end": "37.98 41.55 50.76", "avail_gb_start": 100}

@@ -1,0 +1,93 @@
+{
+ "tree": "$BENCH/qwen3-vl/orig",
+ "mode": "loader",
+ "datasets": "llava665k",
+ "build_s": 2.7158517080006277,
+ "n": 665298,
+ "rss_after_build_mb": 5250.99008,
+ "footprint_after_build_mb": 5202.743472,
+ "lengths_s": 2.243624542001271,
+ "modality_lengths_s": 2.2015677920007874,
+ "lengths_sha256": "348d788a1eda0c285aa7984187337dcc5aad8ef059bc37a887ca1cb0fb4794e8",
+ "mp_ctx": "spawn",
+ "iter_to_first_batch_s": 24.790359000000535,
+ "worker_footprint_checkpoints_mb": [
+  [
+   0.1,
+   [
+    3431,
+    3430,
+    3433,
+    3432
+   ]
+  ],
+  [
+   0.5,
+   [
+    3431,
+    3431,
+    3433,
+    3433
+   ]
+  ]
+ ],
+ "worker_footprint_mb": [
+  3431.353272,
+  3431.009208,
+  3432.844264,
+  3432.614888
+ ],
+ "worker_rss_mb": [
+  2623.258624,
+  2617.950208,
+  3387.736064,
+  3344.62976
+ ],
+ "main_footprint_at_90pct_mb": 9800.392336,
+ "main_rss_at_90pct_mb": 4713.84064,
+ "total_footprint_mb": 23528.213968,
+ "loader_s": 51.60807379200014,
+ "iter_to_last_batch_s": 31.602558458000203,
+ "worker_peak_mb": [
+  3272.6,
+  3272.3,
+  3274.0,
+  3273.9
+ ],
+ "worker_peak_sum_mb": 13092.9,
+ "worker_last_mb": [
+  3272.4,
+  3272.0,
+  3273.8,
+  3273.6
+ ],
+ "worker_start_to_first_batch_s": [
+  20.486,
+  14.416,
+  8.397,
+  3.327
+ ],
+ "worker_iter_to_first_batch_s": [
+  24.66,
+  24.657,
+  24.655,
+  25.835
+ ],
+ "worker_iter_to_init_s": [
+  6.648,
+  12.668,
+  18.925,
+  25.831
+ ],
+ "worker_iter_to_create_s": [
+  4.173,
+  10.241,
+  16.258,
+  22.507
+ ],
+ "main_lifetime_peak_mib": 9346.866836547852,
+ "max_concurrent_total_mib": 22438.456497192383,
+ "main_peak_plus_worker_peaks_mib": 22439.766836547853,
+ "n_samples": 20000,
+ "batches_sha256": "3c98d761142c9abb7ea7a169f03160b374b3e4cfa180c2c45c1ad6eba47f003a"
+}

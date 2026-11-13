@@ -1,0 +1,2 @@
+{"tag": "m_forkserver_list_2x4_r1", "tree": "minicpm", "nproc": 2, "workers": 4, "ctx": "forkserver", "n": 20000, "rc": 0,
+ "wall_s": 241.278057289, "load_start": "39.17 39.26 54.71", "load_end": "52.68 44.38 52.97", "avail_gb_start": 101}

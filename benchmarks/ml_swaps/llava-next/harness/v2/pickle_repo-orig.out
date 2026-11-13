@@ -1,0 +1,10 @@
+Please install pyav to use video processing functions.
+Loading $BENCH/llava-next/data/llava_v1_5_mix665k.json with all sampling strategy
+Loaded 665000 samples from $BENCH/llava-next/data/llava_v1_5_mix665k.json
+Loading $BENCH/llava-next/data/si_mix.json with end:200000 sampling strategy
+Loaded 200000 samples from $BENCH/llava-next/data/si_mix.json
+Loading $BENCH/llava-next/data/text_mix.jsonl with first:80% sampling strategy
+Loaded 120000 samples from $BENCH/llava-next/data/text_mix.jsonl
+Loaded 985000 samples from $BENCH/llava-next/data/mix.yaml
+Formatting inputs...Skip in lazy mode
+{"records": 985000, "type": "list", "load_s": 4.633, "footprint_after_load_mb": 3888.9, "pickle_bytes": 1438835634, "pickle_mb": 1372.2, "dumps_s": [3.601, 3.524, 3.672], "loads_s": 1.66, "roundtrip_equal": true}

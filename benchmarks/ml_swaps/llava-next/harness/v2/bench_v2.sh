@@ -1,0 +1,29 @@
+#!/bin/bash
+# 5 fresh processes per arm and config; orig and packmem interleaved; one config at a time.
+B=$BENCH/llava-next
+H=$B/harness/v2
+OUT=$H/results_v2.jsonl
+LOG=$H/load.log
+: > $OUT
+$BENCH/wait_load.sh $LOG
+echo "start $(date '+%F %T') $(uptime)" >> $LOG
+for cfg in 0:fork 4:spawn 4:fork; do
+  w=${cfg%%:*}; c=${cfg##*:}
+  echo "cfg $cfg begin $(date '+%T') $(sysctl -n vm.loadavg)" >> $LOG
+  for i in 1 2 3 4 5; do
+    for arm in repo-orig repo; do
+      (cd $H && /usr/bin/time -l $B/venv/bin/python -I run_v2.py $B/$arm $B/data/mix.yaml --workers $w --mp-context $c > $H/last.out 2> $H/last.err)
+      json=$(grep '^{' $H/last.out)
+      real=$(grep ' real ' $H/last.err | awk '{print $1}')
+      rss=$(grep 'maximum resident set size' $H/last.err | awk '{print $1}')
+      fp=$(grep 'peak memory footprint' $H/last.err | awk '{print $1}')
+      echo "{\"arm\":\"$arm\",\"workers\":$w,\"ctx\":\"$c\",\"run\":$i,\"wall_s\":${real:-null},\"max_rss\":${rss:-null},\"peak_footprint\":${fp:-null},\"load\":\"$(sysctl -n vm.loadavg)\",\"r\":${json:-null}}" >> $OUT
+    done
+  done
+  echo "cfg $cfg end $(date '+%T') $(sysctl -n vm.loadavg)" >> $LOG
+done
+for arm in repo-orig repo; do
+  (cd $H && /usr/bin/time -l $B/venv/bin/python -I run_v2.py $B/$arm $B/data/mix.yaml --pickle > $H/pickle_$arm.out 2> $H/pickle_$arm.err)
+done
+echo "end $(date '+%F %T') $(uptime)" >> $LOG
+echo done

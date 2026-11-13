@@ -1,0 +1,70 @@
+diff --git a/qwen-vl-finetune/qwenvl/data/data_processor.py b/qwen-vl-finetune/qwenvl/data/data_processor.py
+index 754838c..4efe227 100644
+--- a/qwen-vl-finetune/qwenvl/data/data_processor.py
++++ b/qwen-vl-finetune/qwenvl/data/data_processor.py
+@@ -10,6 +10,7 @@ from collections.abc import Sequence
+ from pathlib import Path
+ 
+ import numpy as np
++import packmem
+ import torch
+ from torch.utils.data import Dataset
+ 
+@@ -266,29 +267,45 @@ class LazySupervisedDataset(Dataset):
+         else:
+             raise ValueError(f"model_type: {data_args.model_type} not supported")
+ 
++        # Plain samples are held as packed columns (packmem); packed samples are
++        # lists of records, which packmem does not store, so they stay a list.
+         list_data_dict = []
+ 
+         for data in dataset_list:
+             file_format = data["annotation_path"].split(".")[-1]
+-            if file_format == "jsonl":
+-                annotations = read_jsonl(data["annotation_path"])
++            if data_args.data_packing:
++                if file_format == "jsonl":
++                    annotations = read_jsonl(data["annotation_path"])
++                else:
++                    annotations = json.load(open(data["annotation_path"], "r"))
++            elif file_format == "jsonl":
++                annotations = packmem.load_jsonl(data["annotation_path"])
+             else:
+-                annotations = json.load(open(data["annotation_path"], "r"))
++                annotations = packmem.load_json(data["annotation_path"])
+             sampling_rate = data.get("sampling_rate", 1.0)
+             if sampling_rate < 1.0:
+-                annotations = random.sample(
+-                    annotations, int(len(annotations) * sampling_rate)
+-                )
++                k = int(len(annotations) * sampling_rate)
++                if isinstance(annotations, packmem.Table):
++                    annotations = annotations.take(random.sample(range(len(annotations)), k))
++                else:
++                    annotations = random.sample(annotations, k)
+                 rank0_print(f"sampling {len(annotations)} examples from dataset {data}")
+             else:
+                 rank0_print(f"dataset name: {data}")
+-            for ann in annotations:
+-                if isinstance(ann, list):
+-                    for sub_ann in ann:
+-                        sub_ann["data_path"] = data["data_path"]
+-                else:
++            if isinstance(annotations, packmem.Table):
++                for ann in annotations.lazy():
+                     ann["data_path"] = data["data_path"]
+-            list_data_dict += annotations
++            else:
++                for ann in annotations:
++                    if isinstance(ann, list):
++                        for sub_ann in ann:
++                            sub_ann["data_path"] = data["data_path"]
++                    else:
++                        ann["data_path"] = data["data_path"]
++            if len(list_data_dict) == 0:
++                list_data_dict = annotations
++            else:
++                list_data_dict.extend(annotations)
+ 
+         rank0_print(f"Total training samples: {len(list_data_dict)}")
+ 

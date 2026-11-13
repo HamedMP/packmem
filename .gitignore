@@ -9,6 +9,7 @@ __pycache__/
 data/
 *.jsonl
 !benchmarks/results/**/*.jsonl
+!benchmarks/ml_swaps/**/*.jsonl
 !experiments/results/*.jsonl
 
 # local build artefacts and tool state

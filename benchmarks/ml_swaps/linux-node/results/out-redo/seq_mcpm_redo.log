@@ -1,0 +1,11 @@
+2026-11-13 17:50:44 start 26.25 39.84 58.27
+2026-11-13 17:51:06 verify minicpm rc=0 {"tree": "$HOME/packmem-bench/linux-node/repos/minicpm", "build_s": 6.374203275889158, "n": 665298, "container": "list", "rows_sha256": "21758dc54526328a384853377fb5982f3bef6d7f7b79ae0875ef4404e65aa8e7"}
+2026-11-13 17:51:33 verify minicpm-pm rc=0 {"tree": "$HOME/packmem-bench/linux-node/repos/minicpm-pm", "build_s": 11.448425923939794, "n": 665298, "container": "Table", "rows_sha256": "21758dc54526328a384853377fb5982f3bef6d7f7b79ae0875ef4404e65aa8e7"}
+2026-11-13 17:51:33 per-record digests identical
+2026-11-13 17:53:46 m_forkserver_pm_2x4_r1 rc=0 wall=133.202621873 load 28.16 38.20 56.74 -> 39.17 39.26 54.71
+2026-11-13 17:57:48 m_forkserver_list_2x4_r1 rc=0 wall=241.278057289 load 39.17 39.26 54.71 -> 52.68 44.38 52.97
+2026-11-13 18:00:01 m_forkserver_pm_2x4_r2 rc=0 wall=133.684937686 load 52.68 44.38 52.97 -> 37.98 41.55 50.76
+2026-11-13 18:03:40 m_forkserver_list_2x4_r2 rc=0 wall=218.763036959 load 37.98 41.55 50.76 -> 46.95 41.65 48.58
+2026-11-13 18:05:48 m_forkserver_pm_2x4_r3 rc=0 wall=127.644847902 load 46.95 41.65 48.58 -> 35.37 39.19 46.77
+2026-11-13 18:08:51 m_forkserver_list_2x4_r3 rc=0 wall=183.640710064 load 35.37 39.19 46.77 -> 28.45 33.43 43.13
+2026-11-13 18:08:51 end 28.45 33.43 43.13

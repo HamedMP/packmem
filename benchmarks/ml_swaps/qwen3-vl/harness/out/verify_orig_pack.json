@@ -1,0 +1,11 @@
+{
+ "tree": "$BENCH/qwen3-vl/orig",
+ "mode": "verify",
+ "datasets": "llava150k",
+ "build_s": 0.44901820799987036,
+ "n": 150000,
+ "rss_after_build_mb": 1108.86912,
+ "uss_after_build_mb": 1057.619968,
+ "rows_sha256": "0a16b2d262ec58364a164b1505ce4ab5ef305b7c6c07d4a9ec528d7937fd32db",
+ "verify_s": 0.761297416999696
+}

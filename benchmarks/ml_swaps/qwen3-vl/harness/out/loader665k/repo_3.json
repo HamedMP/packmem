@@ -1,0 +1,50 @@
+{
+ "tree": "$BENCH/qwen3-vl/repo",
+ "mode": "loader",
+ "datasets": "llava665k",
+ "build_s": 8.906850791999204,
+ "n": 665298,
+ "rss_after_build_mb": 760.430592,
+ "footprint_after_build_mb": 624.624816,
+ "lengths_s": 5.560045541999898,
+ "modality_lengths_s": 5.331673125000634,
+ "lengths_sha256": "348d788a1eda0c285aa7984187337dcc5aad8ef059bc37a887ca1cb0fb4794e8",
+ "worker_footprint_checkpoints_mb": [
+  [
+   0.1,
+   [
+    63,
+    63,
+    64,
+    64
+   ]
+  ],
+  [
+   0.5,
+   [
+    100,
+    100,
+    100,
+    100
+   ]
+  ]
+ ],
+ "worker_footprint_mb": [
+  126.452816,
+  127.353936,
+  126.977104,
+  127.321168
+ ],
+ "worker_rss_mb": [
+  149.454848,
+  150.40512,
+  149.946368,
+  150.3232
+ ],
+ "main_footprint_at_90pct_mb": 704.595264,
+ "main_rss_at_90pct_mb": 841.433088,
+ "total_footprint_mb": 1212.700288,
+ "loader_s": 2.905910084000425,
+ "n_samples": 20000,
+ "batches_sha256": "3c98d761142c9abb7ea7a169f03160b374b3e4cfa180c2c45c1ad6eba47f003a"
+}

@@ -1,0 +1,9 @@
+load still 6.82 after 10 min, proceeding 15:27:13
+start 2026-11-13 15:27:13 15:27  up  2:33, 1 user, load averages: 6.67 6.51 5.91
+cfg 0:fork begin 15:27:13 load averages: 6.67 6.51 5.91
+cfg 0:fork end 15:39:51 load averages: 5.03 5.47 5.68
+cfg 4:spawn begin 15:39:51 load averages: 5.03 5.47 5.68
+cfg 4:spawn end 15:52:11 load averages: 8.58 7.77 6.68
+cfg 4:fork begin 15:52:11 load averages: 8.58 7.77 6.68
+cfg 4:fork end 15:58:22 load averages: 9.96 9.14 7.73
+end 2026-11-13 15:58:58 15:58  up  3:05, 1 user, load averages: 7.83 8.68 7.62

@@ -1,0 +1,73 @@
+diff --git a/llava/train/train.py b/llava/train/train.py
+index 4c524be..c5d261c 100755
+--- a/llava/train/train.py
++++ b/llava/train/train.py
+@@ -30,6 +30,7 @@
+ import random
+ import yaml
+ import math
++import packmem
+ import re
+ import torch
+ 
+@@ -959,7 +960,7 @@ class LazySupervisedDataset(Dataset):
+     def __init__(self, data_path: str, tokenizer: transformers.PreTrainedTokenizer, data_args: DataArguments):
+         super(LazySupervisedDataset, self).__init__()
+         self.tokenizer = tokenizer
+-        self.list_data_dict = []
++        self.list_data_dict = packmem.Table()
+ 
+         # Handle multiple JSON files specified in the data_path
+         if "{" in data_path and "}" in data_path:
+@@ -972,7 +973,7 @@ def __init__(self, data_path: str, tokenizer: transformers.PreTrainedTokenizer,
+                 full_path = f"{base_path}{file_name}.json"
+                 rank0_print(f"Loading {full_path}")
+                 with open(full_path, "r") as file:
+-                    cur_data_dict = json.load(file)
++                    cur_data_dict = packmem.load_json(file)
+                     rank0_print(f"Loaded {len(cur_data_dict)} samples from {full_path}")
+                     self.list_data_dict.extend(cur_data_dict)
+         elif data_path.endswith(".yaml"):
+@@ -996,13 +997,9 @@ def __init__(self, data_path: str, tokenizer: transformers.PreTrainedTokenizer,
+                     rank0_print(f"Loading {json_path} with {sampling_strategy} sampling strategy")
+ 
+                     if json_path.endswith(".jsonl"):
+-                        cur_data_dict = []
+-                        with open(json_path, "r") as json_file:
+-                            for line in json_file:
+-                                cur_data_dict.append(json.loads(line.strip()))
++                        cur_data_dict = packmem.load_jsonl(json_path)
+                     elif json_path.endswith(".json"):
+-                        with open(json_path, "r") as json_file:
+-                            cur_data_dict = json.load(json_file)
++                        cur_data_dict = packmem.load_json(json_path)
+                     else:
+                         raise ValueError(f"Unsupported file type: {json_path}")
+ 
+@@ -1015,12 +1012,13 @@ def __init__(self, data_path: str, tokenizer: transformers.PreTrainedTokenizer,
+ 
+                     # Apply the sampling strategy
+                     if sampling_strategy == "first" and sampling_number is not None:
+-                        cur_data_dict = cur_data_dict[:sampling_number]
++                        del cur_data_dict[sampling_number:]
+                     elif sampling_strategy == "end" and sampling_number is not None:
+-                        cur_data_dict = cur_data_dict[-sampling_number:]
++                        del cur_data_dict[:-sampling_number]
+                     elif sampling_strategy == "random" and sampling_number is not None:
+-                        random.shuffle(cur_data_dict)
+-                        cur_data_dict = cur_data_dict[:sampling_number]
++                        order = list(range(len(cur_data_dict)))
++                        random.shuffle(order)
++                        cur_data_dict = packmem.Table(cur_data_dict[i] for i in order[:sampling_number])
+ 
+                     rank0_print(f"Loaded {len(cur_data_dict)} samples from {json_path}")
+                     self.list_data_dict.extend(cur_data_dict)
+@@ -1028,7 +1026,7 @@ def __init__(self, data_path: str, tokenizer: transformers.PreTrainedTokenizer,
+             data_args.dataset_paths = [data_path]
+             rank0_print(f"Loading {data_path}")
+             with open(data_path, "r") as file:
+-                cur_data_dict = json.load(file)
++                cur_data_dict = packmem.load_json(file)
+                 rank0_print(f"Loaded {len(cur_data_dict)} samples from {data_path}")
+                 self.list_data_dict.extend(cur_data_dict)
+ 

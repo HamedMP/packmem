@@ -68,8 +68,9 @@ the real 665,298-record LLaVA mix took one 8-rank node with 4 fork workers per r
 to 4.9 GiB on Linux, and a 4-worker epoch on the Mac from 16.6 GB to 2.3 GB under fork and
 23.5 GB to 5.5 GB under spawn. Building the dataset is 2 to 4 times slower, because the nested
 conversation turns are stored as JSON text. These figures cover the annotations only (no images,
-model or GPU), none of the repositories has tests covering the patched code, and the patches are
-not in this repository yet: see [benchmarks/results/ml_swaps](benchmarks/results/ml_swaps).
+model or GPU) and none of the repositories has tests covering the patched code. Patches, scripts
+and outputs are in [benchmarks/ml_swaps](benchmarks/ml_swaps); the Linux runs' raw traces were lost
+and only their summaries remain.
 
 ### Where it loses
 

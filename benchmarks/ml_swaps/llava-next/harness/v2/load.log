@@ -1,0 +1,9 @@
+load ok 3.93 after 210 s 17:29:56
+start 2026-11-13 17:29:56 17:29  up  4:36, 1 user, load averages: 3.93 6.17 7.03
+cfg 0:fork begin 17:29:56 { 3.93 6.17 7.03 }
+cfg 0:fork end 17:35:47 { 9.03 7.52 7.32 }
+cfg 4:spawn begin 17:35:47 { 9.03 7.52 7.32 }
+cfg 4:spawn end 17:47:44 { 4.07 5.17 6.08 }
+cfg 4:fork begin 17:47:44 { 4.07 5.17 6.08 }
+cfg 4:fork end 17:52:54 { 2.50 4.10 5.35 }
+end 2026-11-13 17:53:48 17:53  up 5 hrs, 1 user, load averages: 1.96 3.67 5.11
