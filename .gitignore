@@ -1,0 +1,18 @@
+target/
+python/target/
+python/dist/
+.venv/
+__pycache__/
+*.class
+
+# benchmark inputs are rebuilt by benchmarks/fetch_data.py and experiments/gen.py
+data/
+*.jsonl
+!benchmarks/results/**/*.jsonl
+!experiments/results/*.jsonl
+
+# local build artefacts and tool state
+*.whl
+*.tar.gz
+.remember/
+.DS_Store

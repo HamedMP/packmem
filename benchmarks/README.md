@@ -1,0 +1,15 @@
+# Real-data benchmarks
+
+| File | Purpose |
+| --- | --- |
+| `fetch_data.py` | Builds the inputs: nycflights13 as JSON lines, JSON, CSV and SQLite, plus Elastic's nginx sample log |
+| `bench.py` | One holder (list, packmem, pandas, polars) on one dataset, in one process: memory, load time, queries |
+| `bench_io.py` | `csv.DictReader` and `sqlite3` swaps |
+| `run_all.py` | Runs every variant in fresh processes several times and writes median, minimum and maximum |
+| `apps.sh`, `runapp.py` | sqlite-utils and jello, original against one line patched |
+| `mem.py` | Resident memory, physical footprint and peak on Linux and macOS |
+
+Memory on macOS is the physical footprint, which counts compressed pages; on Linux it is
+resident set size. Results are in `results/<machine>/`, each with the machine line that
+`run_all.py` records. The Linux results predate the optimisation pass described in the report
+and were run in a 2-core sandbox.

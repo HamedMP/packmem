@@ -1,0 +1,18 @@
+[package]
+name = "packmem"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Packed, operation-aware columns for record collections: filter and aggregate in memory without decompressing."
+license = "MIT OR Apache-2.0"
+authors = ["Finna Labs Inc."]
+readme = "README.md"
+keywords = ["compression", "columnar", "memory", "encoding"]
+categories = ["compression", "data-structures"]
+exclude = ["benchmarks/", "experiments/", "docs/", "python/", "data/", ".github/"]
+
+[dependencies]
+fsst-rs = "0.7.0"
+lz4_flex = "0.14.0"
+serde_json = "1.0.154"
+zstd = "0.14.4"

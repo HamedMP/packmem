@@ -1,0 +1,6 @@
+{"run": "sqlite-utils insert (original)", "seconds": 12.07, "peak_mb": 477.9, "exit": 0, "out": ""}
+{"run": "jello nginx (original)", "seconds": 0.54, "peak_mb": 152.3, "exit": 0, "out": "11331991"}
+{"run": "jello flights (original)", "seconds": 5.71, "peak_mb": 1288.5, "exit": 0, "out": "3824"}
+{"run": "jello nginx (patched)", "seconds": 0.27, "peak_mb": 66.8, "exit": 0, "out": "11331991"}
+{"run": "jello flights (patched)", "seconds": 2.3, "peak_mb": 280.4, "exit": 0, "out": "3824"}
+{"run": "sqlite-utils insert (patched)", "seconds": 14.5, "peak_mb": 71.0, "exit": 0, "out": ""}

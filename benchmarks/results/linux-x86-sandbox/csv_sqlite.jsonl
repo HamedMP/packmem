@@ -1,0 +1,5 @@
+{"variant": "csv_list", "rows": 336776, "load_s": 1.11, "rss_mb": 450.4, "peak_mb": 453.4, "two_queries_ms": 83.93, "answers": [111279, 48110], "sample_md5": "d5980634"}
+{"variant": "csv_packmem", "rows": 336776, "load_s": 3.21, "rss_mb": 54.1, "peak_mb": 67.6, "two_queries_ms": 2.35, "answers": [111279, 48110], "sample_md5": "d5980634"}
+{"variant": "csv_packmem_wrap", "rows": 336776, "load_s": 2.93, "rss_mb": 54.2, "peak_mb": 67.6, "two_queries_ms": 2.25, "answers": [111279, 48110], "sample_md5": "d5980634"}
+{"variant": "sqlite_list", "rows": 336776, "load_s": 1.46, "rss_mb": 356.4, "peak_mb": 361.6, "two_queries_ms": 60.63, "answers": [111279, 48110], "sample_md5": "ec917fef"}
+{"variant": "sqlite_packmem", "rows": 336776, "load_s": 2.73, "rss_mb": 43.2, "peak_mb": 57.0, "two_queries_ms": 2.19, "answers": [111279, 48110], "sample_md5": "ec917fef"}

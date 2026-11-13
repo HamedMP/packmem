@@ -1,0 +1,42 @@
+== (a) selector vs exhaustive oracle, Hint::Memory, n=1000000 ==
+dataset                                FOR b/v      Dict       RLE  BlockFOR | chosen    oracle     regret | select ms try-all ms
+constant                                  0.00      0.00      0.00      0.10 | Const     Rle          0.0% |     1.089       20.5
+uniform 0..200                            8.00      8.01     95.52      8.10 | For       For          0.0% |     1.128       37.1
+uniform 20-bit                           20.00       n/a     96.00     20.10 | For       For          0.0% |     1.540       27.0
+uniform 64-bit                           64.00       n/a     96.00     64.10 | For       For          0.0% |     1.541        9.4
+5 distinct wide values                   41.00      3.00     76.83     41.10 | Dict      Dict         0.0% |     1.150       35.3
+zipf ids (pareto 1.2)                    17.00     10.06     61.80      9.64 | BlockFor  BlockFor     0.0% |     1.102       40.7
+sorted timestamps (ms)                   24.00       n/a     91.18     14.10 | BlockFor  BlockFor     0.0% |     1.568       27.0
+long runs (avg 150)                       6.00      6.00      0.63      5.92 | Rle       Rle          0.0% |     1.077       29.2
+short runs (avg 3)                        6.00      6.00     31.35      6.10 | For       For          0.0% |     1.078       32.2
+clustered (wide base + small noise)      64.00       n/a     95.90     20.85 | BlockFor  BlockFor     0.0% |     1.549       19.6
+small with 0.1% huge outliers            51.00      5.00     89.99     34.83 | Dict      Dict         0.0% |     1.058       32.9
+signed, mixed +/- 50k                    17.00       n/a     96.00     17.10 | For       For          0.0% |     1.554       27.5
+monotonic ids with gaps                  21.00       n/a     96.00     11.56 | BlockFor  BlockFor     0.0% |     1.510       26.7
+booleans 0/1 (10% ones)                   1.00      1.00     17.29      1.10 | For       For          0.0% |     1.051       26.4
+within 0.5% of oracle: 14/14   mean regret 0.00%   worst 0.0%
+
+== (b) operation cost by encoding (ns per value / per lookup), n=1000000 ==
+dataset                    encoding                bits/val  sum scan  random get  range count
+uniform 20-bit             plain Vec<i64>             64.00     0.363       3.454        0.750
+                           for/u32                    32.00     0.351       3.248        1.032
+                           for/20bit                  20.00     0.940       4.285        1.365
+                           rle(1000000 runs)          96.00     0.631     119.161        0.717
+                           blockfor                   20.10     0.993       8.453        3.494
+sorted timestamps (ms)     plain Vec<i64>             64.00     0.327       3.512        0.795
+                           for/u32                    32.00     0.259       3.445        1.026
+                           for/24bit                  24.00     0.979       4.693        1.407
+                           rle(949790 runs)           91.18     0.604     125.444        0.540
+                           blockfor/sorted            14.10     0.783       5.228        0.000
+long runs (avg 150)        plain Vec<i64>             64.00     0.286       2.924        0.674
+                           for/u8                      8.00     0.119       0.807        0.490
+                           for/6bit                    6.00     0.634       1.188        1.039
+                           dict(50)/6bit               6.00     1.570       1.356        1.030
+                           rle(6520 runs)              0.63     0.002      10.101        0.002
+                           blockfor                    5.92     0.755       2.489        2.700
+zipf ids (pareto 1.2)      plain Vec<i64>             64.00     0.291       2.941        0.608
+                           for/u32                    32.00     0.170       2.407        0.859
+                           for/17bit                  17.00     0.661       2.977        1.068
+                           dict(952)/10bit            10.06     0.986       2.048        1.047
+                           rle(643709 runs)           61.80     0.287      98.964        0.454
+                           blockfor                    9.64     0.966       4.621        3.511

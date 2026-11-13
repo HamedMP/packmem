@@ -1,0 +1,18 @@
+{"run": "sqlite-utils insert flights.json (original)", "seconds": 5.2, "peak_mb": 614.9, "exit": 0, "out": ""}
+{"run": "jello flights: count delayed over 60 by carrier (original)", "seconds": 2.93, "peak_mb": 1541.6, "exit": 0, "out": "09399e1d68bf"}
+{"run": "jello nginx: total bytes of 404s (original)", "seconds": 0.23, "peak_mb": 159.8, "exit": 0, "out": "11331991"}
+{"run": "sqlite-utils insert flights.json (original)", "seconds": 4.85, "peak_mb": 603.6, "exit": 0, "out": ""}
+{"run": "jello flights: count delayed over 60 by carrier (original)", "seconds": 2.5, "peak_mb": 1535.2, "exit": 0, "out": "09399e1d68bf"}
+{"run": "jello nginx: total bytes of 404s (original)", "seconds": 0.23, "peak_mb": 160.3, "exit": 0, "out": "11331991"}
+{"run": "sqlite-utils insert flights.json (original)", "seconds": 4.73, "peak_mb": 603.4, "exit": 0, "out": ""}
+{"run": "jello flights: count delayed over 60 by carrier (original)", "seconds": 2.54, "peak_mb": 1535.4, "exit": 0, "out": "09399e1d68bf"}
+{"run": "jello nginx: total bytes of 404s (original)", "seconds": 0.22, "peak_mb": 160.3, "exit": 0, "out": "11331991"}
+{"run": "sqlite-utils insert flights.json (patched)", "seconds": 6.08, "peak_mb": 79.0, "exit": 0, "out": ""}
+{"run": "jello flights: count delayed over 60 by carrier (patched)", "seconds": 0.9, "peak_mb": 387.6, "exit": 0, "out": "09399e1d68bf"}
+{"run": "jello nginx: total bytes of 404s (patched)", "seconds": 0.09, "peak_mb": 75.3, "exit": 0, "out": "11331991"}
+{"run": "sqlite-utils insert flights.json (patched)", "seconds": 5.44, "peak_mb": 65.1, "exit": 0, "out": ""}
+{"run": "jello flights: count delayed over 60 by carrier (patched)", "seconds": 0.56, "peak_mb": 379.0, "exit": 0, "out": "09399e1d68bf"}
+{"run": "jello nginx: total bytes of 404s (patched)", "seconds": 0.09, "peak_mb": 75.2, "exit": 0, "out": "11331991"}
+{"run": "sqlite-utils insert flights.json (patched)", "seconds": 5.46, "peak_mb": 67.4, "exit": 0, "out": ""}
+{"run": "jello flights: count delayed over 60 by carrier (patched)", "seconds": 0.57, "peak_mb": 380.9, "exit": 0, "out": "09399e1d68bf"}
+{"run": "jello nginx: total bytes of 404s (patched)", "seconds": 0.09, "peak_mb": 75.3, "exit": 0, "out": "11331991"}

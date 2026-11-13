@@ -1,0 +1,27 @@
+[build-system]
+requires = ["maturin>=1.5,<2"]
+build-backend = "maturin"
+
+[project]
+name = "packmem"
+version = "0.1.0"
+description = "A list of dicts that takes a fraction of the memory: packed columns you can filter and aggregate without unpacking."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT OR Apache-2.0" }
+authors = [{ name = "Finna Labs Inc." }]
+keywords = ["memory", "compression", "columnar", "json", "records"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Libraries",
+]
+
+[tool.maturin]
+python-source = "py"
+module-name = "packmem._packmem"
+features = ["pyo3/extension-module"]
