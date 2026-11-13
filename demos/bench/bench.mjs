@@ -12,7 +12,7 @@ const SETTLE_MS = Number(process.env.SETTLE_MS ?? 20_000);
 
 const SERVERS = {
   express: { cwd: here("../express"), cmd: ["node", "--expose-gc", "src/server.ts"], env: { PORT } },
-  nextjs: { cwd: here("../nextjs"), cmd: ["node", "node_modules/next/dist/bin/next", "start", "-p", String(PORT)], env: { NODE_OPTIONS: "--expose-gc" } },
+  nextjs: { cwd: here("../nextjs"), cmd: ["node", "node_modules/next/dist/bin/next", "start", "-H", "127.0.0.1", "-p", String(PORT)], env: { NODE_OPTIONS: "--expose-gc" } },
   fastapi: { cwd: here("../fastapi"), cmd: [".venv/bin/uvicorn", "app:app", "--port", String(PORT), "--log-level", "warning"], env: {} },
 };
 

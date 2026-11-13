@@ -34,10 +34,27 @@ export interface Store {
   exportChunks(q: Query): Iterable<string | Uint8Array>;
 }
 
+/** A malformed number is a client error in both modes, so the two never disagree on it. */
+export class BadRequest extends Error {}
+
 export function parseQuery(get: (k: string) => string | null | undefined): Query {
   const s = (k: string) => get(k) || undefined;
   const d = s("min_delay");
-  return { carrier: s("carrier"), origin: s("origin"), dest: s("dest"), minDelay: d === undefined ? undefined : Number(d) };
+  const minDelay = d === undefined ? undefined : Number(d);
+  if (minDelay !== undefined && !Number.isFinite(minDelay)) throw new BadRequest("min_delay must be a finite number");
+  return { carrier: s("carrier"), origin: s("origin"), dest: s("dest"), minDelay };
+}
+
+/** limit in 0..1000 (default 50) and offset >= 0 (default 0); anything else is a client error. */
+export function parsePage(get: (k: string) => string | null | undefined): { limit: number; offset: number } {
+  const int = (k: string, def: number, max: number) => {
+    const raw = get(k);
+    if (raw === null || raw === undefined || raw === "") return def;
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n < 0 || n > max) throw new BadRequest(`${k} must be an integer from 0 to ${max}`);
+    return n;
+  };
+  return { limit: int("limit", 50, 1000), offset: int("offset", 0, Number.MAX_SAFE_INTEGER) };
 }
 
 async function withPg<T>(url: string, f: (client: import("pg").Client) => Promise<T>): Promise<T> {

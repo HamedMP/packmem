@@ -4,10 +4,10 @@
   "type": "module",
   "scripts": {
     "refresh-packmem": "rm -rf node_modules/packmem && npm install --no-audit --no-fund",
-    "dev": "next dev -p 3002",
+    "dev": "next dev -H 127.0.0.1 -p 3002",
     "build": "npm run refresh-packmem && next build",
-    "start": "next start -p 3002",
-    "start:baseline": "MODE=baseline next start -p 3002"
+    "start": "next start -H 127.0.0.1 -p 3002",
+    "start:baseline": "MODE=baseline next start -H 127.0.0.1 -p 3002"
   },
   "dependencies": {
     "next": "16.4.6",

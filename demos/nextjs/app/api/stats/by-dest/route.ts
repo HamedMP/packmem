@@ -1,7 +1,7 @@
-import { flights, queryOf } from "@/lib/flights";
+import { flights, handle, queryOf } from "@/lib/flights";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request) {
-  return Response.json((await flights()).byDest(queryOf(req)));
+export function GET(req: Request) {
+  return handle(async () => Response.json((await flights()).byDest(queryOf(req))));
 }

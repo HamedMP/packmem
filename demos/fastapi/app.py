@@ -2,13 +2,14 @@
 
 import gc
 import json
+import math
 import os
 import resource
 import sys
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import Response, StreamingResponse
 
 MODE = os.environ.get("MODE", "packmem")
@@ -50,9 +51,11 @@ class Baseline:
             import psycopg
             from psycopg.rows import dict_row
 
-            with psycopg.connect(PG_URL) as conn, conn.cursor(row_factory=dict_row) as cur:
+            # same fetch pattern as the packmem mode: a named cursor, 50,000 rows per round trip
+            with psycopg.connect(PG_URL) as conn, conn.cursor(name="flights", row_factory=dict_row) as cur:
+                cur.itersize = 50_000
                 cur.execute(PG_QUERY)
-                self.rows = cur.fetchall()
+                self.rows = list(cur)
             return
         with open(path) as f:
             self.rows = [json.loads(line) for line in f if line.strip()]
@@ -161,6 +164,8 @@ app = FastAPI(title="packmem flights")
 
 
 def q(carrier, origin, dest, min_delay):
+    if min_delay is not None and not math.isfinite(min_delay):
+        raise HTTPException(400, "min_delay must be a finite number")
     return {"carrier": carrier, "origin": origin, "dest": dest, "min_delay": min_delay}
 
 
@@ -173,7 +178,7 @@ def health():
 
 @app.get("/api/flights")
 def flights(carrier: str | None = None, origin: str | None = None, dest: str | None = None, min_delay: float | None = None,
-            limit: int = Query(50, le=1000), offset: int = 0):
+            limit: int = Query(50, ge=0, le=1000), offset: int = Query(0, ge=0)):
     return Response(dumps(store.list(q(carrier, origin, dest, min_delay), limit, offset)), media_type="application/json")
 
 
