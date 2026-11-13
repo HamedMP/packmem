@@ -4,6 +4,8 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## Unreleased
 
+## 0.1.2 - 2026-11-13
+
 ### Changed
 - Loading text-heavy records is faster: chunks holding megabytes of text are packed on a background thread, and
   nested JSON values are kept as written instead of being re-serialised. `PACKMEM_LOAD_THREADS=0` turns the
