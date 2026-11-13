@@ -9,7 +9,7 @@ authors = ["Finna Labs Inc."]
 readme = "README.md"
 keywords = ["compression", "columnar", "memory", "encoding"]
 categories = ["compression", "data-structures"]
-exclude = ["benchmarks/", "experiments/", "docs/", "python/", "data/", ".github/"]
+include = ["/src/**", "/tests/**", "/Cargo.toml", "/README.md", "/LICENSE", "/NOTICE"]
 
 [dependencies]
 fsst-rs = "0.7.0"
