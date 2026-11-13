@@ -1,0 +1,19 @@
+{
+  "name": "packmem-demo-express",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.ts",
+    "start:baseline": "MODE=baseline node src/server.ts",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "express": "^5.3.0",
+    "packmem": "file:../../node"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  }
+}
