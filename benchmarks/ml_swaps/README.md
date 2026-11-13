@@ -108,3 +108,9 @@ would need about 29 GB per process.
 
 A three-way comparison (list, memory-mapped `datasets`, packmem) on the same records: see
 `hf-datasets/RESULT.md`. Its conclusion is that packmem replaces Python lists, not Arrow.
+
+## Table.share() on the Qwen3-VL loader
+
+`qwen3-vl/share/RESULT.md`: four spawn workers on the full set, list against packmem against packmem with
+`share()`. Parent plus workers peak at 22,687 / 4,535 / 2,715 MB, and the first batch arrives in
+24.6 / 4.06 / 1.17 s. The pickled dataset is 690 MB, 308 MB and 913 bytes.

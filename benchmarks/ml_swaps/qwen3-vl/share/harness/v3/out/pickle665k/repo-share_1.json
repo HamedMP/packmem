@@ -1,0 +1,54 @@
+{
+ "tree": "$WORK/repo-share",
+ "mode": "pickle",
+ "datasets": "llava665k",
+ "pid": 37597,
+ "build_s": 7.876064916999894,
+ "n": 665298,
+ "rss_after_build_mb": 779.780096,
+ "footprint_after_build_mb": 642.7128,
+ "pkm_path": "$TMPDIR/packmem-37597-529b9ecd5d313d89.pkm",
+ "pkm_dir": "$TMPDIR",
+ "pkm_bytes": 307625077,
+ "pkm_size_field": 307625077,
+ "pkm_mode": "-rw-------",
+ "table_shared": true,
+ "table_nbytes": 307633620,
+ "pickle_bytes": 913,
+ "pickle_mb": 0.000913,
+ "dumps_s": [
+  0.0,
+  0.0,
+  0.0
+ ],
+ "loads_s": 0.04852083299920196,
+ "table_pickle_bytes": 141,
+ "table_nbytes_mb": 307.63362,
+ "roundtrip_equal": true,
+ "attached_shared": true,
+ "attached_ops": {
+  "setitem": "TypeError: this table is shared read-only; call unshare() on the original, or copy() it, to change it",
+  "append": "TypeError: this table is shared read-only; call unshare() on the original, or copy() it, to change it",
+  "set_column": "TypeError: this table is shared read-only; call unshare() on the original, or copy() it, to change it",
+  "lazy_row_write": "TypeError: this table is shared read-only; call unshare() on the original, or copy() it, to change it",
+  "dict_row_write": "ok",
+  "share_again": "TypeError: this table was loaded from another process's shared file; copy() it first"
+ },
+ "parent_ops": {
+  "setitem": "TypeError: this table is shared read-only; call unshare() on the original, or copy() it, to change it",
+  "lazy_row_write": "TypeError: this table is shared read-only; call unshare() on the original, or copy() it, to change it"
+ },
+ "copy_ops": {
+  "shared": false,
+  "append": "ok",
+  "len": 665299
+ },
+ "parent_row0_unchanged": true,
+ "unshare_s": 0.012103084001864772,
+ "pkm_exists_after_unshare": false,
+ "writable_after_unshare": "ok",
+ "share_s": 0.16060016699702828,
+ "pkm_exists_after_del_gc": false,
+ "loads_after_owner_gone": "FileNotFoundError: shared packmem table $TMPDIR/packmem-37597-4f700aa771cb6396.pkm is gone: the table that shared it was closed or its process ended",
+ "stale_left_by_self": []
+}

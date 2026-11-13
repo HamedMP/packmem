@@ -1,0 +1,57 @@
+start 2026-11-13 21:01:40 21:01  up  8:08, 1 user, load averages: 3.47 4.30 4.96
+verify665k begin 21:01:40 { 3.47 4.30 4.96 }
+verify665k/orig_1 ok load1=3.47 waited=0s
+verify665k/repo_1 ok load1=3.47 waited=0s
+verify665k/repo-share_1 ok load1=3.90 waited=0s
+verify665k end 21:02:23 { 4.14 4.35 4.95 }
+hash20k begin 21:02:23 { 4.14 4.35 4.95 }
+hash20k/orig_1 ok load1=3.97 waited=5s
+hash20k end 21:02:41 { 3.82 4.27 4.91 }
+hashepoch begin 21:02:41 { 3.82 4.27 4.91 }
+hashepoch/orig_1 ok load1=3.82 waited=0s
+hashepoch end 21:05:56 { 6.05 5.08 5.12 }
+pickle665k begin 21:05:56 { 6.05 5.08 5.12 }
+pickle665k/orig_1 ok load1=3.85 waited=287s
+pickle665k/repo_1 ok load1=3.97 waited=80s
+pickle665k/repo-share_1 ok load1=3.99 waited=121s
+pickle665k end 21:15:09 { 4.13 4.67 4.91 }
+A available_bytes=20238286848 vm.swapusage: total = 4096.00M  used = 2961.62M  free = 1134.38M  (encrypted)
+A_spawn20k begin 21:15:09 { 4.13 4.67 4.91 }
+A_spawn20k/repo_1 ok load1=3.94 waited=15s
+A_spawn20k/repo-share_1 ok load1=3.94 waited=105s
+A_spawn20k/repo-share_2 ok load1=3.74 waited=0s
+A_spawn20k/repo_2 ok load1=3.97 waited=0s
+A_spawn20k/repo_3 ok load1=4.00 waited=55s
+A_spawn20k/repo-share_3 ok load1=3.88 waited=40s
+A_spawn20k end 21:23:11 { 4.61 4.54 4.73 }
+B available_bytes=19894599680 vm.swapusage: total = 4096.00M  used = 2961.62M  free = 1134.38M  (encrypted)
+B_epoch_spawn begin 21:23:11 { 4.61 4.54 4.73 }
+B_epoch_spawn/repo_1 ok load1=4.00 waited=81s
+B_epoch_spawn/repo-share_1 TIMEOUT load1=5.33 waited=602s
+B_epoch_spawn/repo-share_2 ok load1=3.99 waited=40s
+B_epoch_spawn/repo_2 TIMEOUT load1=5.02 waited=602s
+B_epoch_spawn/repo_3 ok load1=3.84 waited=235s
+B_epoch_spawn/repo-share_3 TIMEOUT load1=5.34 waited=602s
+B_epoch_spawn end 22:10:59 { 6.38 7.68 7.17 }
+diag_spawn20k begin 22:11:00 { 6.38 7.68 7.17 }
+diag_spawn20k/repo_1 ok load1=3.74 waited=521s
+diag_spawn20k/repo-share_1 ok load1=3.96 waited=291s
+diag_spawn20k end 22:26:06 { 3.91 4.70 5.54 }
+end 2026-11-13 22:26:07 22:26  up  9:32, 1 user, load averages: 3.91 4.70 5.54
+addon/mixcheck_f34d ok load1=3.94 waited=265s
+addon/mixcheck_single_f34d ok load1=3.99 waited=165s
+seq_build start 2026-11-13 22:36:42 22:36  up  9:43, 1 user, load averages: 4.57 4.62 5.05
+f34d69df52486e3895571667cff75f2e2fa46967b8714580ff2a8c05bfd57cbd  $WORK/wheel/packmem-0.1.1-cp310-abi3-macosx_11_0_arm64.whl
+db12cb13ac6ee12830b3d8d3f2167f2bd8ca2afaf080f49da7b89b9f9ad49f9a  $WORK/wheel-new/packmem-0.1.1-cp310-abi3-macosx_11_0_arm64.whl
+$WORK/llava-next/venv 0.1.1
+build_f34d begin 22:36:42 { 4.57 4.62 5.05 }
+wheel-new replaced with 75dbc431b9738cfe559f282e1301fcae54287aa767d35ac3529ab9ae1f58ae00  $WORK/wheel-new/packmem-0.1.1-cp310-abi3-macosx_11_0_arm64.whl at 22:39:58 (db12cb13 discarded, never installed)
+build_f34d/repo_1 ok load1=3.92 waited=196s
+build_f34d/repo_2 ok load1=3.65 waited=0s
+build_f34d/repo_3 ok load1=3.79 waited=0s
+build_f34d end 22:41:12 { 4.13 4.32 4.79 }
+$WORK/venv 0.1.1
+$WORK/llava-next/venv 0.1.1
+build_new begin 22:56:04 { 4.53 4.54 4.67 }
+build_new/orig_1 ok load1=3.90 waited=251s
+build_new/repo_1 ok load1=3.95 waited=20s

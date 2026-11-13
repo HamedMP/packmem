@@ -1,0 +1,20 @@
+{
+ "tree": "$WORK/orig",
+ "mode": "pickle",
+ "datasets": "llava665k",
+ "pid": 35469,
+ "build_s": 2.924690499999997,
+ "n": 665298,
+ "rss_after_build_mb": 5250.49856,
+ "footprint_after_build_mb": 5202.268384,
+ "pickle_bytes": 689756296,
+ "pickle_mb": 689.756296,
+ "dumps_s": [
+  4.198,
+  3.797,
+  3.856
+ ],
+ "loads_s": 1.7241097920014,
+ "table_pickle_bytes": 689755524,
+ "roundtrip_equal": true
+}

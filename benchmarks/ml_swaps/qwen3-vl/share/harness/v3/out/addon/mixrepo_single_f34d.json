@@ -1,0 +1,13 @@
+{
+ "tree": "$WORK/repo",
+ "build_s": 7.75,
+ "built": {
+  "footprint_mb": 621.3,
+  "peak_mb": 621.3,
+  "malloc_in_use_mb": 409.8,
+  "malloc_allocated_mb": 604.8,
+  "rows": 665298,
+  "nbytes_mb": 307.6,
+  "chunks": null
+ }
+}

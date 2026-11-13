@@ -1,0 +1,13 @@
+{
+ "tree": "$WORK/orig",
+ "mode": "hash",
+ "datasets": "llava665k",
+ "pid": 28137,
+ "build_s": 2.9159251669989317,
+ "n": 665298,
+ "rss_after_build_mb": 5251.842048,
+ "footprint_after_build_mb": 5203.595464,
+ "hash_s": 5.450357334000728,
+ "n_samples": 20000,
+ "batches_sha256": "3c98d761142c9abb7ea7a169f03160b374b3e4cfa180c2c45c1ad6eba47f003a"
+}
