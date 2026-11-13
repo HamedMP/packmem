@@ -5,7 +5,7 @@ appended to and updated, without being unpacked.
 
 ```python
 rows = [json.loads(line) for line in open("events.jsonl")]   # before: 712 MB
-rows = packmem.load_jsonl("events.jsonl")                    # after:   21 MB
+rows = packmem.load_jsonl("events.jsonl")                    # after:   20 MB
 ```
 
 Charts and the project story: https://hamedmp.github.io/packmem/
@@ -17,15 +17,15 @@ library with a Python package on top. Status: **alpha**.
 ## Results
 
 336,776 real flight records (nycflights13, 104 MB as JSON lines) on an Apple M4 Pro, median of
-five fresh processes. Lower is better everywhere. pandas and polars are run with default
+five fresh processes at load average 4 to 5. Lower is better everywhere. pandas and polars are run with default
 settings (inferred types); tuning their column types for memory would narrow the gap.
 
 | Holder | Resident MB | Load s | Count by carrier ms | Group by dest ms | Loop over rows ms |
 | --- | --- | --- | --- | --- | --- |
-| List of dicts | 712 | 0.63 | 31 | 59 | 41 |
-| packmem | 21 | 0.26 | 0.60 | 0.20 | 155 (25 with lazy rows) |
-| pandas, Arrow-backed | 215 | 0.09 | 1.4 | 2.4 | 2,650 |
-| polars | 167 | 0.04 | 2.8 | 3.4 | 285 |
+| List of dicts | 712 | 0.61 | 30 | 59 | 31 |
+| packmem | 20 | 0.25 | 0.57 | 0.14 | 153 (24 with lazy rows) |
+| pandas, Arrow-backed | 215 | 0.09 | 1.4 | 2.1 | 2,600 |
+| polars | 170 | 0.04 | 2.4 | 3.3 | 282 |
 
 ### Against polars tuned for memory
 
@@ -53,14 +53,16 @@ One line changed in two existing tools, outputs identical:
 
 ### Where it loses
 
-- **Plain iteration is slower.** `for r in rows` rebuilds a dict per record and is about 4 times
+- **Plain iteration is slower.** `for r in rows` rebuilds a dict per record and is about 5 times
   slower than looping over the original list. `rows.lazy()` closes the gap but yields mappings,
   not dicts.
-- **Random row access** is about 2.5 times slower than indexing a list.
+- **Random row access** is about 7 times slower than indexing a list (8.7 ms against 1.3 ms for
+  10,000 rows).
 - **Dataframes load faster** and win some numeric filters. packmem is not a dataframe; it
   replaces the list of dicts.
 - **Group-by on a column with very many distinct values is slow.** Counting 436 thousand
-  distinct IP addresses over 2 million rows takes about 300 ms, against 11 ms in polars.
+  distinct IP addresses over 2 million rows takes about 310 ms, against 11 ms in polars (and
+  590 ms for a dict loop over the list).
 - **Small collections gain little.** packmem breaks even with the list at about 300 records
   and saves 2 to 4 times at 10,000; the large ratios start around 100,000. Memory used while
   loading stays with the allocator, which is most of what a small table occupies.

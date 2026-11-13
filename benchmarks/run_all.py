@@ -45,8 +45,11 @@ def merge(rs):
     return o
 
 
+import os
+# one untimed import first: right after a reinstall the first load of the native library is slow on macOS
+subprocess.run([sys.executable, "-c", "import packmem, pandas, polars"], capture_output=True)
 with open(out, "w") as f:
-    f.write(json.dumps({"machine": machine(), "reps": reps, "started": time.strftime("%Y-%m-%dT%H:%M:%S%z")}) + "\n")
+    f.write(json.dumps({"machine": machine(), "reps": reps, "started": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "loadavg_start": [round(x, 2) for x in os.getloadavg()]}) + "\n")
     for script, args in RUNS:
         rs = []
         for _ in range(reps):
@@ -56,3 +59,4 @@ with open(out, "w") as f:
             rs.append(json.loads(p.stdout.strip().splitlines()[-1]))
         line = merge(rs); f.write(json.dumps(line) + "\n"); f.flush()
         print(script, *args, "rss", line["rss_mb"][0], "footprint", line["footprint_mb"][0], "load", line["load_s"][0], flush=True)
+    f.write(json.dumps({"loadavg_end": [round(x, 2) for x in os.getloadavg()]}) + "\n")

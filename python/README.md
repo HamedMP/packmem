@@ -73,11 +73,11 @@ Measured on 336,776 real flight records on an Apple M4 Pro (see `benchmarks/` in
 
 | | List of dicts | packmem |
 | --- | --- | --- |
-| Resident memory | 712 MB | 21 MB |
-| Load from JSON lines | 0.63 s | 0.26 s |
+| Resident memory | 712 MB | 20 MB |
+| Load from JSON lines | 0.61 s | 0.25 s |
 | Filter and aggregate queries | 31 to 59 ms | 0.13 to 1.3 ms |
-| Loop reading one field | 41 ms | 25 ms with `rows.lazy()`, 155 ms with plain iteration |
-| 10,000 random rows as dicts | 5 ms | 12 ms |
+| Loop reading one field | 31 ms | 24 ms with `rows.lazy()`, 153 ms with plain iteration |
+| 10,000 random rows as dicts | 1.3 ms | 8.7 ms |
 
 Plain iteration builds a full dict per record, which is why it is slower than the list it replaces.
 Loading from `csv.DictReader` or a database cursor is 1.2 to 1.5 times slower than building the list.

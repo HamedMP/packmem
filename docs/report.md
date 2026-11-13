@@ -62,22 +62,22 @@ Both tools are command-line utilities that load records and pass over them once,
 
 ## Update: Apple silicon run and an optimisation pass
 
-The results reproduce on an Apple M4 Pro with identical query answers and packed sizes, and a round of changes then cut packmem's resident memory on the flight data from 49 to 21 MB and its JSON load time from 1.00 to 0.26 s. All figures below are medians of 5 fresh processes on macOS 26.6 (48 GB, Python 3.12); the machine was not idle (load average 3 to 5).
+The results reproduce on an Apple M4 Pro with identical query answers and packed sizes, and a round of changes then cut packmem's resident memory on the flight data from 49 to 20 MB and its JSON load time from 1.00 to 0.25 s. All figures below are medians of 5 fresh processes on macOS 26.6 (48 GB, Python 3.12). The "as first built" column was measured at load average about 5; the other two columns come from a later pass at load average 4 to 5 with fewer other jobs running, in which the plain list's own loops and lookups ran faster than first measured.
 
 ### Flight data, before and after the changes (336,776 rows)
 
 | Measure | List of dicts | packmem as first built | packmem now |
 | --- | --- | --- | --- |
-| Resident MB | 712 | 49 | 21 |
+| Resident MB | 712 | 49 | 20 |
 | Peak MB | 722 | 59 | 30 |
-| Load from JSON lines, s | 0.63 | 1.00 | 0.26 |
-| Count by carrier, ms | 31 | 0.58 | 0.60 |
-| Sum with filter, ms | 35 | 1.56 | 1.32 |
-| Group by dest, ms | 59 | 0.13 | 0.20 |
-| Delay over 60, ms | 39 | 2.20 | 0.41 |
-| 10k row lookups, ms | 5.0 | 13.3 | 11.7 |
-| Loop all rows as dicts, ms | 41 | 192 | 155 |
-| Loop all rows, lazy rows, ms | n/a | n/a | 25 |
+| Load from JSON lines, s | 0.61 | 1.00 | 0.25 |
+| Count by carrier, ms | 30 | 0.58 | 0.57 |
+| Sum with filter, ms | 33 | 1.56 | 1.34 |
+| Group by dest, ms | 59 | 0.13 | 0.14 |
+| Delay over 60, ms | 39 | 2.20 | 0.43 |
+| 10k row lookups, ms | 1.3 | 13.3 | 8.7 |
+| Loop all rows as dicts, ms | 31 | 192 | 153 |
+| Loop all rows, lazy rows, ms | n/a | n/a | 24 |
 
 For comparison on the same machine, with default settings and inferred types: Arrow-backed pandas held 215 MB and polars 167 MB (neither was tuned for memory); polars still loads 6 times faster (0.04 s) and pandas is 3 times faster on the delay filter (0.14 ms). On the nginx logs resident memory went from 57 MB (list) to 11 MB (27 MB before the changes).
 
@@ -86,7 +86,7 @@ For comparison on the same machine, with default settings and inferred types: Ar
 - **JSON is parsed straight into columns.** No intermediate object per record, and strings go into one buffer per column instead of one allocation each.
 - **Smaller chunks, packed once.** Chunks are 16,384 rows instead of 65,536, and bulk loads pack each chunk once instead of re-packing the open one as it grows. String compression is also skipped for chunks with under 128 KB of text, where training cost more memory than it saved. Packed size rose 7% on the flight data (7.57 to 8.10 MB).
 - **Decimal columns filter on the packed form.** Range and equality on floats stored as scaled integers no longer fall back to a per-row check.
-- **Lazy rows.** `rows.lazy()` yields rows that decode a field when it is read and write back on assignment. A loop reading one field runs in 25 ms against 41 ms for the plain list. Plain iteration still builds a dict per record and is 3.8 times slower than the list.
+- **Lazy rows.** `rows.lazy()` yields rows that decode a field when it is read and write back on assignment. A loop reading one field runs in 24 ms against 31 ms for the plain list. Plain iteration still builds a dict per record and is 4.9 times slower than the list, and reading 10,000 random rows as dicts is 6.7 times slower.
 - **Minimum Python is now 3.10**, which lets strings be read without copying; `csv.DictReader` loading went from 1.54 to 0.67 s (the list takes 0.46 s).
 - **Fixed:** negative zero lost its sign in decimal-scaled float columns.
 
@@ -106,9 +106,17 @@ packmem breaks even at about 300 records. Below 10,000 the saving is modest beca
 
 `sort`, `insert`, `pop`, `reverse`, `clear` and `del` now exist and match a plain list in randomised and property-based tests. Each rebuilds the table, so it costs time proportional to the table's size. The property tests also found two bugs, both fixed: a record with no keys shifted the column order of later records, and `NaN` or `Infinity` in JSON input was rejected where `json.loads` accepts it.
 
+### High-cardinality group-by and the 2-million-row log
+
+On the synthetic 2-million-row log, grouping by IP address (436 thousand distinct values) takes 311 ms in packmem against 591 ms for a dict loop over the list and about 11 ms in polars. It was 698 ms before string groups were counted by their raw bytes. The same run shows the cost of plain iteration at scale: 695 ms against 226 ms for the list (146 ms with lazy rows), with 99 MB resident against 3,053 MB.
+
+### Pickling
+
+A table pickles as its packed columns: the flight table gives 8 MB in 3 ms and loads in 1 ms, against 46 MB, 125 ms and 163 ms for the list of dicts. This is what data-loader workers started with spawn need, since each worker unpickles the whole dataset.
+
 ### Where the remaining memory is
 
-Of the 21 MB resident, 8 MB is packed data; the rest is memory the macOS allocator keeps after the load buffers are freed, about 10 to 13 MB regardless of table size. Asking the allocator to release it had no effect. The remaining lever is making the load buffers smaller, for example by de-duplicating repeated strings as they arrive.
+Of the 20 MB resident, 8 MB is packed data; the rest is memory the macOS allocator keeps after the load buffers are freed, about 10 to 13 MB regardless of table size. Asking the allocator to release it had no effect. The remaining lever is making the load buffers smaller, for example by de-duplicating repeated strings as they arrive.
 
 ### Tools with one line changed, on the Mac
 
