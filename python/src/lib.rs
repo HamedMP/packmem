@@ -571,31 +571,47 @@ impl PyTable {
         names: Vec<String>,
         rows: &Bound<'_, PyAny>,
     ) -> PyResult<usize> {
+        // resolve the columns once; every row then writes by position
+        let cols: Vec<usize> = names.iter().map(|n| self.t.col_for(n)).collect();
+        self.t.abort_row();
         self.bulk(py, |s| {
             let mut n = 0;
             for row in rows.try_iter()? {
+                let row = row?;
                 let mut i = 0;
-                let r = (|| -> PyResult<()> {
-                    for v in row?.try_iter()? {
-                        let v = v?;
-                        let name = names.get(i).ok_or_else(|| {
-                            PyValueError::new_err("row has more values than there are column names")
-                        })?;
-                        let c = s.t.col_for(name);
-                        if v.is_exact_instance_of::<PyString>() {
-                            s.t.put_str_at(c, &v.downcast::<PyString>()?.to_cow()?)
-                        } else {
-                            s.t.put_at(c, to_cell(&v)?)
-                        }
-                        i += 1
+                let mut put = |s: &mut Self, v: &Bound<'_, PyAny>| -> PyResult<()> {
+                    let c = *cols.get(i).ok_or_else(|| {
+                        PyValueError::new_err("row has more values than there are column names")
+                    })?;
+                    if v.is_exact_instance_of::<PyString>() {
+                        s.t.put_str_at(c, &v.downcast::<PyString>()?.to_cow()?)
+                    } else {
+                        s.t.put_at(c, to_cell(v)?)
                     }
-                    if i != names.len() {
-                        return Err(PyValueError::new_err(
-                            "row has fewer values than there are column names",
-                        ));
+                    i += 1;
+                    Ok(())
+                };
+                let r = (|| -> PyResult<()> {
+                    if let Ok(t) = row.downcast_exact::<PyTuple>() {
+                        for v in t.iter_borrowed() {
+                            put(s, &v)?
+                        }
+                    } else {
+                        for v in row.try_iter()? {
+                            put(s, &v?)?
+                        }
                     }
                     Ok(())
                 })();
+                let r = r.and_then(|_| {
+                    if i == cols.len() {
+                        Ok(())
+                    } else {
+                        Err(PyValueError::new_err(
+                            "row has fewer values than there are column names",
+                        ))
+                    }
+                });
                 if let Err(e) = r {
                     s.t.abort_row();
                     return Err(e);

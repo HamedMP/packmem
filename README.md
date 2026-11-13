@@ -8,6 +8,8 @@ rows = [json.loads(line) for line in open("events.jsonl")]   # before: 712 MB
 rows = packmem.load_jsonl("events.jsonl")                    # after:   21 MB
 ```
 
+Charts and the project story: https://hamedmp.github.io/packmem/
+
 packmem stores each field of a record collection as a column, picks a lightweight encoding for
 it from a sample of the data, and runs filters and aggregates on the encoded form. It is a Rust
 library with a Python package on top. Status: **alpha**.
