@@ -12,6 +12,8 @@ datasets, the upstream clones and the environments are not: each `RESULT` file n
 commit and the commands. The Linux runs' raw traces were lost when their working directory on the
 server was removed during unrelated clean-up, so for those only the per-run summaries remain, and
 batch equality for ranks 3 to 7 of the 8x4 fork runs is not confirmed (see `linux-node/RESULT.md`).
+One naming trap in the raw files: keys ending `_mb` in the Qwen3-VL run files (for example
+`worker_peak_mb` under `epoch665k_fork/`) hold MiB. The tables here convert to MB (10^6 bytes).
 The patches are diffs of Apache-2.0 projects: QwenLM/Qwen3-VL, OpenBMB/MiniCPM-V and
 LLaVA-VL/LLaVA-NeXT.
 
