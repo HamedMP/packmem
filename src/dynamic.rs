@@ -1047,19 +1047,53 @@ impl DynTable {
         let c = &self.cols[col];
         let mut s = Num::Int(0);
         if let Some(sel) = sel {
-            for &r in sel {
-                let r = r as usize;
-                match self.chunk_of(r, col) {
-                    Some((_, ch, o)) if ch.clean() => match &ch.data {
-                        Data::Absent | Data::Str(_) => {}
-                        Data::Int { p, .. } => {
-                            if ch.holes == 0 || !ch.hole(o) {
-                                s = s.add(&Cell::Int(p.get(o)))
+            // work through the selection one chunk at a time, so the chunk and its encoding are resolved once per run
+            let (mut i, mut offs) = (0, Vec::new());
+            while i < sel.len() {
+                let k = sel[i] as usize / CHUNK;
+                let j = i + sel[i..]
+                    .iter()
+                    .take_while(|&&r| r as usize / CHUNK == k)
+                    .count();
+                let run = &sel[i..j];
+                i = j;
+                match self.chunk_of(run[0] as usize, col) {
+                    Some((_, ch, _))
+                        if ch.clean()
+                            && (run[run.len() - 1] as usize % CHUNK) < ch.len as usize =>
+                    {
+                        match (&ch.data, s) {
+                            (Data::Absent | Data::Str(_), _) => {}
+                            (Data::Int { p, .. }, Num::Int(acc)) if ch.safe_sum => {
+                                offs.clear();
+                                offs.extend(
+                                    run.iter()
+                                        .map(|&r| r % CHUNK as u32)
+                                        .filter(|&o| ch.holes == 0 || !ch.hole(o as usize)),
+                                );
+                                s = Num::Int(acc + p.sum_at(&offs) as i128)
+                            }
+                            (Data::Dec { scale, p }, _) => {
+                                let d = POW10[*scale as usize];
+                                for &r in run {
+                                    let o = r as usize % CHUNK;
+                                    if ch.holes == 0 || !ch.hole(o) {
+                                        s = s.add(&Cell::Float(p.get(o) as f64 / d))
+                                    }
+                                }
+                            }
+                            _ => {
+                                for &r in run {
+                                    s = s.add(&ch.get(r as usize % CHUNK))
+                                }
                             }
                         }
-                        _ => s = s.add(&ch.get(o)),
-                    },
-                    _ => s = s.add(&self.get(r, col)),
+                    }
+                    _ => {
+                        for &r in run {
+                            s = s.add(&self.get(r as usize, col))
+                        }
+                    }
                 }
             }
             return s;
@@ -1093,8 +1127,47 @@ impl DynTable {
         let c = &self.cols[col];
         let mut m: HashMap<String, usize> = HashMap::new();
         if let Some(sel) = sel {
-            for &r in sel {
-                *m.entry(to_text(&self.get(r as usize, col))).or_default() += 1
+            // dictionary columns: count codes per chunk and decode each distinct value once
+            let (mut i, mut counts) = (0, Vec::<usize>::new());
+            while i < sel.len() {
+                let k = sel[i] as usize / CHUNK;
+                let j = i + sel[i..]
+                    .iter()
+                    .take_while(|&&r| r as usize / CHUNK == k)
+                    .count();
+                let run = &sel[i..j];
+                i = j;
+                let dict = match self.chunk_of(run[0] as usize, col) {
+                    Some((_, ch, _))
+                        if ch.clean()
+                            && ch.holes == 0
+                            && (run[run.len() - 1] as usize % CHUNK) < ch.len as usize =>
+                    {
+                        match &ch.data {
+                            Data::Str(p) => p.dict_code(0).map(|(_, n)| (p, n)),
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                };
+                match dict {
+                    Some((p, n)) => {
+                        counts.clear();
+                        counts.resize(n, 0);
+                        for &r in run {
+                            counts[p.dict_code(r as usize % CHUNK).unwrap().0 as usize] += 1
+                        }
+                        for (code, &n) in counts.iter().enumerate().filter(|(_, n)| **n > 0) {
+                            *m.entry(serde_json::to_string(&p.dict_value(code as u32)).unwrap())
+                                .or_default() += n
+                        }
+                    }
+                    None => {
+                        for &r in run {
+                            *m.entry(to_text(&self.get(r as usize, col))).or_default() += 1
+                        }
+                    }
+                }
             }
         } else {
             for ch in c.sealed() {
