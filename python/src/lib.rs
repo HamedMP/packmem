@@ -1016,8 +1016,13 @@ impl PyTable {
         self.sync_keys(py)
     }
     /// The packed columns as bytes, without re-encoding. Packs any rows still held uncompressed first.
-    fn to_bytes<'py>(&mut self, py: Python<'py>) -> Bound<'py, PyBytes> {
-        PyBytes::new(py, &self.t.to_bytes())
+    fn to_bytes<'py>(&mut self, py: Python<'py>) -> PyResult<Bound<'py, PyBytes>> {
+        // written straight into the bytes object: one copy of the packed size, nothing left behind
+        let n = self.t.byte_len();
+        PyBytes::new_with(py, n, |out| {
+            self.t.write_bytes(out);
+            Ok(())
+        })
     }
     #[staticmethod]
     fn from_bytes(py: Python<'_>, data: &[u8]) -> PyResult<PyTable> {

@@ -322,7 +322,7 @@ impl StrPool {
                 for s in &p.symbols {
                     w.u64(s.to_u64())
                 }
-                w.0.extend_from_slice(&p.lengths)
+                w.raw(&p.lengths)
             }
         }
     }

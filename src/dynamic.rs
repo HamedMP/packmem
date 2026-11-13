@@ -1465,9 +1465,25 @@ impl DynTable {
     /// The table as bytes, holding the packed columns as they are. Reading them back with `from_bytes` does not re-encode
     /// anything, so it costs about one copy of the packed size. The format is tied to this version of the library.
     pub fn to_bytes(&mut self) -> Vec<u8> {
+        let mut out = vec![0u8; self.byte_len()];
+        self.write_bytes(&mut out);
+        out
+    }
+    /// Size of the table's byte form. Packs any rows still held uncompressed first.
+    pub fn byte_len(&mut self) -> usize {
         self.compact();
-        let mut w = W::default();
-        w.0.extend_from_slice(MAGIC);
+        let mut w = W::counting();
+        self.write(&mut w);
+        w.written()
+    }
+    /// Write the byte form into `out`, which must be exactly `byte_len()` long (call that first: it packs the open rows).
+    pub fn write_bytes(&self, out: &mut [u8]) {
+        assert_eq!(self.tail_len(), 0, "call byte_len() before write_bytes()");
+        let mut w = W::into(out);
+        self.write(&mut w);
+    }
+    fn write(&self, w: &mut W) {
+        w.raw(MAGIC);
         w.u8(match self.hint {
             Hint::Memory => 0,
             Hint::Balanced => 1,
@@ -1478,10 +1494,9 @@ impl DynTable {
         for (name, c) in self.names.iter().zip(&self.cols) {
             w.bytes(name.as_bytes());
             for ch in c.sealed() {
-                ch.write(&mut w)
+                ch.write(w)
             }
         }
-        w.0
     }
     pub fn from_bytes(b: &[u8]) -> Res<DynTable> {
         let mut r = R::new(b);

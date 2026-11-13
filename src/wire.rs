@@ -3,8 +3,35 @@
 
 pub type Res<T> = Result<T, String>;
 
-#[derive(Default)]
-pub struct W(pub Vec<u8>);
+/// Writes into a caller-provided buffer, or only counts bytes when given none. Serialising is two passes (count, then
+/// write into a buffer of exactly that size), so no growing vector and no second copy is left behind.
+pub struct W<'a> {
+    out: Option<&'a mut [u8]>,
+    n: usize,
+}
+
+impl<'a> W<'a> {
+    pub fn counting() -> Self {
+        W { out: None, n: 0 }
+    }
+    pub fn into(out: &'a mut [u8]) -> Self {
+        W {
+            out: Some(out),
+            n: 0,
+        }
+    }
+    /// Bytes written (or counted) so far.
+    pub fn written(&self) -> usize {
+        self.n
+    }
+    #[inline]
+    pub fn raw(&mut self, b: &[u8]) {
+        if let Some(out) = &mut self.out {
+            out[self.n..self.n + b.len()].copy_from_slice(b)
+        }
+        self.n += b.len()
+    }
+}
 
 pub struct R<'a> {
     b: &'a [u8],
@@ -13,16 +40,20 @@ pub struct R<'a> {
 
 macro_rules! num {
     ($put:ident, $get:ident, $putv:ident, $getv:ident, $t:ty) => {
-        impl W {
+        impl W<'_> {
             pub fn $put(&mut self, v: $t) {
-                self.0.extend_from_slice(&v.to_le_bytes())
+                self.raw(&v.to_le_bytes())
             }
             pub fn $putv(&mut self, v: &[$t]) {
+                const N: usize = std::mem::size_of::<$t>();
                 self.u64(v.len() as u64);
-                self.0.reserve(std::mem::size_of_val(v));
-                for x in v {
-                    self.0.extend_from_slice(&x.to_le_bytes())
+                let size = std::mem::size_of_val(v);
+                if let Some(out) = &mut self.out {
+                    for (d, x) in out[self.n..self.n + size].chunks_exact_mut(N).zip(v) {
+                        d.copy_from_slice(&x.to_le_bytes())
+                    }
                 }
+                self.n += size
             }
         }
         impl R<'_> {
@@ -49,13 +80,13 @@ num!(u64, get_u64, v_u64, get_v_u64, u64);
 num!(i64, get_i64, v_i64, get_v_i64, i64);
 num!(f64, get_f64, v_f64, get_v_f64, f64);
 
-impl W {
+impl W<'_> {
     pub fn bool(&mut self, v: bool) {
         self.u8(v as u8)
     }
     pub fn bytes(&mut self, v: &[u8]) {
         self.u64(v.len() as u64);
-        self.0.extend_from_slice(v)
+        self.raw(v)
     }
 }
 
