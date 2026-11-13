@@ -242,4 +242,12 @@ const settleOf = (p: string) => (read(p) as { runs: Settle[] } | null)?.runs ?? 
 export const settleMac = settleOf("node/bench/results/darwin-arm64-settle.json")
 export const settleLinux = settleOf("node/bench/results/linux-x64-settle.json")
 
+// Node in-process timings (node/bench/micro.mjs)
+const micro = (read("node/bench/results/darwin-arm64.json") as { rows: { name: string; plain_ms: number; packmem_ms: number }[] } | null)?.rows ?? []
+const microRow = (name: string) => micro.find((r) => r.name === name) ?? null
+export const pgLoadNode = {
+  rows: microRow("Load the flights table from Postgres"),
+  copy: microRow("Load the flights table from Postgres via COPY"),
+}
+
 export const builtOn = new Date().toISOString().slice(0, 10)

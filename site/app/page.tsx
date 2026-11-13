@@ -388,7 +388,11 @@ export default function Page() {
               )}
               <li><b className="font-medium">Small tables gain nothing.</b> {d.breakEven}</li>
               <li><b className="font-medium">A one-line swap can cost time.</b> sqlite-utils used {less(d.tools[0].a, d.tools[0].b)} memory but took {d.tools[0].tb.toFixed(2)} s against {d.tools[0].ta.toFixed(2)} s.</li>
-              <li><b className="font-medium">Loading from Postgres is slower in Node,</b> and sort, insert and delete exist only in the Python package, where each rebuilds the table.</li>
+              <li>
+                <b className="font-medium">Sort, insert and delete rebuild the table,</b> in Python and in Node, so each costs time proportional to its size.
+                {d.pgLoadNode.rows && d.pgLoadNode.copy &&
+                  ` In Node, fromPg takes ${(d.pgLoadNode.rows.packmem_ms / d.pgLoadNode.rows.plain_ms).toFixed(1)} times as long as plain node-postgres rows; fromPgCopy, which streams COPY output into the native parser, took ${ms(d.pgLoadNode.copy.packmem_ms)} against ${ms(d.pgLoadNode.copy.plain_ms)}.`}
+              </li>
             </ul>
           </Section>
 
@@ -406,7 +410,7 @@ export default function Page() {
               </TabsContent>
               <TabsContent value="node" className="flex flex-col gap-3">
                 <Code>{SNIPPETS.node}</Code>
-                <p className="text-sm text-muted-foreground">An array-like table for Node 20+, with Postgres loaders and JSON responses streamed from the columns. Prebuilt for Linux x86-64 and arm64 (glibc 2.34+), macOS on Apple silicon and Windows x64; other platforms build from source with Rust.</p>
+                <p className="text-sm text-muted-foreground">An array-like table for Node 20+: list methods, lazy rows, CSV and Postgres COPY loaders, and JSON responses streamed from the columns. The same API runs on Cloudflare Workers through <code className="font-mono text-xs">packmem/wasm</code>. Prebuilt for Linux x86-64 and arm64 (glibc 2.34+), macOS on Apple silicon and Windows x64; other platforms build from source with Rust.</p>
               </TabsContent>
               <TabsContent value="rust" className="flex flex-col gap-3">
                 <Code>{SNIPPETS.rust}</Code>
