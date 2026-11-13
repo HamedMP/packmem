@@ -298,6 +298,8 @@ struct PyTable {
     template: Option<Py<PyDict>>,
     /// Key objects seen at each position of the last appended dicts, with their column. Readers such as csv.DictReader reuse the same key objects for every row.
     seen_keys: Vec<(Py<PyAny>, usize)>,
+    /// Set on tables that are shared with other processes: every change is refused, so the copies cannot diverge.
+    frozen: bool,
 }
 
 /// Builds one dict per visited row by copying a template that already holds every key, then replacing values.
@@ -544,6 +546,12 @@ impl PyTable {
         }
         sink.finish()
     }
+    fn guard(&self) -> PyResult<()> {
+        if self.frozen {
+            return Err(PyTypeError::new_err("this table is shared read-only; call unshare() on the original, or copy() it, to change it"));
+        }
+        Ok(())
+    }
     fn check(&self, i: usize) -> PyResult<()> {
         if i >= self.t.len() {
             Err(PyIndexError::new_err("row index out of range"))
@@ -563,17 +571,20 @@ impl PyTable {
             keys: vec![],
             template: None,
             seen_keys: vec![],
+            frozen: false,
         })
     }
     fn __len__(&self) -> usize {
         self.t.len()
     }
     fn append(&mut self, py: Python<'_>, row: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.guard()?;
         let r = self.push_any(py, row);
         self.sync_keys(py)?;
         r
     }
     fn extend(&mut self, py: Python<'_>, rows: &Bound<'_, PyAny>) -> PyResult<usize> {
+        self.guard()?;
         self.bulk(py, |s| {
             let mut n = 0;
             for r in rows.try_iter()? {
@@ -592,6 +603,7 @@ impl PyTable {
         rows: &Bound<'_, PyAny>,
         default: Option<Bound<'_, PyAny>>,
     ) -> PyResult<usize> {
+        self.guard()?;
         // resolve the columns once; every row then writes by position
         let cols: Vec<usize> = names.iter().map(|n| self.t.col_for(n)).collect();
         self.t.abort_row();
@@ -655,6 +667,7 @@ impl PyTable {
         delimiter: &str,
         infer: bool,
     ) -> PyResult<usize> {
+        self.guard()?;
         let &[delimiter] = delimiter.as_bytes() else {
             return Err(PyValueError::new_err(
                 "delimiter must be one ASCII character",
@@ -683,6 +696,7 @@ impl PyTable {
     }
     /// Parse a JSON-lines file in native code; no Python objects are created per record.
     fn load_jsonl_path(&mut self, py: Python<'_>, path: &str) -> PyResult<usize> {
+        self.guard()?;
         let f = std::fs::File::open(path)?;
         self.bulk(py, |s| {
             let mut rd = BufReader::with_capacity(1 << 20, f);
@@ -701,12 +715,14 @@ impl PyTable {
         })
     }
     fn append_json(&mut self, py: Python<'_>, line: &str) -> PyResult<()> {
+        self.guard()?;
         let r = self.push_text(py, line, 1);
         self.sync_keys(py)?;
         r
     }
     /// Parse many JSON lines from any iterable of str or bytes.
     fn extend_json(&mut self, py: Python<'_>, lines: &Bound<'_, PyAny>) -> PyResult<usize> {
+        self.guard()?;
         self.bulk(py, |s| {
             let mut n = 0;
             for l in lines.try_iter()? {
@@ -727,6 +743,7 @@ impl PyTable {
     }
     /// Parse a file holding one JSON array of objects, streaming element by element.
     fn load_json_array_path(&mut self, py: Python<'_>, path: &str) -> PyResult<usize> {
+        self.guard()?;
         let f = std::fs::File::open(path)?;
         self.bulk(py, |s| {
             let mut de =
@@ -740,6 +757,7 @@ impl PyTable {
     }
     /// Same, reading from any Python file object.
     fn load_json_array_file(&mut self, py: Python<'_>, f: &Bound<'_, PyAny>) -> PyResult<usize> {
+        self.guard()?;
         self.bulk(py, |s| {
             let mut de = serde_json::Deserializer::from_reader(PyReader {
                 f: f.clone(),
@@ -821,12 +839,14 @@ impl PyTable {
         name: &str,
         v: &Bound<'_, PyAny>,
     ) -> PyResult<()> {
+        self.guard()?;
         self.check(i)?;
         self.t.set_by_name(i, name, to_cell(v)?);
         self.sync_keys(py)
     }
     /// Replace a whole record: keys not present in `row` become absent.
     fn set_row(&mut self, py: Python<'_>, i: usize, row: &Bound<'_, PyDict>) -> PyResult<()> {
+        self.guard()?;
         self.check(i)?;
         let mut cells: Vec<(String, Cell)> = vec![];
         for (k, v) in row.iter() {
@@ -998,6 +1018,7 @@ impl PyTable {
         name: &str,
         value: &Bound<'_, PyAny>,
     ) -> PyResult<()> {
+        self.guard()?;
         let cell = to_cell(value)?;
         self.t.set_column(name, |_| cell.clone());
         self.sync_keys(py)
@@ -1009,6 +1030,7 @@ impl PyTable {
         name: &str,
         values: &Bound<'_, PyAny>,
     ) -> PyResult<()> {
+        self.guard()?;
         let mut cells = Vec::with_capacity(self.t.len());
         for v in values.try_iter()? {
             cells.push(to_cell(&v?)?)
@@ -1035,12 +1057,14 @@ impl PyTable {
             keys: vec![],
             template: None,
             seen_keys: vec![],
+            frozen: false,
         };
         t.sync_keys(py)?;
         Ok(t)
     }
     /// Append every row of another table natively.
     fn extend_table(&mut self, py: Python<'_>, other: &Bound<'_, PyTable>) -> PyResult<()> {
+        self.guard()?;
         let o = other
             .try_borrow()
             .map_err(|_| PyValueError::new_err("cannot extend a table with itself"))?;
@@ -1057,6 +1081,54 @@ impl PyTable {
             Ok(())
         })
     }
+    /// Write the packed columns to a file other processes can attach to. Returns the file's size.
+    fn write_file(&mut self, path: &str) -> PyResult<usize> {
+        use std::io::Write;
+        let n = self.t.byte_len();
+        // owner-only: the file holds the table's data and sits in a directory other users can list
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        std::os::unix::fs::OpenOptionsExt::mode(&mut options, 0o600);
+        let file = options.open(path)?;
+        let mut out = std::io::BufWriter::with_capacity(1 << 20, file);
+        // written through a small window, so the parent never holds a second copy of the table
+        self.t
+            .write_to(&mut |b: &[u8]| out.write_all(b))
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        out.flush()?;
+        Ok(n)
+    }
+    /// Load a table from a file written by `write_file`, read-only. The file is mapped, so nothing but the table itself
+    /// is allocated in this process.
+    #[staticmethod]
+    fn attach(py: Python<'_>, path: &str, size: usize) -> PyResult<PyTable> {
+        let file = std::fs::File::open(path)?;
+        // SAFETY: the mapping is read-only and dropped before this function returns; the file is written once by its
+        // creator and never modified afterwards.
+        let map = unsafe { memmap2::Mmap::map(&file)? };
+        if map.len() != size {
+            return Err(PyValueError::new_err(
+                "shared table file has the wrong size; it was replaced or truncated",
+            ));
+        }
+        let mut t = PyTable {
+            t: DynTable::from_bytes(&map).map_err(PyValueError::new_err)?,
+            keys: vec![],
+            template: None,
+            seen_keys: vec![],
+            frozen: true,
+        };
+        t.sync_keys(py)?;
+        Ok(t)
+    }
+    fn set_frozen(&mut self, on: bool) {
+        self.frozen = on
+    }
+    #[getter]
+    fn frozen(&self) -> bool {
+        self.frozen
+    }
     #[staticmethod]
     fn from_bytes(py: Python<'_>, data: &[u8]) -> PyResult<PyTable> {
         let mut t = PyTable {
@@ -1064,6 +1136,7 @@ impl PyTable {
             keys: vec![],
             template: None,
             seen_keys: vec![],
+            frozen: false,
         };
         t.sync_keys(py)?;
         Ok(t)
@@ -1078,6 +1151,7 @@ impl PyTable {
     }
     /// Rebuild the table from the given row numbers, in that order.
     fn reorder(&mut self, order: Vec<u32>) -> PyResult<()> {
+        self.guard()?;
         let n = self.t.len();
         if order.iter().any(|&r| r as usize >= n) {
             return Err(PyIndexError::new_err("row index out of range"));

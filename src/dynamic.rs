@@ -1505,6 +1505,17 @@ impl DynTable {
         let mut w = W::into(out);
         self.write(&mut w);
     }
+    /// Stream the byte form to `sink` in small pieces (for writing to a file). Call `byte_len()` first: it packs the
+    /// open rows.
+    pub fn write_to(
+        &self,
+        sink: &mut dyn FnMut(&[u8]) -> std::io::Result<()>,
+    ) -> std::io::Result<usize> {
+        assert_eq!(self.tail_len(), 0, "call byte_len() before write_to()");
+        let mut w = W::to_sink(sink);
+        self.write(&mut w);
+        w.finish()
+    }
     fn write(&self, w: &mut W) {
         w.raw(MAGIC);
         w.u8(match self.hint {

@@ -7,17 +7,41 @@ pub type Res<T> = Result<T, String>;
 /// write into a buffer of exactly that size), so no growing vector and no second copy is left behind.
 pub struct W<'a> {
     out: Option<&'a mut [u8]>,
+    /// When set, bytes go to this sink instead (a file); the first error is kept and later writes are skipped.
+    sink: Option<&'a mut dyn FnMut(&[u8]) -> std::io::Result<()>>,
+    err: Option<std::io::Error>,
     n: usize,
 }
 
 impl<'a> W<'a> {
     pub fn counting() -> Self {
-        W { out: None, n: 0 }
+        W {
+            out: None,
+            sink: None,
+            err: None,
+            n: 0,
+        }
     }
     pub fn into(out: &'a mut [u8]) -> Self {
         W {
             out: Some(out),
+            sink: None,
+            err: None,
             n: 0,
+        }
+    }
+    pub fn to_sink(sink: &'a mut dyn FnMut(&[u8]) -> std::io::Result<()>) -> Self {
+        W {
+            out: None,
+            sink: Some(sink),
+            err: None,
+            n: 0,
+        }
+    }
+    pub fn finish(self) -> std::io::Result<usize> {
+        match self.err {
+            Some(e) => Err(e),
+            None => Ok(self.n),
         }
     }
     /// Bytes written (or counted) so far.
@@ -28,6 +52,10 @@ impl<'a> W<'a> {
     pub fn raw(&mut self, b: &[u8]) {
         if let Some(out) = &mut self.out {
             out[self.n..self.n + b.len()].copy_from_slice(b)
+        } else if let Some(sink) = &mut self.sink {
+            if self.err.is_none() {
+                self.err = sink(b).err()
+            }
         }
         self.n += b.len()
     }
@@ -52,6 +80,17 @@ macro_rules! num {
                     for (d, x) in out[self.n..self.n + size].chunks_exact_mut(N).zip(v) {
                         d.copy_from_slice(&x.to_le_bytes())
                     }
+                } else if self.sink.is_some() {
+                    // through a fixed stack buffer, so a large column never needs a second copy in memory
+                    let mut buf = [0u8; 4096];
+                    let start = self.n;
+                    for block in v.chunks(4096 / N) {
+                        for (d, x) in buf.chunks_exact_mut(N).zip(block) {
+                            d.copy_from_slice(&x.to_le_bytes())
+                        }
+                        self.raw(&buf[..block.len() * N]);
+                    }
+                    self.n = start;
                 }
                 self.n += size
             }

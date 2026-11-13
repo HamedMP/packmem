@@ -238,6 +238,46 @@ def test_set_column():
     e = packmem.Table(); e.set_column("a", 1); assert list(e) == []
 
 
+def _worker_reads(t):
+    return (len(t), t.sum("id"), t.count(g="x"), t.shared)
+
+
+def test_share_between_processes():
+    import multiprocessing as mp, pickle, tempfile, gc
+    m = [{"id": i, "g": "xyz"[i % 3], "v": i / 8, **({"opt": [i]} if i % 5 else {})} for i in range(40_000)]
+    with tempfile.TemporaryDirectory() as d:
+        t = packmem.Table(m); t.append({"id": -1, "g": "x"}); m.append({"id": -1, "g": "x"})
+        plain = len(pickle.dumps(t))
+        assert t.share(dir=d) is t and t.shared and len(os.listdir(d)) == 1 and t.share(dir=d) is t and len(os.listdir(d)) == 1
+        if os.name == "posix":
+            assert os.stat(os.path.join(d, os.listdir(d)[0])).st_mode & 0o077 == 0     # readable by its owner only
+        blob = pickle.dumps(t)
+        assert len(blob) < 600 < plain                                    # a pointer, not the data
+        u = pickle.loads(blob)
+        assert list(u) == m and u.shared and u.count(g="x") == t.count(g="x") and list(t) == m
+        for change in (lambda x: x.append({"id": 1}), lambda x: x.update(0, id=5), lambda x: x.sort(key="id"), lambda x: x.set_column("z", 1),
+                       lambda x: x.extend([{"id": 2}]), lambda x: x.pop(), lambda x: x.__setitem__(0, {"id": 9}), lambda x: next(iter(x.lazy())).__setitem__("id", 9)):
+            for table in (t, u):
+                try: change(table); raise AssertionError("expected a shared table to refuse changes")
+                except TypeError: pass
+        assert list(t) == m and list(u) == m
+        c = u.copy(); c.append({"id": 3}); assert len(c) == len(m) + 1 and not c.shared       # a copy is private and writable
+        try: u.share(dir=d); raise AssertionError("expected TypeError")
+        except TypeError: pass
+        want = (len(m), sum(r["id"] for r in m), sum(1 for r in m if r["g"] == "x"), True)
+        with mp.get_context("spawn").Pool(2) as pool:
+            assert pool.map(_worker_reads, [t, t, t]) == [want] * 3
+        e = Examples(m[:10]); e.stats = {"n": 10}; e.share(dir=d)
+        back = pickle.loads(pickle.dumps(e)); assert type(back) is Examples and back.stats == {"n": 10} and list(back) == m[:10]
+        t.unshare(); assert not t.shared and len(os.listdir(d)) == 1
+        t.append({"id": 7}); assert len(t) == len(m) + 1 and len(pickle.dumps(t)) > 600
+        try: pickle.loads(blob); raise AssertionError("expected FileNotFoundError after unshare")
+        except FileNotFoundError: pass
+        del e, back; gc.collect(); assert os.listdir(d) == []                                    # collected: file removed
+        open(os.path.join(d, "packmem-999999999-00.pkm"), "w").close(); open(os.path.join(d, "packmem-%d-00.pkm" % os.getpid()), "w").close()
+        assert packmem.cleanup_stale(d) == 1 and os.listdir(d) == ["packmem-%d-00.pkm" % os.getpid()]
+
+
 class Examples(packmem.Table):
     __slots__ = ("stats",)
 

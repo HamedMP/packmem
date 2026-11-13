@@ -4,6 +4,10 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## Unreleased
 
+### Added
+- `Table.share()` writes the packed table to a file once, so pickling it for worker processes sends only
+  a pointer; `unshare()`, the `shared` property and `packmem.cleanup_stale()`.
+
 ## 0.1.1 - 2026-11-13
 
 ### Added

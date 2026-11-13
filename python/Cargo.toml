@@ -11,6 +11,7 @@ crate-type = ["cdylib"]
 [dependencies]
 packmem = { path = "..", default-features = false }
 pyo3 = { version = "0.23", features = ["abi3-py310"] }
+memmap2 = "0.9"
 serde = "1"
 serde_json = { version = "1", features = ["preserve_order", "arbitrary_precision", "raw_value"] }
 

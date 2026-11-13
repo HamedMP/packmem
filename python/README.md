@@ -101,6 +101,23 @@ orders = packmem.from_cursor(conn.execute("select id, customer, total from order
 orders.sum("total", customer="acme")
 ```
 
+## With worker processes
+
+A table pickles as its packed columns, which is cheap, but a worker started with spawn still receives
+and holds a copy. `share()` writes the table once to a file and makes it read-only; pickling it then
+sends only the file's location, and each worker loads from the file:
+
+```python
+rows = packmem.load_json("annotations.json").share()
+loader = DataLoader(MyDataset(rows), num_workers=4, multiprocessing_context="spawn")
+```
+
+On a 2-million-row table with four spawned workers, each worker's memory went from 298 MB to 96 MB
+and the parent's from +132 MB to no increase. A shared table refuses changes (`copy()` gives a private,
+writable one; `unshare()` makes the original writable again and removes the file). The file is readable only by
+its owner and is removed when the table is unshared or garbage-collected, and `packmem.cleanup_stale()` clears files left by a
+crashed process. Each worker still holds its own copy of the packed data; they do not yet share one.
+
 ## What to expect
 
 Measured on 336,776 real flight records on an Apple M4 Pro (see `benchmarks/` in the repository):

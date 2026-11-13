@@ -12,7 +12,7 @@ import os as _os
 from collections.abc import MutableSequence as _MutableSequence
 from ._packmem import _Table, Selection, Row
 
-__all__ = ["Table", "View", "Row", "load_jsonl", "load_json", "from_records", "from_cursor", "from_queryset", "read_csv"]
+__all__ = ["Table", "View", "Row", "load_jsonl", "load_json", "from_records", "from_cursor", "from_queryset", "read_csv", "cleanup_stale"]
 try:
     from importlib.metadata import version as _version
     __version__ = _version("packmem")
@@ -23,7 +23,77 @@ except Exception:  # running from a source tree without the package installed
 def _restore(cls, data):
     t = cls.__new__(cls)
     t._t = _Table.from_bytes(data)
+    t._share = None
     return t
+
+
+def _attach(cls, path, size):
+    t = cls.__new__(cls)
+    try:
+        t._t = _Table.attach(path, size)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"shared packmem table {path} is gone: the table that shared it was closed or its process ended") from None
+    t._share = None
+    return t
+
+
+class _Share:
+    __slots__ = ("path", "size", "pid", "release", "__weakref__")
+
+
+def _unlink(path, pid):
+    # only the process that created the file removes it; forked children inherit the handle but must not
+    if _os.getpid() == pid:
+        try:
+            _os.unlink(path)
+        except OSError:
+            pass
+
+
+def _share_dir(dir=None):
+    if dir is not None:
+        return _os.fspath(dir)
+    if _os.path.isdir("/dev/shm") and _os.access("/dev/shm", _os.W_OK):
+        return "/dev/shm"
+    import tempfile
+    return tempfile.gettempdir()
+
+
+def _alive(pid):
+    if _os.name == "nt":
+        import ctypes
+        k = ctypes.windll.kernel32
+        h = k.OpenProcess(0x1000, False, pid)      # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return False
+        code = ctypes.c_ulong()
+        ok = k.GetExitCodeProcess(h, ctypes.byref(code))
+        k.CloseHandle(h)
+        return bool(ok) and code.value == 259      # STILL_ACTIVE
+    try:
+        _os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def cleanup_stale(dir=None):
+    """Remove shared-table files left behind by processes that no longer exist. Returns how many were removed.
+
+    A table's file is normally removed when the table is unshared or garbage-collected; this is for crashes.
+    """
+    d, n = _share_dir(dir), 0
+    for name in _os.listdir(d):
+        parts = name.split("-")
+        if len(parts) == 3 and parts[0] == "packmem" and name.endswith(".pkm") and parts[1].isdigit() and not _alive(int(parts[1])):
+            try:
+                _os.unlink(_os.path.join(d, name))
+                n += 1
+            except OSError:
+                pass
+    return n
 
 
 def _json_chunks(n, batch, part):
@@ -56,10 +126,11 @@ def _select(t, filters, base=None):
 class Table:
     """A mutable sequence of dict records stored as packed columns."""
 
-    __slots__ = ("_t",)
+    __slots__ = ("_t", "_share")
 
     def __init__(self, records=None, hint="balanced"):
         self._t = _Table(hint)
+        self._share = None
         if records is not None:
             self._t.extend(records)
 
@@ -138,6 +209,7 @@ class Table:
         n = len(self._t)
         new = Table.__new__(Table)
         new._t = self._t.take([i + n if i < 0 else i for i in indices])
+        new._share = None
         return new
 
     def copy(self):
@@ -157,9 +229,47 @@ class Table:
         for klass in type(self).__mro__:
             slots = klass.__dict__.get("__slots__", ())
             for name in (slots,) if isinstance(slots, str) else slots:
-                if name not in ("_t", "__dict__", "__weakref__") and hasattr(self, name):
+                if name not in ("_t", "_share", "__dict__", "__weakref__") and hasattr(self, name):
                     state[name] = getattr(self, name)
+        share = getattr(self, "_share", None)
+        if share is not None:
+            # a shared table pickles as a pointer to its file: a few hundred bytes, whatever its size
+            return _attach, (type(self), share.path, share.size), state or None
         return _restore, (type(self), self._t.to_bytes()), state or None
+
+    def share(self, dir=None):
+        """Write the packed table once to a file and make this table read-only, so that pickling it sends only the
+        file's location. Worker processes that unpickle it load from the file instead of receiving the data.
+
+        The file goes to /dev/shm where that exists, otherwise the temp directory, or `dir`. It is removed by
+        `unshare()`, or when this table is garbage-collected or its process exits normally; workers must attach
+        before then. A process started later than that gets FileNotFoundError.
+        """
+        if getattr(self, "_share", None) is None:
+            if self._t.frozen:
+                raise TypeError("this table was loaded from another process's shared file; copy() it first")
+            import secrets, weakref
+            h = _Share()
+            h.pid = _os.getpid()
+            h.path = _os.path.join(_share_dir(dir), f"packmem-{h.pid}-{secrets.token_hex(8)}.pkm")
+            h.size = self._t.write_file(h.path)
+            h.release = weakref.finalize(h, _unlink, h.path, h.pid)
+            self._t.set_frozen(True)
+            self._share = h
+        return self
+
+    def unshare(self):
+        """Remove the shared file and make this table writable again. Processes that already loaded it keep their copy."""
+        h = getattr(self, "_share", None)
+        if h is not None:
+            h.release()
+            self._share = None
+            self._t.set_frozen(False)
+
+    @property
+    def shared(self):
+        """True for a table that is read-only because it is shared, here or in the process it came from."""
+        return self._t.frozen
 
     def __setstate__(self, state):
         for name, value in state.items():
