@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import * as d from "@/lib/data"
+import { highlight, type Lang } from "@/lib/highlight"
 import { cn } from "@/lib/utils"
 
 const x = (v: number) => `${v >= 10 ? Math.round(v) : v.toFixed(1)}×`
@@ -41,11 +42,16 @@ function Lead({ children }: { children: React.ReactNode }) {
   return <p className="text-lg leading-relaxed text-foreground/90 md:text-xl md:leading-relaxed">{children}</p>
 }
 
-function Code({ children }: { children: string }) {
+async function Code({ install, lang, children }: { install: string; lang: Lang; children: string }) {
+  const [cmd, code] = await Promise.all([highlight(install, "shellscript"), highlight(children, lang)])
   return (
-    <pre className="overflow-x-auto rounded-lg border bg-muted/60 p-4 font-mono text-[13px] leading-relaxed backdrop-blur-sm">
-      <code>{children.trim()}</code>
-    </pre>
+    <div className="code overflow-hidden rounded-lg border bg-muted/60 font-mono text-[13px] leading-relaxed backdrop-blur-sm">
+      <div className="flex gap-2 overflow-x-auto border-b px-4 py-2.5">
+        <span aria-hidden className="text-muted-foreground select-none">$</span>
+        <div dangerouslySetInnerHTML={{ __html: cmd }} />
+      </div>
+      <div className="overflow-x-auto p-4" dangerouslySetInnerHTML={{ __html: code }} />
+    </div>
   )
 }
 
@@ -67,29 +73,49 @@ function Fit({ title, stat, statSub, tag, wide, children }: { title: string; sta
   )
 }
 
-const SNIPPETS = {
-  python: `pip install packmem
+const SNIPPETS: Record<"python" | "node" | "rust", { install: string; lang: Lang; code: string }> = {
+  python: {
+    install: "pip install packmem",
+    lang: "python",
+    code: `import packmem
 
-import packmem
+# was: rows = [json.loads(line) for line in open("events.jsonl")]
+rows = packmem.load_jsonl("events.jsonl")
 
-rows = packmem.load_jsonl("events.jsonl")   # was: [json.loads(l) for l in f]
 rows.count(status=404)
 rows.group_count("country", path__prefix="/api/")
-rows.where(carrier="UA").to_json()`,
-  node: `npm install packmem
+rows.where(status=200).to_json()`,
+  },
+  node: {
+    install: "npm install packmem",
+    lang: "typescript",
+    code: `import { loadJsonl } from "packmem"
 
-import { loadJsonl } from "packmem"
+// was: text.trim().split("\\n").map((l) => JSON.parse(l))
+const rows = loadJsonl("events.jsonl")
 
-const rows = loadJsonl("events.jsonl")      // was: lines.map(JSON.parse)
 rows.count({ status: 404 })
-rows.groupCount("country")
-return new Response(rows.where({ carrier: "UA" }).jsonWebStream())`,
-  rust: `# Cargo.toml: packmem = { git = "https://github.com/HamedMP/packmem" }
+rows.groupCount("country", { path: { prefix: "/api/" } })
+
+export function GET() {
+  return new Response(rows.where({ status: 200 }).jsonWebStream())
+}`,
+  },
+  rust: {
+    install: "cargo add packmem --git https://github.com/HamedMP/packmem",
+    lang: "rust",
+    code: `use packmem::{Cell, DynTable, Hint, Pred};
 
 let mut t = DynTable::new(Hint::Balanced);
-let ua = Pred::Eq(Cell::Str("UA".into()));
-let ids = t.select(carrier, &ua);
-let miles = t.sum(distance, Some(&ids));`,
+t.append([
+    ("carrier", Cell::Str("UA".into())),
+    ("distance", Cell::Int(1400)),
+]);
+
+let carrier = t.col_index("carrier").unwrap();
+let ua = t.select(carrier, &Pred::Eq(Cell::Str("UA".into())));
+let miles = t.sum(t.col_index("distance").unwrap(), Some(&ua));`,
+  },
 }
 
 export default function Page() {
@@ -529,24 +555,24 @@ export default function Page() {
                 <TabsTrigger value="rust">Rust</TabsTrigger>
               </TabsList>
               <TabsContent value="python" className="flex flex-col gap-3">
-                <Code>{SNIPPETS.python}</Code>
+                <Code install={SNIPPETS.python.install} lang={SNIPPETS.python.lang}>{SNIPPETS.python.code}</Code>
                 <p className="text-sm text-muted-foreground">A list-of-dicts replacement for Python 3.10+: index, iterate, append, update, sort, query, and JSON straight from the columns.</p>
               </TabsContent>
               <TabsContent value="node" className="flex flex-col gap-3">
-                <Code>{SNIPPETS.node}</Code>
+                <Code install={SNIPPETS.node.install} lang={SNIPPETS.node.lang}>{SNIPPETS.node.code}</Code>
                 <p className="text-sm text-muted-foreground">An array-like table for Node 20+: list methods, lazy rows, CSV and Postgres COPY loaders, and JSON responses streamed from the columns. The same API runs on Cloudflare Workers through <code className="font-mono text-xs">packmem/wasm</code>. Prebuilt for Linux x86-64 and arm64 (glibc 2.17+ and musl), macOS on Apple silicon and Intel, and Windows x64; other platforms build from source with Rust.</p>
               </TabsContent>
               <TabsContent value="rust" className="flex flex-col gap-3">
-                <Code>{SNIPPETS.rust}</Code>
+                <Code install={SNIPPETS.rust.install} lang={SNIPPETS.rust.lang}>{SNIPPETS.rust.code}</Code>
                 <p className="text-sm text-muted-foreground">The core: encodings, the sampling selector, the mutable table and the operators on packed data.</p>
               </TabsContent>
             </Tabs>
-            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <Badge variant="secondary">0.1.1 alpha</Badge>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              <Badge variant="secondary" className="mr-2 align-[1px]">0.1.1 alpha</Badge>
               On <a className="underline underline-offset-4" href="https://pypi.org/project/packmem/">PyPI</a> and{" "}
-              <a className="underline underline-offset-4" href="https://www.npmjs.com/package/packmem">npm</a>, with prebuilt builds for Linux (glibc and
-              musl), macOS and Windows. Apache-2.0.
-            </div>
+              <a className="underline underline-offset-4" href="https://www.npmjs.com/package/packmem">npm</a>, with prebuilt builds for Linux (glibc
+              and musl), macOS and Windows. <span className="whitespace-nowrap">Apache-2.0.</span>
+            </p>
           </Section>
 
           {/* ---------- method ---------- */}

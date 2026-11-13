@@ -154,3 +154,7 @@
 }
 /* the scrolling column fades out under the header, as the content scrolls by */
 .fade-top { mask-image: linear-gradient(to bottom, transparent 0, black 11rem); }
+/* build-time highlighted code: every token carries both themes, the page's theme picks one */
+.code pre { background: transparent; }
+.code .shiki span { color: var(--shiki-light); font-style: var(--shiki-light-font-style); }
+.dark .code .shiki span { color: var(--shiki-dark); font-style: var(--shiki-dark-font-style); }
