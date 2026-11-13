@@ -19,6 +19,20 @@ impl<'de> Raw<'de> for Box<RawValue> {
     }
 }
 
+/// The value failed to parse because of an unpaired UTF-16 surrogate escape: serde_json reports these as surrogate
+/// or hex-escape errors, and the text must also contain a `\uD800`..`\uDFFF` escape, so that genuinely malformed
+/// input is still rejected.
+fn lone_surrogate(e: &serde_json::Error, text: &str) -> bool {
+    let msg = e.to_string();
+    if !(msg.contains("surrogate") || msg.contains("hex escape")) {
+        return false;
+    }
+    let b = text.as_bytes();
+    (0..b.len().saturating_sub(5)).any(|i| {
+        b[i] == b'\\' && b[i + 1] == b'u' && matches!(b[i + 2], b'd' | b'D') && matches!(b[i + 3], b'8'..=b'9' | b'a'..=b'f' | b'A'..=b'F')
+    })
+}
+
 /// One JSON value from its source text. Integers beyond 64 bits stay exact as JSON text.
 pub fn raw_cell(t: &str) -> Result<Cell, String> {
     let b = t.as_bytes();
@@ -29,17 +43,23 @@ pub fn raw_cell(t: &str) -> Result<Cell, String> {
             if !b.contains(&b'\\') {
                 Cell::Str(t[1..t.len() - 1].to_string())
             } else {
-                Cell::Str(serde_json::from_str(t).map_err(|e| e.to_string())?)
+                match serde_json::from_str::<String>(t) {
+                    Ok(s) => Cell::Str(s),
+                    // JSON.parse accepts lone UTF-16 surrogates ("\udd56") that no Rust string can hold: keep the
+                    // JSON text, which is written back verbatim and so reads back as the same JavaScript string
+                    Err(e) if lone_surrogate(&e, t) => Cell::Json(t.to_string()),
+                    Err(e) => return Err(e.to_string()),
+                }
             }
         }
         Some(b'n') => Cell::Null,
         Some(b't') => Cell::Bool(true),
         Some(b'f') => Cell::Bool(false),
-        Some(b'[' | b'{') => Cell::Json(
-            serde_json::from_str::<Value>(t)
-                .map_err(|e| e.to_string())?
-                .to_string(),
-        ),
+        Some(b'[' | b'{') => Cell::Json(match serde_json::from_str::<Value>(t) {
+            Ok(v) => v.to_string(),
+            Err(e) if lone_surrogate(&e, t) => return Ok(Cell::Json(t.to_string())),
+            Err(e) => return Err(e.to_string()),
+        }),
         _ => {
             if !b.iter().any(|c| matches!(c, b'.' | b'e' | b'E')) {
                 match t.parse::<i64>() {
@@ -213,4 +233,32 @@ pub fn push_array_lines(t: &mut DynTable, names: &[String], text: &str) -> Resul
         n += 1
     }
     Ok(n)
+}
+
+/// A JSON object's fields in their original order, each value kept as raw JSON text.
+pub struct Fields(pub Vec<(String, Box<RawValue>)>);
+impl<'de> serde::Deserialize<'de> for Fields {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct V;
+        impl<'de> Visitor<'de> for V {
+            type Value = Fields;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("a JSON object")
+            }
+            fn visit_map<A: MapAccess<'de>>(self, mut m: A) -> Result<Fields, A::Error> {
+                let mut v = Vec::new();
+                while let Some(e) = m.next_entry::<String, Box<RawValue>>()? {
+                    v.push(e)
+                }
+                Ok(Fields(v))
+            }
+        }
+        d.deserialize_map(V)
+    }
+}
+
+/// Parse an object's fields into cells, all before any is applied.
+pub fn field_cells(text: &str) -> Result<Vec<(String, Cell)>, String> {
+    let Fields(v) = serde_json::from_str(text).map_err(|e| e.to_string())?;
+    v.into_iter().map(|(k, x)| raw_cell(x.get()).map(|c| (k, c))).collect()
 }

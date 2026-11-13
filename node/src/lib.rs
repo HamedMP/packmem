@@ -217,16 +217,15 @@ impl NativeTable {
     #[napi]
     pub fn set_row_json(&mut self, row: u32, text: String) -> Result<()> {
         self.check(row)?;
-        let v: serde_json::Map<String, Value> = serde_json::from_str(&text).map_err(err)?;
+        let cells = load::field_cells(&text).map_err(err)?;
         for c in 0..self.t.names().len() {
             let name = self.t.names()[c].clone();
-            if !v.contains_key(&name) {
+            if !cells.iter().any(|(k, _)| *k == name) {
                 self.t.set(row as usize, c, Cell::Missing)
             }
         }
-        for (k, x) in v {
-            self.t
-                .set_by_name(row as usize, &k, load::raw_cell(&x.to_string()).map_err(err)?)
+        for (k, cell) in cells {
+            self.t.set_by_name(row as usize, &k, cell)
         }
         Ok(())
     }
@@ -258,12 +257,8 @@ impl NativeTable {
     #[napi]
     pub fn update_json(&mut self, row: u32, set: String, remove: Vec<String>) -> Result<()> {
         self.check(row)?;
-        let v: serde_json::Map<String, Value> = serde_json::from_str(&set).map_err(err)?;
-        let cells = v
-            .into_iter()
-            .map(|(k, x)| load::raw_cell(&x.to_string()).map(|c| (k, c)))
-            .collect::<std::result::Result<Vec<_>, _>>()
-            .map_err(err)?;
+        // fields kept as raw JSON, so a string the loader can store (a lone surrogate, for one) is not rejected here
+        let cells = load::field_cells(&set).map_err(err)?;
         for (k, c) in cells {
             self.t.set_by_name(row as usize, &k, c)
         }

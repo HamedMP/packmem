@@ -58,6 +58,17 @@ function nonNeg(x, def) {
 
 const isRecord = (r) => r !== null && typeof r === "object" && !Array.isArray(r);
 
+/** Native errors count lines within one batch; report the record's position in the whole input instead. */
+function inBatch(base, f) {
+  try {
+    f();
+  } catch (e) {
+    const m = /^(?:line|row) (\d+): ([\s\S]*)$/.exec(e?.message ?? "");
+    if (m) e.message = `record ${base + Number(m[1]) - 1}: ${m[2]}`;
+    throw e;
+  }
+}
+
 function bigintSafe(_k, v) {
   return typeof v === "bigint" ? (Number.isSafeInteger(Number(v)) ? Number(v) : v.toString()) : v;
 }
@@ -206,16 +217,18 @@ export class Table extends Rows {
     return this._append(() => {
       let lines = [];
       let i = 0;
+      const flush = () => {
+        const text = lines.join("\n");
+        inBatch(i - lines.length, () => this._t.pushJsonl(text));
+        lines = [];
+      };
       for (const r of records) {
         if (!isRecord(r)) throw new TypeError(`record ${i} is not an object: ${String(r)}`);
         lines.push(JSON.stringify(r));
         i++;
-        if (lines.length === BATCH) {
-          this._t.pushJsonl(lines.join("\n"));
-          lines = [];
-        }
+        if (lines.length === BATCH) flush();
       }
-      if (lines.length) this._t.pushJsonl(lines.join("\n"));
+      if (lines.length) flush();
     });
   }
   /**
@@ -226,16 +239,18 @@ export class Table extends Rows {
     return this._append(() => {
       let lines = [];
       let i = 0;
+      const flush = () => {
+        const text = lines.join("\n");
+        inBatch(i - lines.length, () => this._t.pushArraysJsonl(names, text));
+        lines = [];
+      };
       for (const r of rows) {
         if (!Array.isArray(r)) throw new TypeError(`row ${i} is not an array`);
         lines.push(JSON.stringify(r, bigintSafe));
         i++;
-        if (lines.length === BATCH) {
-          this._t.pushArraysJsonl(names, lines.join("\n"));
-          lines = [];
-        }
+        if (lines.length === BATCH) flush();
       }
-      if (lines.length) this._t.pushArraysJsonl(names, lines.join("\n"));
+      if (lines.length) flush();
     });
   }
   /** One append as a unit: packed once at the end, and rolled back if anything in it fails. */

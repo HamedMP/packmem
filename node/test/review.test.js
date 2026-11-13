@@ -40,7 +40,7 @@ test("appends are all or nothing", () => {
   const before = [...t];
   assert.throws(() => t.push({ a: 1 }, null), TypeError);
   assert.throws(() => t.push(undefined), TypeError);
-  assert.throws(() => t.extend([{ a: 1 }, { s: "\ud800" }]));
+  assert.throws(() => t.extend([{ a: 1 }, { d: new Date(Number.NaN), x: 1n }]), TypeError);
   assert.throws(() => t.extend([{ a: 1n }]), TypeError);
   assert.throws(() => t.extendArrays(["a"], [[1], "x"]), TypeError);
   assert.deepEqual([...t], before);
@@ -54,7 +54,7 @@ test("appends are all or nothing", () => {
 
 test("update is all or nothing", () => {
   const t = new pm.Table([{ a: 1, b: 2 }]);
-  assert.throws(() => t.update(0, { a: 5, s: "\ud800" }));
+  assert.throws(() => t.update(0, { a: 5, s: 1n }), TypeError);
   assert.deepEqual(t.at(0), { a: 1, b: 2 });
   t.update(0, { a: 5, b: undefined });
   assert.deepEqual(t.at(0), { a: 5 });
@@ -96,4 +96,34 @@ test("a view recomputes its matches after the table changes", () => {
   assert.equal(v.length, n);
   const w = v.where({ id: { gte: 90 } });
   assert.deepEqual(w.rows(), [{ id: 99, k: "a" }]);
+});
+
+test("lone UTF-16 surrogates round-trip as JSON.parse reads them", () => {
+  // VS Code's trace files contain strings like "\udd56" that JSON.parse accepts but no UTF-8 text can hold
+  const recs = [
+    { s: "\udd56", n: 1 },
+    { s: "a\ud800b", n: 2, nested: { t: "\udfff", list: ["\ud83d", "ok"] } }, // keys in column order: output follows first-seen order
+    { s: "\ud83d\ude00 paired is fine", n: 3 },
+  ];
+  const json = recs.map((r) => JSON.stringify(r)).join("\n");
+  for (const t of [pm.parse(json), new pm.Table(recs), pm.parse(JSON.stringify(recs))]) {
+    assert.deepEqual([...t], recs);
+    assert.equal(t.jsonBuffer().toString(), JSON.stringify(recs));
+    assert.equal(t.count({ n: { gte: 1 } }), 3);
+  }
+  const t = new pm.Table(recs);
+  t.update(2, { s: "\udc00" });
+  assert.equal(t.at(2).s, "\udc00");
+  const a = new pm.Table().extendArrays(["s"], [["\ud800"], ["x"]]);
+  assert.deepEqual([...a], [{ s: "\ud800" }, { s: "x" }]);
+});
+
+test("load errors name the record's position in the whole input", () => {
+  const t = new pm.Table();
+  const rows = Array.from({ length: 5000 }, (_, i) => [i]);
+  assert.throws(() => t.extendArrays(["a", "b"], rows), /^Error: record 0: 1 values for 2 columns/);
+  const ok = rows.map((r) => [r[0], 1]);
+  ok[4100] = [1];
+  assert.throws(() => t.extendArrays(["a", "b"], ok), /record 4100: 1 values for 2 columns/);
+  assert.equal(t.length, 0);
 });
