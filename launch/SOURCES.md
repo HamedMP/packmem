@@ -11,6 +11,7 @@
 | Web servers, settled and peak memory, identical responses | `demos/bench/results/darwin-arm64.json`, `darwin-arm64-postgres.json` |
 | Linux: 710 vs 12.0 MB, loop 5.6x, random 9.0x | `benchmarks/results/linux-x86-fast-ci-dev/datasets.jsonl` |
 | Workers: 200,000 rows in 0.69 MB | `demos/workers` under `wrangler dev` (not a recorded results file; say "in a local wrangler run") |
+| Hugging Face datasets vs packmem vs list: node peak 1.8 / 2.8 / 15.7 GB, 2.2 KB vs 308 MB pickles, reload 0.02 vs 8.5 s, row to dict 6 vs 22 µs | `benchmarks/ml_swaps/hf-datasets/out/` (`dl_*_forkserver_*.json`, `full_*.json`); see `RESULT.md` "How to quote these numbers": memory figures hold, timings are indicative (shared Linux server) |
 
 Labels to keep wherever a number is quoted: Mac runs were on a machine in normal use; Linux tuned-polars figures are
 memory only, measured under CI load; the Linux Postgres server rows are an upper bound (measured before V8 returned

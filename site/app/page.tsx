@@ -26,6 +26,7 @@ const fastapi = d.servers.find((s) => s.f === "fastapi")
 const express = d.servers.find((s) => s.f === "express")
 const jello = d.tools[1]
 const ml = d.mlLoader
+const hf = d.hfDatasets
 const gb = (v: number) => `${(v / 1000).toFixed(1)} GB`
 const pyBookkeeping = d.composition.find((c) => c.label === "Python")!.parts[0]
 
@@ -68,6 +69,10 @@ const COMPARE: { feature: string; cells: [Verdict, string?][] }[] = [
   {
     feature: "Nested lists and objects as typed columns",
     cells: [["part", "kept as JSON text"], ["yes"], ["no", "Python objects"], ["yes"]],
+  },
+  {
+    feature: "Worker processes share one copy",
+    cells: [["no", "each worker unpickles its own"], ["part", "via memory-mapped IPC files"], ["no"], ["yes", "memory-mapped files"]],
   },
   {
     feature: "Parquet and Arrow IPC",
@@ -541,6 +546,33 @@ export default function Page() {
                   </p>
                 </Fit>
               )}
+              {hf && (
+                <Fit wide title="If you already use Hugging Face datasets" tag="Linux, shared server">
+                  <div className="flex flex-col gap-2">
+                    <p className="font-medium text-foreground">Stay there if your workers share a memory-mapped dataset.</p>
+                    <p>
+                      datasets keeps the records as memory-mapped Arrow, so {hf.workers} forkserver workers share one copy and each gets a{" "}
+                      {(hf.pickledBytes.hf / 1000).toFixed(1)} KB reference instead of a {mb(hf.pickledBytes.packmem / 1e6)} pickle: the
+                      whole node peaked at {gb(hf.nodePeakMb.hf)} against {gb(hf.nodePeakMb.packmem)} with packmem. It reloads from its cache
+                      in {hf.loadS.hf.toFixed(2)} s where packmem parses the JSON again ({hf.loadS.packmem.toFixed(1)} s), its batched access
+                      is about twice as fast, and its compressed Parquet source is smaller at rest.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <p className="font-medium text-foreground">packmem replaces the Python list, not Arrow.</p>
+                    <p>
+                      Against the list the same node peaked at {gb(hf.nodePeakMb.list)}, {x(hf.nodePeakMb.list / hf.nodePeakMb.packmem)} as much as with packmem.
+                      Against datasets, packmem turns a random row into a dict in {hf.rowUs.packmem.toFixed(0)} µs instead
+                      of {hf.rowUs.hf.toFixed(0)} µs, holds {x(hf.anonMb.arrowInMemory / hf.anonMb.packmem)} less than the same Arrow data held in
+                      memory, and needs no schema or conversion step.
+                    </p>
+                    <p className="text-xs leading-relaxed">
+                      The same 665,298 records, 4 workers. Memory figures hold under the server&apos;s load; timings are indicative.{" "}
+                      <a className="underline underline-offset-4" href={`${d.REPO}/tree/main/benchmarks/ml_swaps/hf-datasets`}>Method and raw outputs</a>.
+                    </p>
+                  </div>
+                </Fit>
+              )}
               <Fit title="Edge functions and small containers">
                 <p>
                   A Cloudflare Worker gets 128 MB, WebAssembly included. <code className="font-mono text-xs">packmem/wasm</code> runs the
@@ -655,6 +687,13 @@ export default function Page() {
                 <li><b className="font-medium">Group-by over very many distinct values is slow.</b> 436 thousand distinct IP addresses over 2 million rows took {ms(d.ipGroup.packmem)}, against {ms(d.ipGroup.lo)} to {ms(d.ipGroup.hi)} in polars.</li>
               )}
               <li><b className="font-medium">Small tables gain nothing.</b> {d.breakEven}</li>
+              {hf && (
+                <li>
+                  <b className="font-medium">Memory-mapped Arrow datasets share better across worker processes.</b> Each worker gets its own
+                  copy of a packmem table; Hugging Face datasets workers share one mapped file, so a node with {hf.workers} workers peaked
+                  at {gb(hf.nodePeakMb.hf)} against {gb(hf.nodePeakMb.packmem)}. packmem replaces the Python list, not Arrow.
+                </li>
+              )}
               <li><b className="font-medium">A one-line swap can cost time.</b> sqlite-utils used {less(d.tools[0].a, d.tools[0].b)} memory but took {d.tools[0].tb.toFixed(2)} s against {d.tools[0].ta.toFixed(2)} s.</li>
               <li>
                 <b className="font-medium">Sort, insert and delete rebuild the table,</b> in Python and in Node, so each costs time proportional to its size.

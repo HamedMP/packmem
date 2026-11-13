@@ -286,3 +286,29 @@ export const mlLoader = (() => {
   const packmem = mlArm("repo")
   return list && packmem ? { list, packmem } : null
 })()
+
+// ---------- against Hugging Face datasets (benchmarks/ml_swaps/hf-datasets) ----------
+// The same 665,298 LLaVA records as a json.load list (A), a memory-mapped datasets.Dataset (B1), Arrow fully in memory
+// (B2) and packmem (C), on a shared Linux server: memory figures hold under its load, timings are indicative.
+const HF = "benchmarks/ml_swaps/hf-datasets/out"
+const hfRuns = (prefix: string): Rec[] => {
+  const dir = file(HF)
+  return existsSync(dir)
+    ? readdirSync(dir).filter((f) => f.startsWith(prefix) && /_\d+\.json$/.test(f)).map((f) => json(`${HF}/${f}`))
+    : []
+}
+export const hfDatasets = (() => {
+  const dl = (arm: string) => hfRuns(`dl_${arm}_forkserver_`)
+  const full = (arm: string) => hfRuns(`full_${arm}_`)
+  const [list, hf, pm, hfMem, pmFull, hfFull] = [dl("A"), dl("B1"), dl("C"), full("B2"), full("C"), full("B1warm")]
+  if (![list, hf, pm, hfMem, pmFull, hfFull].every((r) => r.length)) return null
+  const peak = (rs: Rec[]) => median(rs.map((r) => r.peak_pss_sum / 1e6))
+  return {
+    workers: 4,
+    nodePeakMb: { list: peak(list), hf: peak(hf), packmem: peak(pm) },
+    pickledBytes: { hf: hf[0].pickled_dataset_bytes as number, packmem: pm[0].pickled_dataset_bytes as number },
+    loadS: { hf: median(hf.map((r) => r.load_s)), packmem: median(pm.map((r) => r.load_s)) },
+    rowUs: { hf: median(hfFull.map((r) => r.rand100k_dict_s * 10)), packmem: median(pmFull.map((r) => r.rand100k_dict_s * 10)) },
+    anonMb: { arrowInMemory: median(hfMem.map((r) => r.mem_after_pass.Pss_Anon / 1e6)), packmem: median(pmFull.map((r) => r.mem_after_pass.Pss_Anon / 1e6)) },
+  }
+})()

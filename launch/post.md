@@ -97,6 +97,13 @@ hand. polars also loads 6 times faster, its filters are 2 to 4 times faster at m
 - **A one-line swap can cost time:** sqlite-utils inserting a 104 MB JSON array took 5.46 s against 4.85 s.
 - **Small tables gain nothing.** At 100 rows packmem used more memory than the list; from 300 rows on it used less.
 - **Unchanged programs gain nothing.** You have to swap the container.
+- **It replaces the Python list, not Arrow.** Hugging Face `datasets` keeps records as memory-mapped Arrow, so
+  worker processes share one copy and each receives a 2.2 KB reference. On 665,298 LLaVA annotations with 4
+  forkserver workers, the node peaked at 1.8 GB with `datasets` against 2.8 GB with packmem, whose table every worker
+  unpickles (308 MB). `datasets` also reloads from its cache in 0.02 s where packmem parses the JSON again (8.5 s), and
+  its batched access is about twice as fast. packmem turns a random row into a dict faster (6 µs against 22 µs) and
+  needs no schema, and against the list the same node peaked at 15.7 GB. If you already use memory-mapped datasets
+  with worker processes, stay there. (Linux server shared with CI: memory figures hold, timings are indicative.)
 
 ## On Linux
 
