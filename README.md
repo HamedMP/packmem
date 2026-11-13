@@ -60,6 +60,17 @@ One line changed in two existing tools, outputs identical:
 | sqlite-utils 4.2.1, insert a 104 MB JSON array | 4.85 s to 5.46 s | 604 MB to 67 MB |
 | jello 1.6.1, query 104 MB of JSON lines | 2.54 s to 0.57 s | 1,535 MB to 381 MB |
 
+### In training-data pipelines
+
+Three vision-language fine-tuning repositories (Qwen3-VL, MiniCPM-V, LLaVA-NeXT) keep their
+annotations as a list of dicts that every data-loader worker touches. Swapping it for packmem on
+the real 665,298-record LLaVA mix took one 8-rank node with 4 fork workers per rank from 47.7 GiB
+to 4.9 GiB on Linux, and a 4-worker epoch on the Mac from 16.6 GB to 2.3 GB under fork and
+23.5 GB to 5.5 GB under spawn. Building the dataset is 2 to 4 times slower, because the nested
+conversation turns are stored as JSON text. These figures cover the annotations only (no images,
+model or GPU), none of the repositories has tests covering the patched code, and the patches are
+not in this repository yet: see [benchmarks/results/ml_swaps](benchmarks/results/ml_swaps).
+
 ### Where it loses
 
 - **Plain iteration is slower.** `for r in rows` rebuilds a dict per record and is about 5 times
@@ -72,6 +83,8 @@ One line changed in two existing tools, outputs identical:
 - **Group-by on a column with very many distinct values is slow.** Counting 436 thousand
   distinct IP addresses over 2 million rows takes about 310 ms, against 11 ms in polars (and
   590 ms for a dict loop over the list).
+- **Records dominated by a nested list of dicts load slowly.** Nested values are stored as JSON
+  text, so such datasets build 2 to 4 times slower than `json.load` and save less.
 - **Small collections gain little.** packmem breaks even with the list at about 300 records
   and saves 2 to 4 times at 10,000; the large ratios start around 100,000. Memory used while
   loading stays with the allocator, which is most of what a small table occupies.
