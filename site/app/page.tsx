@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon, GithubIcon } from "@hugeicons/core-free-icons"
+import { ArrowRight01Icon, Cancel01Icon, GithubIcon, MinusSignIcon, Tick02Icon } from "@hugeicons/core-free-icons"
 
 import { Backdrop } from "@/components/site/backdrop"
 import { Logo } from "@/components/site/logo"
@@ -28,6 +28,52 @@ const jello = d.tools[1]
 const ml = d.mlLoader
 const gb = (v: number) => `${(v / 1000).toFixed(1)} GB`
 const pyBookkeeping = d.composition.find((c) => c.label === "Python")!.parts[0]
+
+const pdHold = d.holders.find((h) => h.label === "pandas, inferred types")!
+const pdArrowHold = d.holders.find((h) => h.label === "pandas, Arrow-backed, inferred types")!
+const vsPm = (mbs: number) => `${x(mbs / d.hero.b)} packmem's memory on the flights`
+const COMPARE: { feature: string; cells: [Verdict, string?][] }[] = [
+  {
+    feature: "Use it as a list of dicts or an array of objects",
+    cells: [["yes", "index, loop, append, update, sort"], ["no", "rows on request"], ["part", "row by row is slow"], ["no", "immutable tables"]],
+  },
+  {
+    feature: "Small in memory without choosing types by hand",
+    cells: [["yes", "encoding picked per chunk"], ["no", vsPm(d.hero.polars)], ["no", vsPm(pdHold.value)], ["no", vsPm(pdArrowHold.value)]],
+  },
+  {
+    feature: "Filters and counts run on compressed data",
+    cells: [["yes"], ["part", "on Categorical and Enum, opt-in"], ["part", "on category, opt-in"], ["part", "on dictionary arrays, opt-in"]],
+  },
+  {
+    feature: "Missing keys stay missing when written back as JSON",
+    cells: [["yes"], ["no", "become null"], ["no", "become null"], ["no", "become null"]],
+  },
+  {
+    feature: "JSON responses streamed from the columns",
+    cells: [["yes", "in chunks, from a filtered view"], ["part", "whole string or file"], ["part", "whole string or file"], ["no", "no JSON writer"]],
+  },
+  {
+    feature: "Python, Node.js and Cloudflare Workers",
+    cells: [["yes", "WebAssembly build for Workers"], ["part", "no Workers build"], ["part", "Python only"], ["yes"]],
+  },
+  {
+    feature: "Joins, window functions and expressions",
+    cells: [["no", "filter, count, sum, group count"], ["yes"], ["yes"], ["part", "joins and group-by, no windows"]],
+  },
+  {
+    feature: "Multi-threaded loading and queries",
+    cells: [["no", `loads ${Math.round(d.loads.packmem / d.loads.polars)}× slower than polars`], ["yes"], ["no"], ["yes"]],
+  },
+  {
+    feature: "Nested lists and objects as typed columns",
+    cells: [["part", "kept as JSON text"], ["yes"], ["no", "Python objects"], ["yes"]],
+  },
+  {
+    feature: "Parquet and Arrow IPC",
+    cells: [["no"], ["yes"], ["yes"], ["yes"]],
+  },
+]
 
 function Section({ id, title, children }: { id?: string; title?: string; children: React.ReactNode }) {
   return (
@@ -69,6 +115,25 @@ function Fit({ title, stat, statSub, tag, wide, children }: { title: string; sta
         </div>
       )}
       <div className={cn("text-sm leading-relaxed text-muted-foreground", wide ? "grid gap-4 md:grid-cols-2 md:gap-10" : "flex flex-col gap-2")}>{children}</div>
+    </div>
+  )
+}
+
+type Verdict = "yes" | "part" | "no"
+const VERDICT = {
+  yes: { icon: Tick02Icon, label: "Yes", className: "text-foreground" },
+  part: { icon: MinusSignIcon, label: "Partly", className: "text-muted-foreground" },
+  no: { icon: Cancel01Icon, label: "No", className: "text-muted-foreground/60" },
+}
+function Cell({ v, note }: { v: Verdict; note?: string }) {
+  const { icon, label, className } = VERDICT[v]
+  return (
+    <div className="flex flex-col gap-1">
+      <span className={className}>
+        <HugeiconsIcon icon={icon} strokeWidth={2.2} className="size-4" aria-hidden />
+        <span className="sr-only">{label}</span>
+      </span>
+      {note && <span className="text-[11px] leading-snug whitespace-normal text-muted-foreground">{note}</span>}
     </div>
   )
 }
@@ -524,6 +589,59 @@ export default function Page() {
               <p className="text-sm text-muted-foreground">
                 And where it is the wrong tool, see <a className="underline underline-offset-4" href="#limits">where it loses</a>.
               </p>
+            </div>
+          </Section>
+
+          {/* ---------- compare ---------- */}
+          <Section id="compare" title="packmem, polars, pandas and Arrow">
+            <Lead>
+              They solve different problems. The rows below are about holding records inside an application, which is what
+              packmem is for, plus the analytics features where the dataframes are clearly ahead.
+            </Lead>
+            <div className="rounded-xl border bg-card/70 backdrop-blur-sm">
+              <Table className="table-fixed">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[11rem] whitespace-normal">
+                      <span className="sr-only">Feature</span>
+                    </TableHead>
+                    {["packmem", "polars", "pandas", "Arrow"].map((t, i) => (
+                      <TableHead key={t} className={cn("w-[6.6rem]", i === 0 && "bg-primary/10 text-foreground")}>
+                        {t}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {COMPARE.map((r) => (
+                    <TableRow key={r.feature} className="hover:bg-transparent">
+                      <TableCell className="align-top text-sm leading-snug whitespace-normal">{r.feature}</TableCell>
+                      {r.cells.map(([v, note], i) => (
+                        <TableCell key={i} className={cn("align-top", i === 0 && "bg-primary/10")}>
+                          <Cell v={v} note={note} />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Checked against packmem 0.1.1 and the polars, pandas and pyarrow documentation, November 2026. Memory notes are the
+              flights measurements above; Arrow&apos;s is pandas with its Arrow backend, the closest we measured.
+            </p>
+            <div className="grid gap-x-10 gap-y-6 sm:grid-cols-2">
+              {[
+                ["packmem", "Your program keeps records as records, such as a server's dataset, a script's list or a training loader's annotations, and memory sets the limit. Change the container and keep the code."],
+                ["polars", "Analytics: joins, windows and large group-bys over millions of rows, Parquet in and out, every core busy. Once the work is analysis rather than holding records, use a dataframe."],
+                ["pandas", "The notebook ecosystem: plotting, statsmodels, scikit-learn and the large body of existing pandas code, on data that fits comfortably in memory."],
+                ["Arrow", "The format between systems: handing columnar data to another process or language without copying, Parquet and Flight, and building query engines."],
+              ].map(([h, t]) => (
+                <div key={h} className="flex flex-col gap-1.5">
+                  <h3 className="font-medium">Use {h} when</h3>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{t}</p>
+                </div>
+              ))}
             </div>
           </Section>
 
