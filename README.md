@@ -27,6 +27,23 @@ settings (inferred types); tuning their column types for memory would narrow the
 | pandas, Arrow-backed | 215 | 0.09 | 1.4 | 2.4 | 2,650 |
 | polars | 167 | 0.04 | 2.8 | 3.4 | 285 |
 
+### Against polars tuned for memory
+
+The table above uses polars with inferred types. With every string column cast to an enum, the
+smallest integer types, a rechunk, and its allocator told to return freed memory
+(`_RJEM_MALLOC_CONF=dirty_decay_ms:0,muzzy_decay_ms:0`), polars gets much closer:
+
+| Dataset | List of dicts | polars, default | polars, tuned | packmem |
+| --- | --- | --- | --- | --- |
+| Flights, 337 thousand rows | 712 MB | 166 MB | 41 to 57 MB | 19 MB |
+| Synthetic web log, 2 million rows | 3,053 MB | 764 MB | 256 to 271 MB | 98 MB |
+| Flights repeated 10 times, 3.4 million rows | 7,101 MB | 1,203 MB | 175 to 198 MB | 113 MB |
+
+So packmem holds 1.5 to 2.7 times less than tuned polars, and tuned polars needs the schema to be
+known and set by hand. In return polars loads 4 to 5 times faster from JSON lines and far faster
+from parquet, and its filters are 2 to 4 times faster at millions of rows. These runs were taken
+on a busy machine; the memory figures are stable, the timings are not final.
+
 One line changed in two existing tools, outputs identical:
 
 | Tool and task | Time | Peak memory |
@@ -42,6 +59,8 @@ One line changed in two existing tools, outputs identical:
 - **Random row access** is about 2.5 times slower than indexing a list.
 - **Dataframes load faster** and win some numeric filters. packmem is not a dataframe; it
   replaces the list of dicts.
+- **Group-by on a column with very many distinct values is slow.** Counting 436 thousand
+  distinct IP addresses over 2 million rows takes about 300 ms, against 11 ms in polars.
 - **Small collections gain little.** packmem breaks even with the list at about 300 records
   and saves 2 to 4 times at 10,000; the large ratios start around 100,000. Memory used while
   loading stays with the allocator, which is most of what a small table occupies.

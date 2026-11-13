@@ -15,6 +15,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
   `pop`, `reverse`, `clear` and `del`.
 - JSON output straight from the columns: `to_json` and `iter_json` on tables and filtered views,
   and `offset` for paging through `View.rows`.
+- Benchmark against polars tuned for memory, with recorded results.
 - `from_cursor` packs the rows of any DB-API cursor without building a dict per row.
 - Benchmarks on nycflights13 and nginx logs, one-line swaps in sqlite-utils and jello, and
   recorded results for Linux x86-64 and macOS arm64.

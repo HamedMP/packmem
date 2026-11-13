@@ -304,6 +304,23 @@ impl Tail {
     }
 }
 
+/// A small multiplicative hasher for byte-string keys (the FxHash scheme); the default SipHash dominates group-by otherwise.
+#[derive(Default)]
+struct Fx(u64);
+impl std::hash::Hasher for Fx {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+    fn write(&mut self, bytes: &[u8]) {
+        for c in bytes.chunks(8) {
+            let mut w = [0u8; 8];
+            w[..c.len()].copy_from_slice(c);
+            self.0 =
+                (self.0.rotate_left(5) ^ u64::from_le_bytes(w)).wrapping_mul(0x517c_c1b7_2722_0a95)
+        }
+    }
+}
+
 type Bits = Vec<u64>;
 fn bit(b: &Option<Bits>, i: usize) -> bool {
     match b {
@@ -1126,6 +1143,9 @@ impl DynTable {
     pub fn group_count(&self, col: usize, sel: Option<&[u32]>) -> Vec<(Cell, usize)> {
         let c = &self.cols[col];
         let mut m: HashMap<String, usize> = HashMap::new();
+        // plain string chunks are counted by their bytes, which skips a JSON encode and decode per group
+        let mut strs: HashMap<Box<[u8]>, usize, std::hash::BuildHasherDefault<Fx>> =
+            HashMap::default();
         if let Some(sel) = sel {
             // dictionary columns: count codes per chunk and decode each distinct value once
             let (mut i, mut counts) = (0, Vec::<usize>::new());
@@ -1172,11 +1192,12 @@ impl DynTable {
         } else {
             for ch in c.sealed() {
                 match (&ch.data, ch.clean() && ch.holes == 0) {
-                    (Data::Str(p), true) => {
-                        for (k, n) in p.group_count() {
-                            *m.entry(serde_json::to_string(&k).unwrap()).or_default() += n
+                    (Data::Str(p), true) => p.for_each_group(|k, n| match strs.get_mut(k) {
+                        Some(v) => *v += n,
+                        None => {
+                            strs.insert(k.into(), n);
                         }
-                    }
+                    }),
                     _ => {
                         for i in 0..ch.len as usize {
                             *m.entry(to_text(&ch.get(i))).or_default() += 1
@@ -1188,8 +1209,16 @@ impl DynTable {
                 *m.entry(to_text(&cell)).or_default() += 1
             }
         }
-        m.into_iter()
-            .map(|(k, n)| (from_text(k.as_bytes()), n))
+        if !m.is_empty() {
+            // some chunks went through the general path: fold the string counts in so each value appears once
+            for (k, n) in strs.drain() {
+                *m.entry(serde_json::to_string(&String::from_utf8_lossy(&k)).unwrap())
+                    .or_default() += n
+            }
+        }
+        strs.into_iter()
+            .map(|(k, n)| (Cell::Str(String::from_utf8_lossy(&k).into_owned()), n))
+            .chain(m.into_iter().map(|(k, n)| (from_text(k.as_bytes()), n)))
             .collect()
     }
     /// Approximate bytes held (packed chunks + uncompressed tail).

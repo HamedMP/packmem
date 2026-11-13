@@ -7,6 +7,7 @@
 | `bench_io.py` | `csv.DictReader` and `sqlite3` swaps |
 | `run_all.py` | Runs every variant in fresh processes several times and writes median, minimum and maximum |
 | `apps.sh`, `runapp.py` | sqlite-utils and jello, original against one line patched |
+| `bench_polars_tuned.py`, `run_polars_tuned.py` | polars with enum and narrow integer types, a known schema, parquet, and its allocator set to return freed memory |
 | `crossover.py` | Memory and load time against the list for 100 to 1,000,000 rows |
 | `mem.py` | Resident memory, physical footprint and peak on Linux and macOS |
 

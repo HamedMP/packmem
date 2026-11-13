@@ -263,6 +263,25 @@ impl PackedStrs {
         }
     }
     /// GROUP BY value -> count. Dict: a histogram over codes; strings are never materialised per row.
+    /// Calls `f(value, count)` for the groups of this column without allocating per value. A dictionary column reports each
+    /// distinct value once; a direct column reports every row with a count of 1, leaving the merging to the caller.
+    pub fn for_each_group(&self, mut f: impl FnMut(&[u8], usize)) {
+        let mut b = vec![];
+        match self {
+            PackedStrs::Dict { pool, codes, len } => {
+                let mut h = vec![0usize; pool.len()];
+                codes.for_each(*len, |k| h[k as usize] += 1);
+                for (i, c) in h.into_iter().enumerate().filter(|(_, c)| *c > 0) {
+                    f(pool.get(i, &mut b), c)
+                }
+            }
+            PackedStrs::Direct { pool } => {
+                for i in 0..pool.len() {
+                    f(pool.get(i, &mut b), 1)
+                }
+            }
+        }
+    }
     pub fn group_count(&self) -> Vec<(String, usize)> {
         match self {
             PackedStrs::Dict { pool, codes, len } => {
