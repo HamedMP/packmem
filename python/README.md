@@ -68,6 +68,39 @@ Filters: `col=value`, `col__prefix`, `col__contains`, `col__gt`, `col__gte`, `co
 | `list(queryset.values())` (Django) | `packmem.from_queryset(queryset)` |
 | any iterable of dicts | `packmem.Table(records)` |
 
+## In a web service
+
+Hold the data once at start-up and answer from the packed columns. Responses are written as JSON
+straight from the columns, so no dict is built per record:
+
+```python
+from fastapi import FastAPI, Query
+from fastapi.responses import StreamingResponse
+import packmem
+
+app = FastAPI()
+rows = packmem.load_jsonl("flights.jsonl")
+
+@app.get("/flights")
+def flights(carrier: str, limit: int = Query(50, ge=0, le=1000), offset: int = Query(0, ge=0)):
+    view = rows.where(carrier=carrier)
+    return StreamingResponse(view.iter_json(limit=limit, offset=offset), media_type="application/json")
+
+@app.get("/destinations")
+def destinations(carrier: str):
+    return rows.group_count("dest", carrier=carrier)
+```
+
+From a database, rows go into columns without model instances or dicts. `default=` converts
+values that are not JSON-like, such as dates and decimals (`from_queryset`, `default=` and the
+native CSV path are in the repository and will be in 0.1.1; 0.1.0 has `from_cursor`):
+
+```python
+orders = packmem.from_queryset(Order.objects.filter(year=2026), default=str)                 # Django
+orders = packmem.from_cursor(conn.execute("select id, customer, total from orders"))        # any DB-API cursor
+orders.sum("total", customer="acme")
+```
+
 ## What to expect
 
 Measured on 336,776 real flight records on an Apple M4 Pro (see `benchmarks/` in the repository):
