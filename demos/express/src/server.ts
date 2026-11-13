@@ -2,18 +2,18 @@ import express, { type Request } from "express";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
-import { createStore, memory, parseQuery, type Mode } from "./store.ts";
+import { createStore, memory, parseQuery, sourceFromEnv, type Mode } from "./store.ts";
 
 const mode = (process.env.MODE ?? "packmem") as Mode;
-const path = process.env.FLIGHTS_PATH ?? fileURLToPath(new URL("../../../data/flights.jsonl", import.meta.url));
+const source = sourceFromEnv(fileURLToPath(new URL("../../../data/flights.jsonl", import.meta.url)));
 const port = Number(process.env.PORT ?? 3001);
 
-const store = createStore(mode, path);
+const store = await createStore(mode, source);
 const app = express();
 const query = (req: Request) => parseQuery((k) => (typeof req.query[k] === "string" ? (req.query[k] as string) : undefined));
 
 app.get("/api/health", (_req, res) => {
-  res.json({ framework: "express", mode: store.mode, rows: store.rows, load_ms: Math.round(store.loadMs), packed_mb: store.packedBytes && Math.round(store.packedBytes / 1e5) / 10, ...memory() });
+  res.json({ framework: "express", mode: store.mode, source: store.source, rows: store.rows, load_ms: Math.round(store.loadMs), packed_mb: store.packedBytes && Math.round(store.packedBytes / 1e5) / 10, ...memory() });
 });
 
 app.get("/api/flights", (req, res) => {

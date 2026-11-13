@@ -1,5 +1,6 @@
 """The flights demo API on FastAPI. MODE=baseline holds the data as a list of dicts, MODE=packmem (default) as a packmem Table."""
 
+import gc
 import json
 import os
 import resource
@@ -12,6 +13,9 @@ from fastapi.responses import Response, StreamingResponse
 
 MODE = os.environ.get("MODE", "packmem")
 PATH = os.environ.get("FLIGHTS_PATH", str(Path(__file__).resolve().parents[2] / "data" / "flights.jsonl"))
+PG_URL = os.environ.get("FLIGHTS_PG_URL")  # postgres://... selects Postgres instead of the file
+PG_QUERY = "select * from flights"
+SOURCE = "postgres" if PG_URL else "file"
 BATCH = 4096
 
 
@@ -42,6 +46,14 @@ class Baseline:
     packed_bytes = None
 
     def __init__(self, path):
+        if PG_URL:
+            import psycopg
+            from psycopg.rows import dict_row
+
+            with psycopg.connect(PG_URL) as conn, conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(PG_QUERY)
+                self.rows = cur.fetchall()
+            return
         with open(path) as f:
             self.rows = [json.loads(line) for line in f if line.strip()]
 
@@ -92,7 +104,16 @@ class Packed:
     def __init__(self, path):
         import packmem
 
-        self.t = packmem.load_jsonl(path)
+        if PG_URL:
+            import psycopg
+
+            # a server-side cursor streams rows in batches; from_cursor packs them without a dict per row
+            with psycopg.connect(PG_URL) as conn, conn.cursor(name="flights") as cur:
+                cur.itersize = 50_000  # the default of 100 rows per round trip would make this a test of latency
+                cur.execute(PG_QUERY)
+                self.t = packmem.from_cursor(cur)
+        else:
+            self.t = packmem.load_jsonl(path)
         nb = self.t.nbytes
         self.packed_bytes = nb() if callable(nb) else nb
 
@@ -134,6 +155,7 @@ class Packed:
 t0 = time.perf_counter()
 store = Packed(PATH) if MODE == "packmem" else Baseline(PATH)
 LOAD_MS = round((time.perf_counter() - t0) * 1000)
+gc.collect()  # same steady-state point as the Node demos, which collect after loading
 
 app = FastAPI(title="packmem flights")
 
@@ -145,7 +167,7 @@ def q(carrier, origin, dest, min_delay):
 @app.get("/api/health")
 def health():
     pb = store.packed_bytes
-    return {"framework": "fastapi", "mode": store.mode, "rows": len(store), "load_ms": LOAD_MS,
+    return {"framework": "fastapi", "mode": store.mode, "source": SOURCE, "rows": len(store), "load_ms": LOAD_MS,
             "packed_mb": round(pb / 1e6, 1) if pb else None, "rss_mb": rss_mb()}
 
 

@@ -3,8 +3,8 @@ import { flights, queryOf } from "@/lib/flights";
 export const dynamic = "force-dynamic";
 
 /** Every matching row as one JSON array. With packmem the bytes are written from the packed columns and streamed. */
-export function GET(req: Request) {
-  const chunks = flights().exportChunks(queryOf(req))[Symbol.iterator]();
+export async function GET(req: Request) {
+  const chunks = (await flights()).exportChunks(queryOf(req))[Symbol.iterator]();
   const enc = new TextEncoder();
   const body = new ReadableStream<Uint8Array>({
     pull(controller) {

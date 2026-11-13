@@ -1,9 +1,12 @@
 // The flights dataset behind the demo API, held either as an array of objects (baseline) or as a packmem Table.
 // Kept identical in demos/express/src/store.ts and demos/nextjs/lib/store.ts.
 import { readFileSync } from "node:fs";
-import { loadJsonl, type Filters, type Row, type Table } from "packmem";
+import { fromPg, loadJsonl, type Filters, type Row, type Table } from "packmem";
 
 export type Mode = "baseline" | "packmem";
+/** Where the rows come from: a JSON-lines file, or a Postgres table (`postgres://...` URL). */
+export type Source = { kind: "file"; path: string } | { kind: "postgres"; url: string };
+const PG_QUERY = "select * from flights";
 
 export interface Query {
   carrier?: string;
@@ -20,6 +23,7 @@ export interface Summary {
 
 export interface Store {
   mode: Mode;
+  source: Source["kind"];
   rows: number;
   loadMs: number;
   packedBytes: number | null;
@@ -36,12 +40,26 @@ export function parseQuery(get: (k: string) => string | null | undefined): Query
   return { carrier: s("carrier"), origin: s("origin"), dest: s("dest"), minDelay: d === undefined ? undefined : Number(d) };
 }
 
-function baseline(path: string): Store {
+async function withPg<T>(url: string, f: (client: import("pg").Client) => Promise<T>): Promise<T> {
+  const { default: pg } = await import("pg");
+  const client = new pg.Client({ connectionString: url });
+  await client.connect();
+  try {
+    return await f(client);
+  } finally {
+    await client.end();
+  }
+}
+
+async function baseline(src: Source): Promise<Store> {
   const t0 = performance.now();
-  const rows: Row[] = readFileSync(path, "utf8")
-    .split("\n")
-    .filter(Boolean)
-    .map((l) => JSON.parse(l));
+  const rows: Row[] =
+    src.kind === "file"
+      ? readFileSync(src.path, "utf8")
+          .split("\n")
+          .filter(Boolean)
+          .map((l) => JSON.parse(l))
+      : await withPg(src.url, async (c) => (await c.query(PG_QUERY)).rows);
   const loadMs = performance.now() - t0;
   const match = (q: Query) => (r: Row) =>
     (q.carrier === undefined || r.carrier === q.carrier) &&
@@ -50,6 +68,7 @@ function baseline(path: string): Store {
     (q.minDelay === undefined || (typeof r.dep_delay === "number" && r.dep_delay > q.minDelay));
   return {
     mode: "baseline",
+    source: src.kind,
     rows: rows.length,
     loadMs,
     packedBytes: null,
@@ -80,9 +99,9 @@ function baseline(path: string): Store {
   };
 }
 
-function packed(path: string): Store {
+async function packed(src: Source): Promise<Store> {
   const t0 = performance.now();
-  const t: Table = loadJsonl(path);
+  const t: Table = src.kind === "file" ? loadJsonl(src.path) : await withPg(src.url, (c) => fromPg(c, PG_QUERY));
   const loadMs = performance.now() - t0;
   const filters = (q: Query): Filters => ({
     carrier: q.carrier,
@@ -92,6 +111,7 @@ function packed(path: string): Store {
   });
   return {
     mode: "packmem",
+    source: src.kind,
     rows: t.length,
     loadMs,
     packedBytes: t.nbytes,
@@ -112,8 +132,17 @@ function packed(path: string): Store {
   };
 }
 
-export function createStore(mode: Mode, path: string): Store {
-  return mode === "packmem" ? packed(path) : baseline(path);
+export async function createStore(mode: Mode, src: Source): Promise<Store> {
+  const store = await (mode === "packmem" ? packed(src) : baseline(src));
+  // With --expose-gc (the benchmark sets it), collect load garbage so idle memory is the steady state in both modes.
+  (globalThis as { gc?: () => void }).gc?.();
+  return store;
+}
+
+/** FLIGHTS_PG_URL selects Postgres; otherwise FLIGHTS_PATH or the default file. */
+export function sourceFromEnv(defaultPath: string): Source {
+  const url = process.env.FLIGHTS_PG_URL;
+  return url ? { kind: "postgres", url } : { kind: "file", path: process.env.FLIGHTS_PATH ?? defaultPath };
 }
 
 export function memory() {

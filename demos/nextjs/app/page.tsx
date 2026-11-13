@@ -24,7 +24,7 @@ export default async function Page({ searchParams }: { searchParams: Search }) {
     origin: typeof sp.origin === "string" ? sp.origin : undefined,
   };
   const q = parseQuery((k) => (k in cur ? cur[k as keyof typeof cur] : undefined));
-  const store = flights();
+  const store = await flights();
 
   const t0 = performance.now();
   const summary = store.summary(q);

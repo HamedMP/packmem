@@ -1,5 +1,5 @@
 // Runs each demo server in baseline and packmem mode, one at a time, and measures memory and latency per endpoint.
-// Usage: node bench.mjs [express|nextjs|fastapi ...]     results: results/<platform>-<arch>.json and a markdown table on stdout
+// Usage: [FLIGHTS_PG_URL=postgres://...] node bench.mjs [express|nextjs|fastapi ...]     results: results/<platform>-<arch>.json and a markdown table on stdout
 import { spawn, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -8,10 +8,11 @@ import { fileURLToPath } from "node:url";
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 const PORT = 3199;
+const SETTLE_MS = Number(process.env.SETTLE_MS ?? 20_000);
 
 const SERVERS = {
-  express: { cwd: here("../express"), cmd: ["node", "src/server.ts"], env: { PORT } },
-  nextjs: { cwd: here("../nextjs"), cmd: ["node", "node_modules/next/dist/bin/next", "start", "-p", String(PORT)], env: {} },
+  express: { cwd: here("../express"), cmd: ["node", "--expose-gc", "src/server.ts"], env: { PORT } },
+  nextjs: { cwd: here("../nextjs"), cmd: ["node", "node_modules/next/dist/bin/next", "start", "-p", String(PORT)], env: { NODE_OPTIONS: "--expose-gc" } },
   fastapi: { cwd: here("../fastapi"), cmd: [".venv/bin/uvicorn", "app:app", "--port", String(PORT), "--log-level", "warning"], env: {} },
 };
 
@@ -71,7 +72,17 @@ async function fetchBody(path) {
   return { ms: performance.now() - t0, buf };
 }
 
+async function portFree() {
+  try {
+    await fetch(`http://127.0.0.1:${PORT}/api/health`);
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 async function run(framework, mode) {
+  if (!(await portFree())) throw new Error(`port ${PORT} is already serving; stop that process first`);
   const s = SERVERS[framework];
   const proc = spawn(s.cmd[0], s.cmd.slice(1), { cwd: s.cwd, env: { ...process.env, ...s.env, MODE: mode }, stdio: ["ignore", "ignore", "pipe"] });
   let stderr = "";
@@ -85,8 +96,12 @@ async function run(framework, mode) {
   const readyMs = performance.now() - t0;
   const mem = sampler(proc.pid);
   await sleep(1000);
+  const justLoaded = treeRss(proc.pid);
+  // runtimes return freed heap to the OS lazily (V8's memory reducer acts after several idle seconds), so the
+  // steady state is measured after a quiet period
+  await sleep(SETTLE_MS - 1000);
   const idle = treeRss(proc.pid);
-  const result = { framework, mode, rows: health.rows, load_ms: health.load_ms, ready_ms: Math.round(readyMs), idle_rss_mb: Math.round(idle), endpoints: [] };
+  const result = { framework, mode, rows: health.rows, load_ms: health.load_ms, ready_ms: Math.round(readyMs), rss_after_load_mb: Math.round(justLoaded), idle_rss_mb: Math.round(idle), endpoints: [] };
 
   for (const e of ENDPOINTS) {
     for (let i = 0; i < 2; i++) await fetchBody(e.path);
@@ -102,8 +117,13 @@ async function run(framework, mode) {
   result.endpoints.push({ name: CONCURRENT.name, path: CONCURRENT.path, median_ms: +(performance.now() - t1).toFixed(1), bytes: bodies[0].buf.length, peak_rss_mb: Math.round(mem.peak()), hash: canon(bodies[0].buf), wall: true });
   result.peak_rss_mb = Math.max(...result.endpoints.map((e) => e.peak_rss_mb));
   mem.stop();
-  proc.kill("SIGTERM");
-  await new Promise((r) => proc.once("exit", r));
+  if (proc.exitCode === null && proc.signalCode === null) {
+    const exited = new Promise((r) => proc.once("exit", r));
+    proc.kill("SIGTERM");
+    await exited;
+  } else {
+    throw new Error(`${framework}/${mode} exited during the run: ${stderr.slice(-2000)}`);
+  }
   return result;
 }
 
@@ -120,7 +140,9 @@ for (const f of frameworks) {
 
 const machine = { cpu: cpus()[0]?.model, cores: cpus().length, mem_gb: Math.round(totalmem() / 2 ** 30), node: process.version, platform: `${process.platform}-${process.arch}`, date: new Date().toISOString(), loadavg_before: loadBefore, loadavg_after: loadavg().map((x) => +x.toFixed(2)) };
 mkdirSync(here("./results"), { recursive: true });
-const file = here(`./results/${process.platform}-${process.arch}.json`);
+const source = process.env.FLIGHTS_PG_URL ? "postgres" : "file";
+machine.source = source;
+const file = here(`./results/${process.platform}-${process.arch}${source === "postgres" ? "-postgres" : ""}.json`);
 writeFileSync(file, JSON.stringify({ machine, results }, null, 2));
 
 // markdown
@@ -130,7 +152,8 @@ for (const f of frameworks) {
   const [b, p] = ["baseline", "packmem"].map((m) => results.find((r) => r.framework === f && r.mode === m));
   lines.push(`\n### ${f}\n`);
   lines.push(`| Measure | Baseline | packmem | Change |`, `| --- | --- | --- | --- |`);
-  lines.push(`| Idle RSS after load, MB | ${b.idle_rss_mb} | ${p.idle_rss_mb} | ${(b.idle_rss_mb / p.idle_rss_mb).toFixed(1)}x less |`);
+  lines.push(`| RSS 1 s after load, MB | ${b.rss_after_load_mb} | ${p.rss_after_load_mb} | ${(b.rss_after_load_mb / p.rss_after_load_mb).toFixed(1)}x less |`);
+  lines.push(`| Idle RSS, settled (${SETTLE_MS / 1000} s), MB | ${b.idle_rss_mb} | ${p.idle_rss_mb} | ${(b.idle_rss_mb / p.idle_rss_mb).toFixed(1)}x less |`);
   lines.push(`| Peak RSS during the run, MB | ${b.peak_rss_mb} | ${p.peak_rss_mb} | ${(b.peak_rss_mb / p.peak_rss_mb).toFixed(1)}x less |`);
   lines.push(`| Load, ms | ${b.load_ms} | ${p.load_ms} | |`);
   b.endpoints.forEach((e, i) => {

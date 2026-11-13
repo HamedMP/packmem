@@ -12,11 +12,14 @@
   "dependencies": {
     "next": "16.4.6",
     "packmem": "file:../../node",
+    "pg": "^8.23.1",
+    "pg-cursor": "^2.22.1",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.2.0",
     "typescript": "^5.9.0"
