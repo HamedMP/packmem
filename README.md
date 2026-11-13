@@ -27,6 +27,11 @@ settings (inferred types); tuning their column types for memory would narrow the
 | pandas, Arrow-backed | 215 | 0.09 | 1.4 | 2.1 | 2,600 |
 | polars | 170 | 0.04 | 2.4 | 3.3 | 282 |
 
+On Linux (Ryzen 9 7950X3D, Ubuntu 24.04, load average about 1) the same data gives 710 MB for
+the list and 12 MB for packmem: glibc returns the memory used while loading, which macOS keeps.
+There, lazy rows match the list's loop speed (31 ms each) instead of beating it, plain iteration
+is 5.6 times slower and random row access 9 times slower.
+
 ### Against polars tuned for memory
 
 The table above uses polars with inferred types. With every string column cast to an enum, the

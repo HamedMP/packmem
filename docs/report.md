@@ -114,9 +114,29 @@ On the synthetic 2-million-row log, grouping by IP address (436 thousand distinc
 
 A table pickles as its packed columns: the flight table gives 8 MB in 3 ms and loads in 1 ms, against 46 MB, 125 ms and 163 ms for the list of dicts. This is what data-loader workers started with spawn need, since each worker unpickles the whole dataset.
 
+### Linux x86-64 run
+
+The same suite on an AMD Ryzen 9 7950X3D (Ubuntu 24.04, glibc 2.39, load average 0.6 to 1.3) returned identical query answers.
+
+| Flight data | List of dicts | packmem |
+| --- | --- | --- |
+| Resident MB | 710 | 12.0 |
+| Peak MB | 705 | 27.6 |
+| Load from JSON lines, s | 1.20 | 0.30 |
+| Count by carrier, ms | 35 | 0.78 |
+| Group by dest, ms | 65 | 0.19 |
+| 10k row lookups, ms | 1.0 | 8.9 |
+| Loop all rows as dicts, ms | 31 | 174 |
+| Loop all rows, lazy rows, ms | n/a | 31 |
+
+- **Memory is lower than on macOS:** 12 MB against 20 MB, and 4.2 MB against 11.5 MB for the nginx logs. glibc returns the buffers used while loading; the macOS allocator keeps them. Peak is about the same on both.
+- **Break-even is the same:** more memory than the list at 100 records, less from 300 on; 633 MB against 11 MB at 300,000.
+- **Lazy rows only match the list here** (31 ms each); plain iteration is 5.6 times slower and random row access 9 times slower.
+- **Rust core benchmark** on 2 million records: same answers and sizes as before (`experiments/results/bench_2m_linux_fast_ci_dev.txt`).
+
 ### Where the remaining memory is
 
-Of the 20 MB resident, 8 MB is packed data; the rest is memory the macOS allocator keeps after the load buffers are freed, about 10 to 13 MB regardless of table size. Asking the allocator to release it had no effect. The remaining lever is making the load buffers smaller, for example by de-duplicating repeated strings as they arrive.
+Of the 20 MB resident, 8 MB is packed data; the rest is memory the macOS allocator keeps after the load buffers are freed, about 10 to 13 MB regardless of table size. Asking the allocator to release it had no effect. On Linux this memory is returned (see the Linux run above), so it is a property of the macOS allocator and not of the table. The remaining lever is making the load buffers smaller, for example by de-duplicating repeated strings as they arrive.
 
 ### Tools with one line changed, on the Mac
 

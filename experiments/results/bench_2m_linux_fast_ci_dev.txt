@@ -1,0 +1,46 @@
+rows=2000000 file_bytes=503499360 raw_columnar_bytes=348963523 zstd3_4k_pages=91657638 zstd3_64k_blocks=84022013
+answers (identical for all representations): [928122082, 199567, 562201, 4706825930, 1960875, 20001, 26756123217, 1]
+representation                                              MB |    Q1 ms       Q2       Q3       Q4       Q5       Q6       Q7       Q8
+A dynamic values (serde_json::Value)                   1664.96 | 197.5434 292.4398 217.6084 375.9207  50.4084 197.7931 234.2243 183.2727
+B native structs (Vec<struct>, String fields)           588.96 |   9.4883  15.3757  49.9503 213.1523   0.3113   6.6495   8.6033  29.4033
+C plain columns (Vec<i64>, Vec<String>)                 588.96 |   0.4992   4.4937  32.2949  49.4802   0.2956   1.0744   0.1170   3.7104
+D plain columns, LZ4 4K pages (decompress to use)       160.01 |  13.4206  28.3531  69.3285  60.2381 136.1177  11.0923   7.7744  24.3245
+E packmem (Memory)                                       55.51 |   2.0843   1.1120   1.1073   1.0786   0.6219   0.0001   1.2484   6.0167
+E packmem (Balanced)                                     57.03 |   2.1036   0.5779   1.1055   1.0789   0.4754   0.0001   0.9084   6.0734
+E packmem (Speed)                                        90.09 |   2.0690   0.5753   0.5598   0.5531   0.4081   0.0001   0.1296   4.2878
+-- Memory: encoded in 636 ms
+   ts           blockfor/sorted             3281522 B   13.13 bits/row
+   user_id      blockfor                    2413106 B    9.65 bits/row
+   status       dict(6)/3bit                 750056 B    3.00 bits/row
+   bytes        blockfor                    4771394 B   19.09 bits/row
+   latency_us   blockfor                    4570210 B   18.28 bits/row
+   method       dict(4)/2bit                 500044 B    2.00 bits/row
+   path         dict(4201)/13bit            3328790 B   13.32 bits/row
+   ip           dict(436245)+fsst/19bit     8551140 B   34.20 bits/row
+   country      dict(10)/4bit               1000072 B    4.00 bits/row
+   ua           dict(32)/5bit               1252168 B    5.01 bits/row
+   session      direct+fsst                24881864 B   99.53 bits/row
+-- Balanced: encoded in 637 ms
+   ts           blockfor/sorted             3281522 B   13.13 bits/row
+   user_id      dict(1327)/11bit            2760624 B   11.04 bits/row
+   status       dict(6)/3bit                 750056 B    3.00 bits/row
+   bytes        blockfor                    4771394 B   19.09 bits/row
+   latency_us   for/20bit                   5000016 B   20.00 bits/row
+   method       dict(4)/2bit                 500044 B    2.00 bits/row
+   path         dict(4201)/u16              4078782 B   16.32 bits/row
+   ip           dict(436245)+fsst/19bit     8551140 B   34.20 bits/row
+   country      dict(10)/4bit               1000072 B    4.00 bits/row
+   ua           dict(32)/5bit               1252168 B    5.01 bits/row
+   session      direct+fsst                24881864 B   99.53 bits/row
+-- Speed: encoded in 504 ms
+   ts           blockfor/sorted             3281522 B   13.13 bits/row
+   user_id      dict(1327)/u16              4010616 B   16.04 bits/row
+   status       dict(6)/u8                  2000048 B    8.00 bits/row
+   bytes        for/u32                     8000008 B   32.00 bits/row
+   latency_us   for/u32                     8000008 B   32.00 bits/row
+   method       dict(4)/u8                  2000036 B    8.00 bits/row
+   path         dict(4201)/u16              4078782 B   16.32 bits/row
+   ip           dict(436245)/u32           14679124 B   58.72 bits/row
+   country      dict(10)/u8                 2000064 B    8.00 bits/row
+   ua           dict(32)/u8                 2002160 B    8.01 bits/row
+   session      direct                     40000004 B  160.00 bits/row
