@@ -88,6 +88,36 @@ class Table:
     def extend(self, rows):
         self._t.extend(rows)
 
+    def __delitem__(self, i):
+        n = len(self._t)
+        drop = set(range(*i.indices(n))) if isinstance(i, slice) else {self._idx(i)}
+        if drop:
+            self._t.reorder([j for j in range(n) if j not in drop])
+
+    def insert(self, i, row):
+        """Insert a record before position i. Rebuilds the table unless i is at the end."""
+        n = len(self._t)
+        i = max(0, i + n) if i < 0 else min(i, n)
+        self._t.append(row)
+        if i < n:
+            self._t.reorder([*range(i), n, *range(i, n)])
+
+    def pop(self, i=-1):
+        row = self[i]
+        del self[i]
+        return row
+
+    def clear(self):
+        self._t.reorder([])
+
+    def reverse(self):
+        self._t.reorder(range(len(self._t) - 1, -1, -1))
+
+    def sort(self, *, key, reverse=False):
+        """Sort in place, stably. `key` is a column name or a function of a record, as in list.sort."""
+        keys = self._t.column(key) if isinstance(key, str) else [key(r) for r in self]
+        self._t.reorder(sorted(range(len(keys)), key=keys.__getitem__, reverse=reverse))
+
     def compact(self):
         """Pack rows that are still held uncompressed (done automatically as the table grows)."""
         self._t.compact()
@@ -117,7 +147,7 @@ class Table:
 
     @property
     def columns(self):
-        return [c for c in self._t.names() if c != ""]
+        return self._t.names()
 
     @property
     def nbytes(self):
@@ -184,11 +214,28 @@ def load_json(src, hint="balanced"):
 
     Replaces `json.load(f)` when the file holds a list of records; the full list of dicts is never built.
     """
+    path = isinstance(src, (str, _os.PathLike))
+    start = src.tell() if not path and getattr(src, "seekable", lambda: False)() else None
     t = Table(hint=hint)
-    if isinstance(src, (str, _os.PathLike)):
-        t._t.load_json_array_path(_os.fspath(src))
-    else:
-        t._t.load_json_array_file(src)
+    try:
+        if path:
+            t._t.load_json_array_path(_os.fspath(src))
+        else:
+            t._t.load_json_array_file(src)
+    except ValueError:
+        # Python's json also accepts NaN and Infinity; retry with it when the input can be read again
+        import json
+        if path:
+            with open(src, encoding="utf-8") as f:
+                data = json.load(f)
+        elif start is not None:
+            src.seek(start)
+            data = json.load(src)
+        else:
+            raise
+        if not isinstance(data, list) or not all(isinstance(r, dict) for r in data):
+            raise
+        t = Table(data, hint=hint)
     return t
 
 

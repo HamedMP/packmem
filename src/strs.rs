@@ -25,7 +25,7 @@ impl StrPool {
     fn build<'a>(items: &[&'a str], hint: Hint) -> Self {
         let raw: usize = items.iter().map(|s| s.len()).sum();
         let mut fsst = None;
-        if hint != Hint::Speed && raw >= 16 * 1024 {
+        if hint != Hint::Speed && raw >= 128 * 1024 {
             let step = (items.len() / 4096).max(1);
             let sample: Vec<&[u8]> = items.iter().step_by(step).map(|s| s.as_bytes()).collect();
             let c = Compressor::train(&sample);

@@ -863,9 +863,6 @@ impl DynTable {
     pub fn end_row(&mut self) {
         let slot = self.tail_len();
         self.cur = 0;
-        if self.cols.is_empty() {
-            self.col_or_create("");
-        }
         for c in &mut self.cols {
             if c.tail.len() == slot {
                 c.tail.push(&Cell::Missing)
@@ -1152,6 +1149,26 @@ impl DynTable {
                 )
             })
             .collect()
+    }
+    /// A new table holding the given rows of this one, in the given order (rows may repeat or be left out).
+    /// Sorting, deleting and inserting in the middle are built on this; each is a full rebuild, O(rows).
+    pub fn take(&self, order: &[u32]) -> DynTable {
+        let mut t = DynTable::new(self.hint);
+        for name in &self.names {
+            t.col_or_create(name);
+        }
+        t.set_bulk(true);
+        for &r in order {
+            for c in 0..self.cols.len() {
+                match self.get(r as usize, c) {
+                    Cell::Missing => {}
+                    cell => t.put_at(c, cell),
+                }
+            }
+            t.end_row();
+        }
+        t.set_bulk(false);
+        t
     }
     /// Rows currently held uncompressed.
     pub fn tail_rows(&self) -> usize {

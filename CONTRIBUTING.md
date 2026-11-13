@@ -12,7 +12,8 @@ cargo test --release                                  # Rust core
 cd python
 maturin build --release -o dist && pip install --force-reinstall dist/*.whl
 python tests/test_packmem.py                          # model test against a list of dicts
-python tests/test_paths.py                            # fast paths, JSON parsing, lazy rows
+python tests/test_paths.py                            # fast paths, JSON parsing, lazy rows, list methods
+pip install hypothesis && python tests/test_properties.py   # property-based round trips and edits
 ```
 
 Before sending a change, run `cargo fmt` in the repository root and in `python/`, and check that

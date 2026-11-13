@@ -102,6 +102,36 @@ def test_failed_append_leaves_table_intact():
     assert list(t) == [{"a": 1, "b": "x"}, {"b": "y"}, {"a": 7}, {"a": 8}]
 
 
+
+def test_sort_insert_delete():
+    r = random.Random(11)
+    mk = lambda i: {"id": i, "g": r.choice(["x", "y", "z"]), "v": round(r.uniform(0, 9), 1), **({"opt": [i]} if i % 4 else {})}
+    m = [mk(i) for i in range(36_000)]
+    t = packmem.Table(m)
+    for step in range(40):
+        op = r.choice(["del", "delslice", "insert", "pop", "sort_col", "sort_fn", "reverse", "append"])
+        n = len(m)
+        if op == "del": i = r.randrange(-n, n); del m[i]; del t[i]
+        elif op == "delslice": a = r.randrange(n); sl = slice(a, a + r.randrange(0, 3000), r.choice([1, 1, 2, 7])); del m[sl]; del t[sl]
+        elif op == "insert": i = r.randrange(-n - 5, n + 5); row = mk(-step); m.insert(i, row); t.insert(i, row)
+        elif op == "pop": i = r.choice([-1, 0, r.randrange(n)]); assert m.pop(i) == t.pop(i)
+        elif op == "sort_col": rev = r.random() < .5; k = r.choice(["g", "v", "id"]); m.sort(key=lambda x: x[k], reverse=rev); t.sort(key=k, reverse=rev)
+        elif op == "sort_fn": f = lambda x: (x["g"], -x["v"]); m.sort(key=f); t.sort(key=f)
+        elif op == "reverse": m.reverse(); t.reverse()
+        else: row = mk(10**6 + step); m.append(row); t.append(row)
+        assert len(t) == len(m), op
+        for i in (0, 1, len(m) // 2, len(m) - 1): assert t[i] == m[i], (op, i)
+    assert list(t) == m and t.count(g="x") == sum(1 for x in m if x["g"] == "x")
+    assert t.columns == ["id", "g", "v", "opt"]
+    t.clear(); assert len(t) == 0 and list(t) == [] and t.columns == ["id", "g", "v", "opt"]
+    t.append({"id": 1}); assert list(t) == [{"id": 1}]
+    try: t.sort(key=lambda x: x.get("opt"))            # None is fine alone; mixing types must raise as in list.sort
+    except TypeError: raise AssertionError("single row sort must not raise")
+    t.extend([{"id": "a"}])
+    try: t.sort(key="id"); raise AssertionError("expected TypeError")
+    except TypeError: pass
+
+
 if __name__ == "__main__":
     for name, f in list(globals().items()):
         if name.startswith("test_"): f(); print("ok", name)

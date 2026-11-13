@@ -45,5 +45,6 @@ jobs:
       - run: pip install python/dist/*.whl
       - run: python python/tests/test_packmem.py
       - run: python python/tests/test_paths.py
+      - run: pip install hypothesis && python python/tests/test_properties.py
       - uses: actions/upload-artifact@v4
         with: { name: "wheel-${{ matrix.os }}-py${{ matrix.python }}", path: python/dist }

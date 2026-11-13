@@ -13,6 +13,8 @@ rows = packmem.load_jsonl("events.jsonl")                    # after
 
 ```python
 len(rows); rows[0]; rows[-5:]; rows.append({...}); rows.extend(more)
+rows.insert(0, {...}); rows.pop(); del rows[10:20]; rows.reverse()
+rows.sort(key="bytes")         # a column name, or a function of a record as in list.sort
 rows[3] = {...}                 # replace a record
 rows.update(3, status=500)      # change fields in place
 for r in rows: ...
@@ -57,11 +59,11 @@ Measured on 336,776 real flight records on an Apple M4 Pro (see `benchmarks/` in
 
 | | List of dicts | packmem |
 | --- | --- | --- |
-| Resident memory | 712 MB | 24 MB |
-| Load from JSON lines | 0.63 s | 0.27 s |
+| Resident memory | 712 MB | 21 MB |
+| Load from JSON lines | 0.63 s | 0.26 s |
 | Filter and aggregate queries | 31 to 59 ms | 0.13 to 1.3 ms |
-| Loop reading one field | 41 ms | 24 ms with `rows.lazy()`, 159 ms with plain iteration |
-| 10,000 random rows as dicts | 5 ms | 13 ms |
+| Loop reading one field | 41 ms | 25 ms with `rows.lazy()`, 155 ms with plain iteration |
+| 10,000 random rows as dicts | 5 ms | 12 ms |
 
 Plain iteration builds a full dict per record, which is why it is slower than the list it replaces.
 Loading from `csv.DictReader` or a database cursor is 1.2 to 1.5 times slower than building the list.
@@ -75,6 +77,8 @@ Loading from `csv.DictReader` or a database cursor is 1.2 to 1.5 times slower th
 - Key order in returned dicts is the order columns were first seen.
 - `sum` adds ints, floats and bools and skips everything else. Integers beyond 64 bits are
   stored exactly but are not treated as numbers by filters or `sum`.
-- No `sort`, `insert` or `del` yet.
+- `sort`, `del`, `pop`, `reverse` and `insert` anywhere but the end rebuild the table, so each takes time
+  proportional to its size. Row numbers held by a `View` or a lazy row refer to positions, not records.
+- `load_jsonl` and `load_json` accept what `json.loads` accepts, including `NaN` and `Infinity`.
 
 Status: alpha. Requires Python 3.10 or later. Built and tested on Linux x86-64 and macOS arm64; the CI workflow has not run yet.

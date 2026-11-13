@@ -11,6 +11,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - `DynTable`: a mutable, schema-flexible table with append, update, nulls, floats, nested values
   and columns whose type changes over time.
 - Python package: `Table`, `load_jsonl`, `load_json`, `read_csv`, `from_records`, filters,
-  `sum`, `group_count`, and lazy rows through `Table.lazy()`.
+  `sum`, `group_count`, lazy rows through `Table.lazy()`, and the list methods `sort`, `insert`,
+  `pop`, `reverse`, `clear` and `del`.
 - Benchmarks on nycflights13 and nginx logs, one-line swaps in sqlite-utils and jello, and
   recorded results for Linux x86-64 and macOS arm64.

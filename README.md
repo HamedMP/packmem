@@ -5,7 +5,7 @@ appended to and updated, without being unpacked.
 
 ```python
 rows = [json.loads(line) for line in open("events.jsonl")]   # before: 712 MB
-rows = packmem.load_jsonl("events.jsonl")                    # after:   24 MB
+rows = packmem.load_jsonl("events.jsonl")                    # after:   21 MB
 ```
 
 packmem stores each field of a record collection as a column, picks a lightweight encoding for
@@ -20,7 +20,7 @@ five fresh processes. Lower is better everywhere.
 | Holder | Resident MB | Load s | Count by carrier ms | Group by dest ms | Loop over rows ms |
 | --- | --- | --- | --- | --- | --- |
 | List of dicts | 712 | 0.63 | 31 | 59 | 41 |
-| packmem | 24 | 0.27 | 0.57 | 0.20 | 159 (24 with lazy rows) |
+| packmem | 21 | 0.26 | 0.60 | 0.20 | 155 (25 with lazy rows) |
 | pandas, Arrow-backed | 215 | 0.09 | 1.4 | 2.4 | 2,650 |
 | polars | 167 | 0.04 | 2.8 | 3.4 | 285 |
 
@@ -39,9 +39,11 @@ One line changed in two existing tools, outputs identical:
 - **Random row access** is about 2.5 times slower than indexing a list.
 - **Dataframes load faster** and win some numeric filters. packmem is not a dataframe; it
   replaces the list of dicts.
-- **Small collections gain little.** About 10 to 15 MB of load-time memory stays with the
-  allocator, so a table of a few thousand rows can use more memory than the list it replaces.
-- **No sort, insert or delete yet.**
+- **Small collections gain little.** packmem breaks even with the list at about 300 records
+  and saves 2 to 4 times at 10,000; the large ratios start around 100,000. Memory used while
+  loading stays with the allocator, which is most of what a small table occupies.
+- **Sort, delete and insert in the middle rebuild the table,** so each costs time proportional
+  to its size.
 
 The full study, including the cases above and the method, is in [docs/report.md](docs/report.md).
 
@@ -66,6 +68,7 @@ rows = packmem.load_jsonl("events.jsonl")        # or load_json, read_csv, Table
 len(rows); rows[0]; rows[-5:]                    # still a sequence of dicts
 rows.append({"status": 200, "bytes": 512})
 rows.update(3, status=500)
+rows.sort(key="bytes", reverse=True)            # also insert, pop, del, reverse
 
 rows.count(status=404)                           # runs on the packed data
 rows.sum("bytes", agent__contains="curl")

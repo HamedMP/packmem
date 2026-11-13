@@ -1,0 +1,8 @@
+{"rows": 100, "list": {"kind": "list", "rows": 100, "mb": 0.23, "load_ms": 0.21, "packed_mb": null}, "packmem": {"kind": "packmem", "rows": 100, "mb": 0.34, "load_ms": 0.2, "packed_mb": 0.005}}
+{"rows": 300, "list": {"kind": "list", "rows": 300, "mb": 0.66, "load_ms": 0.56, "packed_mb": null}, "packmem": {"kind": "packmem", "rows": 300, "mb": 0.52, "load_ms": 0.38, "packed_mb": 0.011}}
+{"rows": 1000, "list": {"kind": "list", "rows": 1000, "mb": 2.16, "load_ms": 1.87, "packed_mb": null}, "packmem": {"kind": "packmem", "rows": 1000, "mb": 0.93, "load_ms": 0.96, "packed_mb": 0.033}}
+{"rows": 3000, "list": {"kind": "list", "rows": 3000, "mb": 6.49, "load_ms": 5.61, "packed_mb": null}, "packmem": {"kind": "packmem", "rows": 3000, "mb": 2.36, "load_ms": 2.68, "packed_mb": 0.082}}
+{"rows": 10000, "list": {"kind": "list", "rows": 10000, "mb": 21.36, "load_ms": 18.52, "packed_mb": null}, "packmem": {"kind": "packmem", "rows": 10000, "mb": 5.91, "load_ms": 8.25, "packed_mb": 0.249}}
+{"rows": 30000, "list": {"kind": "list", "rows": 30000, "mb": 63.54, "load_ms": 52.56, "packed_mb": null}, "packmem": {"kind": "packmem", "rows": 30000, "mb": 7.7, "load_ms": 22.97, "packed_mb": 0.727}}
+{"rows": 100000, "list": {"kind": "list", "rows": 100000, "mb": 211.27, "load_ms": 176.15, "packed_mb": null}, "packmem": {"kind": "packmem", "rows": 100000, "mb": 10.98, "load_ms": 74.61, "packed_mb": 2.416}}
+{"rows": 300000, "list": {"kind": "list", "rows": 300000, "mb": 632.93, "load_ms": 523.45, "packed_mb": null}, "packmem": {"kind": "packmem", "rows": 300000, "mb": 16.55, "load_ms": 221.15, "packed_mb": 7.231}}

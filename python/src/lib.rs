@@ -473,6 +473,20 @@ impl PyTable {
         self.t.end_row();
         Ok(())
     }
+    /// One JSON record from text. Text the native parser rejects gets a second chance with Python's `json.loads`,
+    /// which also accepts `NaN` and `Infinity`; if that fails too, the native error is reported.
+    fn push_text(&mut self, py: Python<'_>, line: &str, lineno: usize) -> PyResult<()> {
+        let Err(e) = push_line(&mut self.t, line) else {
+            return Ok(());
+        };
+        let err = || PyValueError::new_err(format!("line {lineno}: {e}"));
+        let v = py
+            .import("json")?
+            .getattr("loads")?
+            .call1((line,))
+            .map_err(|_| err())?;
+        self.push(v.downcast::<PyDict>().map_err(|_| err())?)
+    }
     fn push_any(&mut self, py: Python<'_>, row: &Bound<'_, PyAny>) -> PyResult<()> {
         match row.downcast::<PyDict>() {
             Ok(d) => self.push(d),
@@ -564,14 +578,13 @@ impl PyTable {
                 if line.trim().is_empty() {
                     continue;
                 }
-                push_line(&mut s.t, &line)
-                    .map_err(|e| PyValueError::new_err(format!("line {}: {e}", n + 1)))?;
+                s.push_text(py, &line, n + 1)?;
                 n += 1
             }
         })
     }
     fn append_json(&mut self, py: Python<'_>, line: &str) -> PyResult<()> {
-        let r = push_line(&mut self.t, line).map_err(PyValueError::new_err);
+        let r = self.push_text(py, line, 1);
         self.sync_keys(py)?;
         r
     }
@@ -589,8 +602,7 @@ impl PyTable {
                 if text.trim().is_empty() {
                     continue;
                 }
-                push_line(&mut s.t, &text)
-                    .map_err(|e| PyValueError::new_err(format!("line {}: {e}", n + 1)))?;
+                s.push_text(py, &text, n + 1)?;
                 n += 1
             }
             Ok(n)
@@ -838,6 +850,15 @@ impl PyTable {
             )?)?
         }
         Ok(l)
+    }
+    /// Rebuild the table from the given row numbers, in that order.
+    fn reorder(&mut self, order: Vec<u32>) -> PyResult<()> {
+        let n = self.t.len();
+        if order.iter().any(|&r| r as usize >= n) {
+            return Err(PyIndexError::new_err("row index out of range"));
+        }
+        self.t = self.t.take(&order);
+        Ok(())
     }
     fn compact(&mut self) {
         self.t.compact()
