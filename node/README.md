@@ -113,6 +113,24 @@ loaded as fast as plain node-postgres rows (see the timings below). It types val
 numeric as strings, json as nested values) except dates and timestamps, which stay as Postgres prints them, in the
 session's time zone, instead of becoming `Date`s.
 
+## WebAssembly: Cloudflare Workers, Deno, browsers
+
+Where a native addon cannot load, `packmem/wasm` gives the same API (without file paths and Node streams), compiled
+to WebAssembly from the same Rust source as the addon and tested to return identical results.
+
+```js
+// Cloudflare Workers: the .wasm file is imported as a compiled module
+import wasm from "packmem/wasm/packmem.wasm";
+import { initSync } from "packmem/wasm";
+
+const pm = initSync(wasm);
+const events = pm.parse(await (await fetch(url)).arrayBuffer());
+return new Response(events.where({ status: 404 }).jsonWebStream());
+```
+
+Elsewhere, `const pm = await init(bytesOrResponseOrUrl)`. A Worker has 128 MB of memory: in `../demos/workers`,
+200,000 generated log rows take 0.69 MB packed, and filtered aggregates answer in a few milliseconds under `wrangler dev`.
+
 ## What to expect
 
 Measured on 336,776 flight records (nycflights13, 104 MB as JSON lines), Apple M4 Pro. Every figure here

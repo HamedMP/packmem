@@ -64,6 +64,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with: { pattern: addon-*, path: node, merge-multiple: true }
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with: { toolchain: stable, targets: wasm32-unknown-unknown }
+      - name: Build the WebAssembly binding
+        working-directory: node
+        run: |
+          cargo install wasm-bindgen-cli --version "$(grep -oE 'wasm-bindgen = "=[0-9.]+"' wasm/Cargo.toml | grep -oE '[0-9.]+[0-9]')" --locked
+          node scripts/build-wasm.mjs
       - id: v
         name: Check the version against the tag
         working-directory: node
@@ -78,6 +85,7 @@ jobs:
         run: |
           ls -la *.node
           test "$(ls *.node | wc -l)" -eq 7
+          test -s wasm-dist/packmem_bg.wasm
           npm pack
           tar -tzf packmem-*.tgz
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -64,3 +64,21 @@ jobs:
         env:
           PACKMEM_PG_URL: postgres://packmem:packmem@localhost:5432/packmem
         run: npm test
+
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with: { toolchain: stable, targets: wasm32-unknown-unknown }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: { node-version: 22 }
+      - name: Build the addon and the WebAssembly binding
+        working-directory: node
+        run: |
+          cargo install wasm-bindgen-cli --version "$(grep -oE 'wasm-bindgen = "=[0-9.]+"' wasm/Cargo.toml | grep -oE '[0-9.]+[0-9]')" --locked
+          npm run build
+          node scripts/build-wasm.mjs
+      - name: WebAssembly gives the same results as the addon
+        working-directory: node
+        run: node --test test/wasm.test.js

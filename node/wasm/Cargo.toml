@@ -1,0 +1,25 @@
+[package]
+name = "packmem-wasm"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+packmem = { path = "../..", default-features = false }
+wasm-bindgen = "=0.2.130"
+js-sys = "0.3"
+serde = "1"
+serde_json = { version = "1", features = ["preserve_order", "arbitrary_precision", "raw_value"] }
+itoa = "1"
+ryu = "1"
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1
+
+[workspace]

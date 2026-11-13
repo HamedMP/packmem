@@ -28,11 +28,22 @@
     ".": {
       "types": "./index.d.ts",
       "default": "./index.js"
-    }
+    },
+    "./wasm": {
+      "types": "./wasm.d.ts",
+      "default": "./wasm.js"
+    },
+    "./wasm/packmem.wasm": "./wasm-dist/packmem_bg.wasm",
+    "./package.json": "./package.json"
   },
   "files": [
     "index.js",
     "index.d.ts",
+    "api.js",
+    "wasm.js",
+    "wasm.d.ts",
+    "wasm-dist/packmem.js",
+    "wasm-dist/packmem_bg.wasm",
     "*.node",
     "LICENSE"
   ],
@@ -41,7 +52,8 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test test/table.test.js test/review.test.js test/listops.test.js test/csv.test.js test/pg.test.js"
+    "test": "node --test test/table.test.js test/review.test.js test/listops.test.js test/csv.test.js test/wasm.test.js test/pg.test.js",
+    "build:wasm": "node scripts/build-wasm.mjs"
   },
   "peerDependencies": {
     "pg-cursor": ">=2",

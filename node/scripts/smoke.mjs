@@ -1,6 +1,9 @@
 // Run from a directory where the packed packmem tarball is installed: loads the platform's addon and exercises the API.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import * as pm from "packmem";
+import { init } from "packmem/wasm";
 
 const rows = Array.from({ length: 20_000 }, (_, i) => ({ id: i, k: i % 3 ? "a" : "b", v: i / 4, s: i % 7 === 0 ? "\udd56" : `r${i}` }));
 const t = new pm.Table(rows);
@@ -14,4 +17,8 @@ let lazy = 0;
 for (const r of t.lazy()) lazy += r.id;
 assert.equal(lazy, rows.reduce((s, r) => s + r.id, 0));
 assert.deepEqual([...pm.parseCsv('a,b\n1,"x, y"\n')], [{ a: 1, b: "x, y" }]);
-console.log(`packmem ok on ${process.platform}-${process.arch}`);
+const wasm = await init(readFileSync(fileURLToPath(import.meta.resolve("packmem/wasm/packmem.wasm"))));
+const w = new wasm.Table(rows);
+assert.equal(new TextDecoder().decode(w.jsonBuffer()), JSON.stringify(rows));
+assert.equal(w.count({ k: "b" }), t.count({ k: "b" }));
+console.log(`packmem ok on ${process.platform}-${process.arch}, native and wasm`);

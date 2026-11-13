@@ -1,0 +1,15 @@
+{
+  "name": "packmem-demo-workers",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "packmem": "file:../../node"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}
