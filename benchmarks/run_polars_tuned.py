@@ -11,7 +11,7 @@ Set PM_VARIANTS=a,b,... to run a subset.
 import json, os, pathlib, platform, statistics, subprocess, sys, time
 
 here = pathlib.Path(__file__).resolve().parent
-data, work, out = sys.argv[1], sys.argv[2], sys.argv[3]
+data, work, out = sys.argv[1], os.path.abspath(sys.argv[2]), os.path.abspath(sys.argv[3])   # children run with cwd=data
 reps = int(sys.argv[4]) if len(sys.argv) > 4 else 5
 datasets = sys.argv[5:] or ["flights", "nginx", "logs", "flights_big"]
 VARIANTS = ["list", "packmem", "polars", "polars_rechunk", "polars_tuned", "polars_tuned_scan", "polars_parquet",
