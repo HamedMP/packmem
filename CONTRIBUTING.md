@@ -40,5 +40,5 @@ Keep them short and say why the change was made.
 
 ## License
 
-By contributing you agree that your contribution is dual licensed under MIT and Apache-2.0, as
-described in the README.
+By contributing you agree that your contribution is licensed under the Apache License, Version 2.0,
+as described in the README.
