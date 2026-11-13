@@ -23,7 +23,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test test/table.test.js test/pg.test.js"
+    "test": "node --test test/table.test.js test/review.test.js test/pg.test.js"
   },
   "peerDependencies": {
     "pg-cursor": ">=2"

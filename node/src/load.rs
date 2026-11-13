@@ -24,6 +24,7 @@ pub fn raw_cell(t: &str) -> Result<Cell, String> {
     let b = t.as_bytes();
     Ok(match b.first() {
         None => Cell::Missing,
+        Some(b'"') if b.len() < 2 || b[b.len() - 1] != b'"' => return Err(format!("not a JSON value: {t}")),
         Some(b'"') => {
             if !b.contains(&b'\\') {
                 Cell::Str(t[1..t.len() - 1].to_string())

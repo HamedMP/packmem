@@ -13,6 +13,7 @@ napi = { version = "3", default-features = false, features = ["napi4"] }
 napi-derive = "3"
 serde = "1"
 itoa = "1"
+ryu = "1"
 serde_json = { version = "1", features = ["preserve_order", "arbitrary_precision", "raw_value"] }
 
 [build-dependencies]

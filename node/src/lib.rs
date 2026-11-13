@@ -27,8 +27,14 @@ fn hint_of(h: Option<String>) -> Result<Hint> {
 }
 
 fn num(v: &Value) -> Result<f64> {
-    v.as_f64()
-        .ok_or_else(|| err(format!("expected a number, got {v}")))
+    match v.as_str() {
+        Some("Infinity") => Ok(f64::INFINITY),
+        Some("-Infinity") => Ok(f64::NEG_INFINITY),
+        _ => v
+            .as_f64()
+            .filter(|f| !f.is_nan())
+            .ok_or_else(|| err(format!("expected a number, got {v}"))),
+    }
 }
 
 fn pred(op: &str, v: &Value) -> Result<Pred> {
@@ -225,6 +231,50 @@ impl NativeTable {
         Ok(())
     }
 
+    /// Row ids from JavaScript must be in range before they reach the core, which indexes without checks.
+    fn check_ids(&self, ids: &[u32]) -> Result<()> {
+        let n = self.t.len();
+        match ids.iter().find(|&&i| i as usize >= n) {
+            Some(i) => Err(err(format!("row id {i} out of range (length {n})"))),
+            None => Ok(()),
+        }
+    }
+
+    /// Drop every row from `len` on. Used to undo an append that failed part-way; rebuilds the table.
+    #[napi]
+    pub fn truncate(&mut self, len: u32) {
+        let len = (len as usize).min(self.t.len());
+        if len == self.t.len() {
+            return;
+        }
+        let keep: Vec<u32> = (0..len as u32).collect();
+        self.t = self.t.take(&keep);
+        if self.bulk_depth > 0 {
+            self.t.set_bulk(true)
+        }
+    }
+
+    /// Set and remove fields of one row as a unit: everything is parsed before anything is written.
+    #[napi]
+    pub fn update_json(&mut self, row: u32, set: String, remove: Vec<String>) -> Result<()> {
+        self.check(row)?;
+        let v: serde_json::Map<String, Value> = serde_json::from_str(&set).map_err(err)?;
+        let cells = v
+            .into_iter()
+            .map(|(k, x)| load::raw_cell(&x.to_string()).map(|c| (k, c)))
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .map_err(err)?;
+        for (k, c) in cells {
+            self.t.set_by_name(row as usize, &k, c)
+        }
+        for k in remove {
+            if let Some(c) = self.t.col_index(&k) {
+                self.t.set(row as usize, c, Cell::Missing)
+            }
+        }
+        Ok(())
+    }
+
     fn check(&self, row: u32) -> Result<()> {
         if (row as usize) < self.t.len() {
             Ok(())
@@ -255,6 +305,7 @@ impl NativeTable {
     /// Rows with these ids as JSON text of an array.
     #[napi]
     pub fn json_at(&self, ids: Uint32Array) -> Result<String> {
+        self.check_ids(&ids)?;
         self.with_json(|t, o| json::at(t, &ids, o), |b| std::str::from_utf8(b).map(str::to_owned).map_err(err))
     }
 
@@ -266,6 +317,7 @@ impl NativeTable {
 
     #[napi]
     pub fn json_at_buffer<'e>(&self, env: &'e Env, ids: Uint32Array) -> Result<BufferSlice<'e>> {
+        self.check_ids(&ids)?;
         self.with_json(|t, o| json::at(t, &ids, o), |b| BufferSlice::copy_from(env, b))
     }
 
@@ -273,6 +325,12 @@ impl NativeTable {
     #[napi]
     pub fn select(&self, spec: String, within: Option<Uint32Array>) -> Result<Uint32Array> {
         let spec: Vec<(String, String, Value)> = serde_json::from_str(&spec).map_err(err)?;
+        if let Some(w) = within.as_deref() {
+            self.check_ids(w)?;
+            if w.windows(2).any(|p| p[0] >= p[1]) {
+                return Err(err("row ids must be strictly increasing"));
+            }
+        }
         let mut ids: Option<Vec<u32>> = within.map(|w| w.to_vec());
         for (col, op, v) in &spec {
             let p = pred(op, v)?;
@@ -294,18 +352,24 @@ impl NativeTable {
     }
 
     #[napi]
-    pub fn sum(&self, name: String, ids: Option<Uint32Array>) -> f64 {
-        match self.t.col_index(&name) {
+    pub fn sum(&self, name: String, ids: Option<Uint32Array>) -> Result<f64> {
+        if let Some(ids) = ids.as_deref() {
+            self.check_ids(ids)?
+        }
+        Ok(match self.t.col_index(&name) {
             Some(c) => num_out(self.t.sum(c, ids.as_deref())),
             None => 0.0,
-        }
+        })
     }
 
     /// GROUP BY value, count. JSON text of `[[value, count], ...]`; rows without the key are left out.
     #[napi]
-    pub fn group_count(&self, name: String, ids: Option<Uint32Array>) -> String {
+    pub fn group_count(&self, name: String, ids: Option<Uint32Array>) -> Result<String> {
+        if let Some(ids) = ids.as_deref() {
+            self.check_ids(ids)?
+        }
         let Some(c) = self.t.col_index(&name) else {
-            return "[]".into();
+            return Ok("[]".into());
         };
         let groups = self.t.group_count(c, ids.as_deref());
         let mut out = String::from("[");
@@ -316,7 +380,7 @@ impl NativeTable {
                 Cell::Null => "null".to_string(),
                 Cell::Bool(b) => b.to_string(),
                 Cell::Int(i) => i.to_string(),
-                Cell::Float(f) => serde_json::to_string(&f).unwrap(),
+                Cell::Float(f) => json::js_number(f),
                 Cell::Str(s) => serde_json::to_string(&s).unwrap(),
                 Cell::Json(s) => s,
             };
@@ -331,20 +395,23 @@ impl NativeTable {
             out.push(']')
         }
         out.push(']');
-        out
+        Ok(out)
     }
 
     /// One column as JSON text of an array (`undefined` for missing keys becomes null).
     #[napi]
-    pub fn column_json(&self, name: String, ids: Option<Uint32Array>) -> String {
+    pub fn column_json(&self, name: String, ids: Option<Uint32Array>) -> Result<String> {
+        if let Some(ids) = ids.as_deref() {
+            self.check_ids(ids)?
+        }
         let Some(c) = self.t.col_index(&name) else {
-            return "[]".into();
+            return Ok("[]".into());
         };
         let cell = |i: usize| match self.t.get(i, c) {
             Cell::Missing | Cell::Null => "null".to_string(),
             Cell::Bool(b) => b.to_string(),
             Cell::Int(i) => i.to_string(),
-            Cell::Float(f) => serde_json::to_string(&f).unwrap(),
+            Cell::Float(f) => json::js_number(f),
             Cell::Str(s) => serde_json::to_string(&s).unwrap(),
             Cell::Json(s) => s,
         };
@@ -352,7 +419,7 @@ impl NativeTable {
             Some(ids) => ids.iter().map(|&i| cell(i as usize)).collect(),
             None => (0..self.t.len()).map(cell).collect(),
         };
-        format!("[{}]", parts.join(","))
+        Ok(format!("[{}]", parts.join(",")))
     }
 
     #[napi]

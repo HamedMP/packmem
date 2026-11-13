@@ -83,7 +83,7 @@ test("sum and groupCount match plain loops", () => {
   );
   const want = {};
   for (const m of model) want[m.carrier] = (want[m.carrier] ?? 0) + 1;
-  assert.deepEqual(table.groupCount("carrier"), want);
+  assert.deepEqual({ ...table.groupCount("carrier") }, want);
   assert.deepEqual(table.column("dist", { carrier: "WN" }), model.filter((m) => m.carrier === "WN").map((m) => m.dist));
 });
 

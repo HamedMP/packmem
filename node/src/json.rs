@@ -12,6 +12,72 @@ pub struct JsonWriter<'a> {
     dict: HashMap<(usize, usize, u32), Box<[u8]>>,
 }
 
+/// A number written exactly as JavaScript's `String(number)` / `JSON.stringify` writes it; null for NaN and infinities.
+/// The digits are the shortest that round-trip (ryu), which is also how V8 picks them; only the layout differs from ryu's.
+pub fn write_js_number(out: &mut Vec<u8>, v: f64) {
+    if !v.is_finite() {
+        return out.extend_from_slice(b"null");
+    }
+    if v == 0.0 {
+        return out.push(b'0');
+    }
+    if v.fract() == 0.0 && v.abs() < 1e18 {
+        return out.extend_from_slice(itoa::Buffer::new().format(v as i64).as_bytes());
+    }
+    let mut buf = ryu::Buffer::new();
+    let s = buf.format_finite(v);
+    let (neg, s) = match s.strip_prefix('-') {
+        Some(r) => (true, r),
+        None => (false, s),
+    };
+    let (mant, exp) = match s.split_once('e') {
+        Some((m, e)) => (m, e.parse::<i32>().unwrap_or(0)),
+        None => (s, 0),
+    };
+    let point = mant.find('.').unwrap_or(mant.len()) as i32;
+    let mut digits: Vec<u8> = mant.bytes().filter(|&c| c != b'.').collect();
+    // value = 0.d1d2... x 10^n
+    let mut n = point + exp;
+    let lead = digits.iter().take_while(|&&c| c == b'0').count();
+    digits.drain(..lead);
+    n -= lead as i32;
+    while digits.len() > 1 && digits.last() == Some(&b'0') {
+        digits.pop();
+    }
+    let k = digits.len() as i32;
+    if neg {
+        out.push(b'-')
+    }
+    if k <= n && n <= 21 {
+        out.extend_from_slice(&digits);
+        out.extend(std::iter::repeat_n(b'0', (n - k) as usize));
+    } else if 0 < n && n <= 21 {
+        out.extend_from_slice(&digits[..n as usize]);
+        out.push(b'.');
+        out.extend_from_slice(&digits[n as usize..]);
+    } else if -6 < n && n <= 0 {
+        out.extend_from_slice(b"0.");
+        out.extend(std::iter::repeat_n(b'0', (-n) as usize));
+        out.extend_from_slice(&digits);
+    } else {
+        let e = n - 1;
+        out.push(digits[0]);
+        if k > 1 {
+            out.push(b'.');
+            out.extend_from_slice(&digits[1..]);
+        }
+        out.push(b'e');
+        out.push(if e < 0 { b'-' } else { b'+' });
+        out.extend_from_slice(itoa::Buffer::new().format(e.abs()).as_bytes());
+    }
+}
+
+pub fn js_number(v: f64) -> String {
+    let mut out = Vec::with_capacity(24);
+    write_js_number(&mut out, v);
+    String::from_utf8(out).expect("ASCII")
+}
+
 fn esc(out: &mut Vec<u8>, s: &str) {
     serde_json::to_writer(out, s).expect("writing to a Vec cannot fail")
 }
@@ -79,12 +145,7 @@ impl RowVisitor for JsonWriter<'_> {
     }
     fn float(&mut self, col: usize, v: f64) {
         self.key(col);
-        // match JSON.stringify: whole numbers without ".0" (and -0 as 0), shortest round-trip form otherwise, null for NaN and infinities
-        if v.fract() == 0.0 && v.abs() < 1e15 {
-            self.out.extend_from_slice(itoa::Buffer::new().format(v as i64).as_bytes())
-        } else {
-            serde_json::to_writer(&mut self.out, &v).expect("writing to a Vec cannot fail")
-        }
+        write_js_number(self.out, v)
     }
     fn str(&mut self, col: usize, s: &str) {
         self.key(col);

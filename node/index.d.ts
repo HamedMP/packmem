@@ -14,7 +14,10 @@ export interface Ops {
   prefix?: string;
   contains?: string;
 }
-/** `{ col: value }` for equality, or `{ col: { gt: 60 } }`. Every condition must hold. */
+/**
+ * `{ col: value }` for equality, or `{ col: { gt: 60 } }`. Every condition must hold. A NaN bound throws
+ * TypeError; infinite bounds work; equality with NaN or an infinity matches nothing, as in JavaScript.
+ */
 export type Filters = Record<string, Json | Ops | undefined>;
 
 declare abstract class Rows<R extends Row = Row> implements Iterable<R> {
@@ -33,6 +36,8 @@ declare abstract class Rows<R extends Row = Row> implements Iterable<R> {
   map<T>(fn: (row: R, i: number, rows: this) => T): T[];
   filter(fn: (row: R, i: number, rows: this) => unknown): R[];
   reduce<T>(fn: (acc: T, row: R, i: number, rows: this) => T, init: T): T;
+  /** Without `init`, starts from the first row, as `Array.prototype.reduce` does; throws on an empty table. */
+  reduce(fn: (acc: R, row: R, i: number, rows: this) => R): R;
 }
 
 export declare class Table<R extends Row = Row> extends Rows<R> {
@@ -43,12 +48,14 @@ export declare class Table<R extends Row = Row> extends Rows<R> {
   readonly nbytes: number;
   at(i: number): R | undefined;
   slice(start?: number, end?: number): R[];
+  /** All or nothing: if any record is not an object or cannot be stored, none is added. */
   push(...rows: R[]): number;
+  /** All or nothing, like `push`. */
   extend(records: Iterable<R>): this;
   /** Rows as arrays of values in the order of `names` (a database driver's array mode). */
   extendArrays(names: string[], rows: Iterable<unknown[]>): this;
   set(i: number, row: R): void;
-  /** A value of `undefined` removes the key. */
+  /** A value of `undefined` removes the key. All or nothing. */
   update(i: number, fields: Partial<Record<keyof R, Json | undefined>>): void;
   where(filters: Filters): View<R>;
   count(filters?: Filters): number;
@@ -61,6 +68,7 @@ export declare class Table<R extends Row = Row> extends Rows<R> {
 
 export declare class View<R extends Row = Row> extends Rows<R> {
   readonly table: Table<R>;
+  /** Matching row numbers, ascending; recomputed after the table changes. Do not modify. */
   readonly ids: Uint32Array;
   readonly length: number;
   where(filters: Filters): View<R>;
