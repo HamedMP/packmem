@@ -564,6 +564,48 @@ impl PyTable {
             Ok(n)
         })
     }
+    /// Rows given as sequences of values aligned with `names` (what a DB-API cursor yields): no dict is built per row.
+    fn extend_rows(
+        &mut self,
+        py: Python<'_>,
+        names: Vec<String>,
+        rows: &Bound<'_, PyAny>,
+    ) -> PyResult<usize> {
+        self.bulk(py, |s| {
+            let mut n = 0;
+            for row in rows.try_iter()? {
+                let mut i = 0;
+                let r = (|| -> PyResult<()> {
+                    for v in row?.try_iter()? {
+                        let v = v?;
+                        let name = names.get(i).ok_or_else(|| {
+                            PyValueError::new_err("row has more values than there are column names")
+                        })?;
+                        let c = s.t.col_for(name);
+                        if v.is_exact_instance_of::<PyString>() {
+                            s.t.put_str_at(c, &v.downcast::<PyString>()?.to_cow()?)
+                        } else {
+                            s.t.put_at(c, to_cell(&v)?)
+                        }
+                        i += 1
+                    }
+                    if i != names.len() {
+                        return Err(PyValueError::new_err(
+                            "row has fewer values than there are column names",
+                        ));
+                    }
+                    Ok(())
+                })();
+                if let Err(e) = r {
+                    s.t.abort_row();
+                    return Err(e);
+                }
+                s.t.end_row();
+                n += 1
+            }
+            Ok(n)
+        })
+    }
     /// Parse a JSON-lines file in native code; no Python objects are created per record.
     fn load_jsonl_path(&mut self, py: Python<'_>, path: &str) -> PyResult<usize> {
         let f = std::fs::File::open(path)?;

@@ -156,6 +156,25 @@ def test_json_output():
         assert len(got) == len(rows) and all(g == w or (g != g) or str(g) == str(w) for g, w in zip(got, rows)), rows[:2]
 
 
+
+def test_from_cursor():
+    import sqlite3
+    con = sqlite3.connect(":memory:")
+    con.execute("create table t (id integer, name text, v real, note text)")
+    data = [(i, "n%d" % (i % 7), i / 4, None if i % 3 else "x") for i in range(20_000)]
+    con.executemany("insert into t values (?,?,?,?)", data)
+    cur = con.execute("select id, name, v, note from t order by id")
+    t = packmem.from_cursor(cur)
+    want = [dict(zip(("id", "name", "v", "note"), row)) for row in data]
+    assert list(t) == want and t.columns == ["id", "name", "v", "note"] and t.count(name="n3") == sum(1 for w in want if w["name"] == "n3")
+    assert list(packmem.from_cursor(con.execute("select id from t where id < 0"))) == []
+    for bad in ([(1, 2, 3)], [(1,)], [(1, object())]):
+        u = packmem.Table([{"a": 0, "b": 0}])
+        try: u._t.extend_rows(["a", "b"], bad); raise AssertionError("expected an error")
+        except (ValueError, TypeError): pass
+        assert list(u) == [{"a": 0, "b": 0}]
+
+
 if __name__ == "__main__":
     for name, f in list(globals().items()):
         if name.startswith("test_"): f(); print("ok", name)

@@ -11,7 +11,7 @@ assignment, and adds filters and aggregates that run on the packed data:
 import os as _os
 from ._packmem import _Table, Selection, Row
 
-__all__ = ["Table", "View", "Row", "load_jsonl", "load_json", "from_records", "read_csv"]
+__all__ = ["Table", "View", "Row", "load_jsonl", "load_json", "from_records", "from_cursor", "read_csv"]
 __version__ = "0.1.0"
 
 
@@ -228,6 +228,17 @@ class View:
 def from_records(records, hint="balanced"):
     """Pack any iterable of mappings (dicts, csv.DictReader, sqlite3.Row with keys, ...)."""
     return Table(records, hint=hint)
+
+
+def from_cursor(cursor, hint="balanced"):
+    """Pack the remaining rows of a DB-API cursor (sqlite3, psycopg, ...) without building a dict per row.
+
+    Replaces `[dict(zip(names, row)) for row in cursor]`. Column names come from `cursor.description`.
+    Values must be None, bool, int, float, str or JSON-like; convert dates and decimals in the query.
+    """
+    t = Table(hint=hint)
+    t._t.extend_rows([d[0] for d in cursor.description], cursor)
+    return t
 
 
 def load_jsonl(src, hint="balanced"):
