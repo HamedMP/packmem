@@ -33,13 +33,31 @@ fn to_cell(v: &Bound<'_, PyAny>) -> PyResult<Cell> {
     } else if v.is_exact_instance_of::<PyFloat>() {
         Ok(Cell::Float(v.extract()?))
     } else if v.is_exact_instance_of::<PyString>() {
-        Ok(Cell::Str(v.extract()?))
+        // a str holding a lone surrogate has no UTF-8 form: keep it as escaped JSON text, which reads back identically
+        match v.extract::<String>() {
+            Ok(s) => Ok(Cell::Str(s)),
+            Err(_) => Ok(Cell::Json(dumps(v)?)),
+        }
     } else {
         let s = dumps(v)?;
         Ok(match from_text(s.as_bytes()) {
             Cell::Missing => Cell::Null,
             _ => Cell::Json(s),
         })
+    }
+}
+
+/// Writes a Python str cell, falling back to escaped JSON text when it has no UTF-8 form (lone surrogates).
+trait PutStr {
+    fn put_str_cell(&mut self, c: usize, v: &Bound<'_, PyString>) -> PyResult<()>;
+}
+impl PutStr for DynTable {
+    fn put_str_cell(&mut self, c: usize, v: &Bound<'_, PyString>) -> PyResult<()> {
+        match v.to_cow() {
+            Ok(s) => self.put_str_at(c, &s),
+            Err(_) => self.put_at(c, Cell::Json(dumps(v.as_any())?)),
+        }
+        Ok(())
     }
 }
 
@@ -459,7 +477,7 @@ impl PyTable {
             };
             let r = c.and_then(|c| {
                 if v.is_exact_instance_of::<PyString>() {
-                    self.t.put_str_at(c, &v.downcast::<PyString>()?.to_cow()?)
+                    self.t.put_str_cell(c, v.downcast::<PyString>()?)?
                 } else {
                     self.t.put_at(c, to_cell(&v)?)
                 }
@@ -584,7 +602,7 @@ impl PyTable {
                         PyValueError::new_err("row has more values than there are column names")
                     })?;
                     if v.is_exact_instance_of::<PyString>() {
-                        s.t.put_str_at(c, &v.downcast::<PyString>()?.to_cow()?)
+                        s.t.put_str_cell(c, v.downcast::<PyString>()?)?
                     } else {
                         s.t.put_at(c, to_cell(v)?)
                     }
@@ -931,6 +949,53 @@ impl PyTable {
             )?)?
         }
         Ok(l)
+    }
+    /// A new table holding the given rows, in the given order.
+    fn take(&self, py: Python<'_>, order: Vec<u32>) -> PyResult<PyTable> {
+        let n = self.t.len();
+        if order.iter().any(|&r| r as usize >= n) {
+            return Err(PyIndexError::new_err("row index out of range"));
+        }
+        let mut t = PyTable {
+            t: self.t.take(&order),
+            keys: vec![],
+            template: None,
+            seen_keys: vec![],
+        };
+        t.sync_keys(py)?;
+        Ok(t)
+    }
+    /// Append every row of another table natively.
+    fn extend_table(&mut self, py: Python<'_>, other: &Bound<'_, PyTable>) -> PyResult<()> {
+        let o = other
+            .try_borrow()
+            .map_err(|_| PyValueError::new_err("cannot extend a table with itself"))?;
+        self.t.extend_from(&o.t);
+        drop(o);
+        self.sync_keys(py)
+    }
+    /// The packed columns as bytes, without re-encoding. Packs any rows still held uncompressed first.
+    fn to_bytes<'py>(&mut self, py: Python<'py>) -> Bound<'py, PyBytes> {
+        PyBytes::new(py, &self.t.to_bytes())
+    }
+    #[staticmethod]
+    fn from_bytes(py: Python<'_>, data: &[u8]) -> PyResult<PyTable> {
+        let mut t = PyTable {
+            t: DynTable::from_bytes(data).map_err(PyValueError::new_err)?,
+            keys: vec![],
+            template: None,
+            seen_keys: vec![],
+        };
+        t.sync_keys(py)?;
+        Ok(t)
+    }
+    #[getter]
+    fn hint(&self) -> &'static str {
+        match self.t.hint {
+            Hint::Memory => "memory",
+            Hint::Balanced => "balanced",
+            Hint::Speed => "speed",
+        }
     }
     /// Rebuild the table from the given row numbers, in that order.
     fn reorder(&mut self, order: Vec<u32>) -> PyResult<()> {

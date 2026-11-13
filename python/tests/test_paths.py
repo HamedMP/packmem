@@ -176,6 +176,39 @@ def test_from_cursor():
         assert list(u) == [{"a": 0, "b": 0}]
 
 
+
+def test_pickle_take_extend_and_surrogates():
+    import pickle, random as rnd
+    r = rnd.Random(9)
+    m = [{"id": i, "s": r.choice(["a", "é", ""]), "f": r.choice([1.5, float("inf"), -0.0, 2.0]), "big": 2**70 + i, "n": None if i % 4 else [i, {"k": None}], **({"late": i} if i > 20_000 else {})} for i in range(40_000)]
+    t = packmem.Table(m, hint="memory")
+    u = pickle.loads(pickle.dumps(t))
+    assert list(u) == m and u.columns == t.columns and u._t.hint == "memory" and len(pickle.dumps(t)) < len(pickle.dumps(m))
+    assert u.count(s="é") == sum(1 for x in m if x["s"] == "é") and u.sum("id") == sum(x["id"] for x in m)
+    u.append({"id": -1}); u.update(3, s="patched"); w = pickle.loads(pickle.dumps(u)); assert w[3]["s"] == "patched" and w[-1] == {"id": -1} and len(w) == len(m) + 1
+    for junk in (b"", b"PKM1", t.to_bytes()[:-7], b"nope" + t.to_bytes()[4:], t.to_bytes() + b"x"):
+        try: packmem.Table.from_bytes(junk); raise AssertionError("expected ValueError")
+        except ValueError: pass
+    nan = packmem.Table([{"x": float("nan"), "y": 1}, {"y": 2}]); back = list(pickle.loads(pickle.dumps(nan)))
+    assert back[0]["x"] != back[0]["x"] and back[1] == {"y": 2}
+    e = pickle.loads(pickle.dumps(packmem.Table())); assert len(e) == 0 and e.columns == []
+    # take, copy, shuffle, extend with another table, and the Sequence protocol
+    idx = [5, -1, 5, 39_999, 0]
+    assert list(t.take(idx)) == [m[i] for i in idx] and list(t.copy()) == m and len(t) == len(m)
+    a = packmem.Table(m[:30_000]); b = packmem.Table([{"other": 1, "id": -1}] + m[30_000:])
+    a.extend(b); assert list(a) == m[:30_000] + [{"id": -1, "other": 1}] + m[30_000:]
+    c = packmem.Table(m[:10]); c.extend(c); assert list(c) == m[:10] * 2
+    s = t.copy(); s.shuffle(rnd.Random(1)); assert sorted(x["id"] for x in s) == list(range(len(m))) and [x["id"] for x in s[:50]] != list(range(50))
+    assert len(rnd.Random(2).sample(t, 5)) == 5 and m[7] in t
+    # a lone surrogate has no UTF-8 form; it must still round-trip, as it does through json.loads
+    line = '{"a":"\\udd56 x","b":1,"c":"ok"}'
+    want = [json.loads(line)]
+    for tab in (packmem.load_jsonl([line] * 3), packmem.Table(want * 3), pickle.loads(pickle.dumps(packmem.Table(want * 3)))):
+        assert list(tab) == want * 3 and json.loads(tab.to_json()) == want * 3 and tab.count(c="ok") == 3
+    big = packmem.Table(want * 20_000 + [{"a": "plain", "b": 2, "c": "ok"}]); big.compact()
+    assert big[0] == want[0] and big[-1]["a"] == "plain" and big[19_999]["a"] == want[0]["a"]
+
+
 if __name__ == "__main__":
     for name, f in list(globals().items()):
         if name.startswith("test_"): f(); print("ok", name)

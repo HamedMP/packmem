@@ -666,3 +666,131 @@ impl PackedInts {
         (0..self.len()).map(|i| self.get(i)).collect()
     }
 }
+
+use crate::wire::{R, Res, W, bad};
+
+impl Store {
+    pub(crate) fn write(&self, w: &mut W) {
+        match self {
+            Store::A8(v) => {
+                w.u8(0);
+                w.v_u8(v)
+            }
+            Store::A16(v) => {
+                w.u8(1);
+                w.v_u16(v)
+            }
+            Store::A32(v) => {
+                w.u8(2);
+                w.v_u32(v)
+            }
+            Store::A64(v) => {
+                w.u8(3);
+                w.v_u64(v)
+            }
+            Store::Bits(b) => {
+                w.u8(4);
+                w.u8(b.w);
+                w.v_u8(&b.data)
+            }
+        }
+    }
+    pub(crate) fn read(r: &mut R) -> Res<Store> {
+        Ok(match r.get_u8()? {
+            0 => Store::A8(r.get_v_u8()?),
+            1 => Store::A16(r.get_v_u16()?),
+            2 => Store::A32(r.get_v_u32()?),
+            3 => Store::A64(r.get_v_u64()?),
+            4 => {
+                let w = r.get_u8()?;
+                if w > 56 {
+                    return bad("bit width");
+                }
+                Store::Bits(BitPacked {
+                    data: r.get_v_u8()?,
+                    w,
+                    mask: if w == 0 { 0 } else { (1u64 << w) - 1 },
+                })
+            }
+            _ => return bad("store kind"),
+        })
+    }
+}
+
+impl PackedInts {
+    pub(crate) fn write(&self, w: &mut W) {
+        match self {
+            PackedInts::Const { v, len } => {
+                w.u8(0);
+                w.i64(*v);
+                w.u64(*len as u64)
+            }
+            PackedInts::For { base, s, len } => {
+                w.u8(1);
+                w.i64(*base);
+                s.write(w);
+                w.u64(*len as u64)
+            }
+            PackedInts::Dict { dict, codes, len } => {
+                w.u8(2);
+                w.v_i64(dict);
+                codes.write(w);
+                w.u64(*len as u64)
+            }
+            PackedInts::Rle { vals, ends, len } => {
+                w.u8(3);
+                w.v_i64(vals);
+                w.v_u32(ends);
+                w.u64(*len as u64)
+            }
+            PackedInts::BlockFor {
+                bases,
+                widths,
+                offs,
+                data,
+                len,
+                sorted,
+            } => {
+                w.u8(4);
+                w.v_i64(bases);
+                w.v_u8(widths);
+                w.v_u32(offs);
+                w.v_u8(data);
+                w.u64(*len as u64);
+                w.bool(*sorted)
+            }
+        }
+    }
+    pub(crate) fn read(r: &mut R) -> Res<PackedInts> {
+        Ok(match r.get_u8()? {
+            0 => PackedInts::Const {
+                v: r.get_i64()?,
+                len: r.get_u64()? as usize,
+            },
+            1 => PackedInts::For {
+                base: r.get_i64()?,
+                s: Store::read(r)?,
+                len: r.get_u64()? as usize,
+            },
+            2 => PackedInts::Dict {
+                dict: r.get_v_i64()?,
+                codes: Store::read(r)?,
+                len: r.get_u64()? as usize,
+            },
+            3 => PackedInts::Rle {
+                vals: r.get_v_i64()?,
+                ends: r.get_v_u32()?,
+                len: r.get_u64()? as usize,
+            },
+            4 => PackedInts::BlockFor {
+                bases: r.get_v_i64()?,
+                widths: r.get_v_u8()?,
+                offs: r.get_v_u32()?,
+                data: r.get_v_u8()?,
+                len: r.get_u64()? as usize,
+                sorted: r.get_bool()?,
+            },
+            _ => return bad("integer encoding"),
+        })
+    }
+}

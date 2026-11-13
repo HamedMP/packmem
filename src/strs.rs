@@ -306,3 +306,90 @@ impl PackedStrs {
         }
     }
 }
+
+use crate::wire::{R, Res, W, bad};
+
+impl StrPool {
+    fn write(&self, w: &mut W) {
+        w.v_u8(&self.bytes);
+        w.v_u32(&self.offs);
+        w.u64(self.raw_bytes as u64);
+        match &self.fsst {
+            None => w.u8(0),
+            Some(p) => {
+                w.u8(1);
+                w.u8(p.n_symbols);
+                for s in &p.symbols {
+                    w.u64(s.to_u64())
+                }
+                w.0.extend_from_slice(&p.lengths)
+            }
+        }
+    }
+    fn read(r: &mut R) -> Res<StrPool> {
+        let (bytes, offs, raw_bytes) = (r.get_v_u8()?, r.get_v_u32()?, r.get_u64()? as usize);
+        if offs.is_empty()
+            || offs.windows(2).any(|p| p[0] > p[1])
+            || *offs.last().unwrap() as usize > bytes.len()
+        {
+            return bad("string offsets");
+        }
+        let fsst = match r.get_u8()? {
+            0 => None,
+            1 => {
+                let n_symbols = r.get_u8()?;
+                let mut symbols = [fsst::Symbol::ZERO; 255];
+                for s in &mut symbols {
+                    *s = fsst::Symbol::from_slice(&r.get_u64()?.to_le_bytes())
+                }
+                let lengths: [u8; 255] = r.take(255)?.try_into().unwrap();
+                if lengths.iter().any(|&l| l > 8) {
+                    return bad("symbol length");
+                }
+                Some(Box::new(CompressorParts {
+                    symbols,
+                    lengths,
+                    n_symbols,
+                }))
+            }
+            _ => return bad("string pool"),
+        };
+        Ok(StrPool {
+            bytes,
+            offs,
+            fsst,
+            raw_bytes,
+            enc: std::sync::OnceLock::new(),
+        })
+    }
+}
+
+impl PackedStrs {
+    pub(crate) fn write(&self, w: &mut W) {
+        match self {
+            PackedStrs::Dict { pool, codes, len } => {
+                w.u8(0);
+                pool.write(w);
+                codes.write(w);
+                w.u64(*len as u64)
+            }
+            PackedStrs::Direct { pool } => {
+                w.u8(1);
+                pool.write(w)
+            }
+        }
+    }
+    pub(crate) fn read(r: &mut R) -> Res<PackedStrs> {
+        Ok(match r.get_u8()? {
+            0 => PackedStrs::Dict {
+                pool: StrPool::read(r)?,
+                codes: Store::read(r)?,
+                len: r.get_u64()? as usize,
+            },
+            1 => PackedStrs::Direct {
+                pool: StrPool::read(r)?,
+            },
+            _ => return bad("string encoding"),
+        })
+    }
+}

@@ -43,6 +43,8 @@ def test_round_trip(rows, cut, hint):
     assert same(t[1:-1:2], want[1:-1:2])
     assert same([r.to_dict() for r in t.lazy()], want)
     t.compact(); assert same(list(t), want)
+    assert same(list(__import__("pickle").loads(__import__("pickle").dumps(t))), want)
+    assert same(list(t.take(range(len(want) - 1, -1, -1))), want[::-1])
 
 
 @settings(max_examples=300, deadline=None)

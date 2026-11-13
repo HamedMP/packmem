@@ -3,6 +3,7 @@ pub mod dynamic;
 pub mod ints;
 pub mod strs;
 pub mod table;
+pub mod wire;
 pub use dynamic::{Cell, DynTable, Num, Pred};
 pub use ints::{Hint, PackedInts};
 pub use strs::PackedStrs;

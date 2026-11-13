@@ -52,7 +52,11 @@ pub fn from_text(t: &[u8]) -> Cell {
     }
     let s = std::str::from_utf8(t).unwrap_or("");
     match t[0] {
-        b'"' => Cell::Str(serde_json::from_str(s).unwrap_or_default()),
+        // text that is not a valid Rust string (a lone UTF-16 surrogate escape) stays as raw JSON text
+        b'"' => match serde_json::from_str(s) {
+            Ok(x) => Cell::Str(x),
+            Err(_) => Cell::Json(s.to_string()),
+        },
         b'n' => Cell::Null,
         b't' => Cell::Bool(true),
         b'f' => Cell::Bool(false),
@@ -1272,8 +1276,260 @@ impl DynTable {
         t.set_bulk(false);
         t
     }
+    /// Append every row of `other`, matching columns by name, without leaving native code.
+    pub fn extend_from(&mut self, other: &DynTable) {
+        let map: Vec<usize> = other.names.iter().map(|n| self.col_or_create(n)).collect();
+        let was_bulk = self.bulk;
+        self.bulk = true;
+        for r in 0..other.len {
+            for (c, &dst) in map.iter().enumerate() {
+                match other.get(r, c) {
+                    Cell::Missing => {}
+                    cell => self.put_at(dst, cell),
+                }
+            }
+            self.end_row();
+        }
+        if !was_bulk {
+            self.set_bulk(false)
+        }
+    }
     /// Rows currently held uncompressed.
     pub fn tail_rows(&self) -> usize {
         self.tail_len()
+    }
+}
+
+use crate::wire::{R, Res, W, bad};
+const MAGIC: &[u8; 4] = b"PKM1";
+
+fn write_cell(w: &mut W, c: &Cell) {
+    match c {
+        Cell::Missing => w.u8(T_MISSING),
+        Cell::Null => w.u8(T_NULL),
+        Cell::Bool(b) => {
+            w.u8(T_BOOL);
+            w.bool(*b)
+        }
+        Cell::Int(i) => {
+            w.u8(T_INT);
+            w.i64(*i)
+        }
+        Cell::Float(f) => {
+            w.u8(T_FLOAT);
+            w.f64(*f)
+        }
+        Cell::Str(s) => {
+            w.u8(T_STR);
+            w.bytes(s.as_bytes())
+        }
+        Cell::Json(s) => {
+            w.u8(T_JSON);
+            w.bytes(s.as_bytes())
+        }
+    }
+}
+fn read_cell(r: &mut R) -> Res<Cell> {
+    Ok(match r.get_u8()? {
+        T_MISSING => Cell::Missing,
+        T_NULL => Cell::Null,
+        T_BOOL => Cell::Bool(r.get_bool()?),
+        T_INT => Cell::Int(r.get_i64()?),
+        T_FLOAT => Cell::Float(r.get_f64()?),
+        T_STR => Cell::Str(r.get_string()?),
+        T_JSON => Cell::Json(r.get_string()?),
+        _ => return bad("cell kind"),
+    })
+}
+fn write_bits(w: &mut W, b: &Option<Bits>) {
+    match b {
+        None => w.u8(0),
+        Some(v) => {
+            w.u8(1);
+            w.v_u64(v)
+        }
+    }
+}
+fn read_bits(r: &mut R, len: usize) -> Res<Option<Bits>> {
+    Ok(match r.get_u8()? {
+        0 => None,
+        _ => {
+            let v = r.get_v_u64()?;
+            if v.len() != len.div_ceil(64) {
+                return bad("bitmap size");
+            }
+            Some(v)
+        }
+    })
+}
+
+impl Chunk {
+    fn write(&self, w: &mut W) {
+        match &self.data {
+            Data::Absent => w.u8(0),
+            Data::Int { p, is_bool } => {
+                w.u8(1);
+                w.bool(*is_bool);
+                p.write(w)
+            }
+            Data::Dec { scale, p } => {
+                w.u8(2);
+                w.u8(*scale);
+                p.write(w)
+            }
+            Data::F64(v) => {
+                w.u8(3);
+                w.v_f64(v)
+            }
+            Data::Str(p) => {
+                w.u8(4);
+                p.write(w)
+            }
+            Data::Mixed(p) => {
+                w.u8(5);
+                p.write(w)
+            }
+        }
+        w.u32(self.len);
+        w.u32(self.holes);
+        w.i64(self.fill);
+        w.bool(self.safe_sum);
+        write_bits(w, &self.nulls);
+        write_bits(w, &self.missing);
+        w.u64(self.patches.len() as u64);
+        for (i, c) in &self.patches {
+            w.u32(*i);
+            write_cell(w, c)
+        }
+    }
+    fn read(r: &mut R) -> Res<Chunk> {
+        let data = match r.get_u8()? {
+            0 => Data::Absent,
+            1 => {
+                let is_bool = r.get_bool()?;
+                Data::Int {
+                    p: PackedInts::read(r)?,
+                    is_bool,
+                }
+            }
+            2 => {
+                let scale = r.get_u8()?;
+                if scale as usize >= POW10.len() {
+                    return bad("decimal scale");
+                }
+                Data::Dec {
+                    scale,
+                    p: PackedInts::read(r)?,
+                }
+            }
+            3 => Data::F64(r.get_v_f64()?),
+            4 => Data::Str(PackedStrs::read(r)?),
+            5 => Data::Mixed(PackedStrs::read(r)?),
+            _ => return bad("column kind"),
+        };
+        let (len, holes, fill, safe_sum) =
+            (r.get_u32()?, r.get_u32()?, r.get_i64()?, r.get_bool()?);
+        let n = len as usize;
+        let stored = match &data {
+            Data::Absent => n,
+            Data::Int { p, .. } | Data::Dec { p, .. } => p.len(),
+            Data::F64(v) => v.len(),
+            Data::Str(p) | Data::Mixed(p) => p.len(),
+        };
+        if n > CHUNK || stored != n || holes > len {
+            return bad("chunk length");
+        }
+        let (nulls, missing) = (read_bits(r, n)?, read_bits(r, n)?);
+        let mut patches = BTreeMap::new();
+        for _ in 0..r.len(5)? {
+            let i = r.get_u32()?;
+            if i >= len {
+                return bad("patch position");
+            }
+            patches.insert(i, read_cell(r)?);
+        }
+        Ok(Chunk {
+            data,
+            nulls,
+            missing,
+            fill,
+            holes,
+            len,
+            safe_sum,
+            patches,
+        })
+    }
+}
+
+impl DynTable {
+    /// The table as bytes, holding the packed columns as they are. Reading them back with `from_bytes` does not re-encode
+    /// anything, so it costs about one copy of the packed size. The format is tied to this version of the library.
+    pub fn to_bytes(&mut self) -> Vec<u8> {
+        self.compact();
+        let mut w = W::default();
+        w.0.extend_from_slice(MAGIC);
+        w.u8(match self.hint {
+            Hint::Memory => 0,
+            Hint::Balanced => 1,
+            Hint::Speed => 2,
+        });
+        w.u64(self.len as u64);
+        w.u64(self.cols.len() as u64);
+        for (name, c) in self.names.iter().zip(&self.cols) {
+            w.bytes(name.as_bytes());
+            for ch in c.sealed() {
+                ch.write(&mut w)
+            }
+        }
+        w.0
+    }
+    pub fn from_bytes(b: &[u8]) -> Res<DynTable> {
+        let mut r = R::new(b);
+        if r.take(4)? != MAGIC {
+            return Err(
+                "not packed table data, or written by a different version of packmem".into(),
+            );
+        }
+        let hint = match r.get_u8()? {
+            0 => Hint::Memory,
+            1 => Hint::Balanced,
+            2 => Hint::Speed,
+            _ => return bad("hint"),
+        };
+        let len = r.get_u64()? as usize;
+        let (nfull, plen) = (len / CHUNK, len % CHUNK);
+        let mut t = DynTable::new(hint);
+        for _ in 0..r.len(8)? {
+            let name = r.get_string()?;
+            let mut col = Column {
+                chunks: Vec::new(),
+                partial: None,
+                tail: Tail::default(),
+            };
+            for _ in 0..nfull {
+                let ch = Chunk::read(&mut r)?;
+                if ch.len as usize != CHUNK {
+                    return bad("chunk length");
+                }
+                col.chunks.push(ch)
+            }
+            if plen > 0 {
+                let ch = Chunk::read(&mut r)?;
+                if ch.len as usize != plen {
+                    return bad("chunk length");
+                }
+                col.partial = Some(ch)
+            }
+            if t.index.insert(name.clone(), t.cols.len()).is_some() {
+                return bad("duplicate column");
+            }
+            t.names.push(name);
+            t.cols.push(col)
+        }
+        if !r.done() {
+            return bad("trailing bytes");
+        }
+        (t.len, t.plen) = (len, plen);
+        Ok(t)
     }
 }

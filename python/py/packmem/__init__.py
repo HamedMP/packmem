@@ -9,10 +9,17 @@ assignment, and adds filters and aggregates that run on the packed data:
     rows.where(status=404, ua__contains="curl").sum("bytes")
 """
 import os as _os
+from collections.abc import MutableSequence as _MutableSequence
 from ._packmem import _Table, Selection, Row
 
 __all__ = ["Table", "View", "Row", "load_jsonl", "load_json", "from_records", "from_cursor", "read_csv"]
 __version__ = "0.1.0"
+
+
+def _restore(data):
+    t = Table.__new__(Table)
+    t._t = _Table.from_bytes(data)
+    return t
 
 
 def _json_chunks(n, batch, part):
@@ -107,7 +114,39 @@ class Table:
         self._t.append(row)
 
     def extend(self, rows):
-        self._t.extend(rows)
+        if isinstance(rows, Table):
+            self._t.extend_table((rows.copy() if rows is self else rows)._t)
+        else:
+            self._t.extend(rows)
+
+    def take(self, indices):
+        """A new Table holding the rows at `indices`, in that order (rows may repeat)."""
+        n = len(self._t)
+        new = Table.__new__(Table)
+        new._t = self._t.take([i + n if i < 0 else i for i in indices])
+        return new
+
+    def copy(self):
+        return self.take(range(len(self._t)))
+
+    def shuffle(self, random=None):
+        """Shuffle in place with one rebuild. `random.shuffle(table)` also works but rewrites two rows per swap."""
+        import random as _random
+        order = list(range(len(self._t)))
+        (random or _random).shuffle(order)
+        self._t.reorder(order)
+
+    def __reduce__(self):
+        # pickled as the packed columns themselves: unpickling copies them and re-encodes nothing
+        return _restore, (self._t.to_bytes(),)
+
+    def to_bytes(self):
+        """The packed table as bytes (`Table.from_bytes` reads it back). The format is tied to this version of packmem."""
+        return self._t.to_bytes()
+
+    @classmethod
+    def from_bytes(cls, data):
+        return _restore(data)
 
     def __delitem__(self, i):
         n = len(self._t)
@@ -178,6 +217,9 @@ class Table:
     def describe(self):
         """(column, encodings, bytes) for the sealed part of each column."""
         return self._t.describe()
+
+
+_MutableSequence.register(Table)
 
 
 class View:
