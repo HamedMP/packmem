@@ -2,13 +2,14 @@
 
 ## r/Python
 
-**Title:** packmem: a drop-in list of dicts that used 36x less memory on 336k real records
+**Title:** packmem: a one-line replacement for a list of dicts that used 36x less memory on 336k real records
 
 **Body:**
 
     `rows = packmem.load_jsonl("flights.jsonl")` instead of `[json.loads(l) for l in f]`. On nycflights13
-    (336,776 rows, 104 MB of JSON lines) the list of dicts takes 712 MB; packmem takes 19.7 MB and still behaves like a
-    list: index, iterate, append, update, sort. Queries like `rows.count(carrier="UA")` or `rows.group_count("dest")`
+    (336,776 rows, 104 MB of JSON lines) the list of dicts takes 712 MB; packmem takes 19.7 MB (Mac, on a machine in normal
+    use) and supports the list operations: index, iterate, append, update, sort. It is not a list subclass: a row you
+    read is a fresh dict, so changing it does not change the table (lazy rows write through). Queries like `rows.count(carrier="UA")` or `rows.group_count("dest")`
     run on the packed columns and were 24 to 426 times faster than loops over the dicts.
 
     It also reads CSV (`packmem.read_csv`), DB-API cursors without a dict per row (`packmem.from_cursor`) and Django
@@ -18,7 +19,7 @@
     access 6.7x slower, and below a few hundred rows there is no saving. polars tuned for memory comes within 1.6 to
     2.9x and loads faster; packmem is for code that wants a list, not a dataframe.
 
-    pip install packmem — benchmarks, scripts and every results file: https://github.com/HamedMP/packmem
+    Alpha (0.1.0). pip install packmem — benchmarks, scripts and every results file: https://github.com/HamedMP/packmem
 
 ## r/node
 
@@ -31,11 +32,11 @@
     responses. `rows.where({...}).jsonStream().pipe(res)` writes JSON straight from the columns (byte-identical to
     JSON.stringify for flat records) without building objects or a full-size string.
 
-    Postgres: `fromPgCopy(client, sql)` streams COPY output into the columns with no row objects (as fast as plain
-    node-postgres rows on our data); `fromQuery` takes Drizzle and Kysely queries. `packmem/wasm` runs the same code on
+    Postgres: `fromPgCopy(client, sql)` streams COPY output into the columns with no row objects (448 ms against 436 ms
+    for plain node-postgres rows on our data); `fromQuery` takes Drizzle and Kysely queries. `packmem/wasm` runs the same code on
     Cloudflare Workers.
 
     Honest part: V8 already stores same-shape objects compactly, so the gain in Node is memory more than speed, and a
     loop over every row is slower than over a plain array. Details and every number's source in the repo.
 
-    npm install packmem — https://github.com/HamedMP/packmem
+    Alpha (0.1.0). npm install packmem — https://github.com/HamedMP/packmem
