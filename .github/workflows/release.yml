@@ -1,7 +1,7 @@
 name: release
 # Builds the Python wheels and source distribution.
-#   Run manually:  build everything and upload to TestPyPI.
-#   Push a v* tag: build everything and upload to PyPI.
+#   Run manually:  build and test everything; upload to TestPyPI if TESTPYPI_TRUSTED_PUBLISHING is 'true'.
+#   Push a v* tag: build and test everything; upload to PyPI if PYPI_TRUSTED_PUBLISHING is 'true'.
 # Both uploads use PyPI trusted publishing (no tokens); the publisher has to be registered
 # for this repository and workflow on test.pypi.org and pypi.org first.
 on:
@@ -82,7 +82,8 @@ jobs:
       - run: python python/tests/test_paths.py
 
   testpypi:
-    if: github.event_name == 'workflow_dispatch'
+    # uploads need a trusted publisher registered on the index; set the repository variable once that is done
+    if: github.event_name == 'workflow_dispatch' && vars.TESTPYPI_TRUSTED_PUBLISHING == 'true'
     needs: [test-install, sdist]
     runs-on: ubuntu-latest
     environment: testpypi
@@ -94,7 +95,7 @@ jobs:
         with: { repository-url: "https://test.pypi.org/legacy/" }
 
   pypi:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') && vars.PYPI_TRUSTED_PUBLISHING == 'true'
     needs: [test-install, sdist]
     runs-on: ubuntu-latest
     environment: pypi

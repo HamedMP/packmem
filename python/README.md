@@ -100,4 +100,5 @@ Loading from `csv.DictReader` or a database cursor is 1.2 to 1.5 times slower th
   spawn. Each worker then holds its own copy; under fork the packed data is shared.
 - `rows.shuffle()` and `rows.take(indices)` rebuild once. `random.shuffle(rows)` works but is far slower.
 
-Status: alpha. Requires Python 3.10 or later. Built and tested on Linux x86-64 and macOS arm64; the CI workflow has not run yet.
+Status: alpha. `pip install packmem`. Requires Python 3.10 or later. Tested in CI on Linux x86-64, macOS arm64 and
+Windows x86-64; the Linux arm64 and musl wheels are cross-built and not exercised by tests.

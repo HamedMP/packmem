@@ -110,15 +110,15 @@ def main(n=200_000, seed=7):
     d = tempfile.mkdtemp(); p = os.path.join(d, "x.jsonl"); sub = [row for row in model[:5000]]
     for row in sub:
         for k in ("float", "mixed", "big"): row.pop(k, None)   # NaN/huge ints are not portable JSON
-    open(p, "w").write("\n".join(json.dumps(row) for row in sub) + "\n")
-    ref = [json.loads(l) for l in open(p)]
-    assert same(list(packmem.load_jsonl(p)), ref) and same(list(packmem.load_jsonl(open(p))), ref) and same(list(packmem.load_jsonl(open(p, "rb"))), ref)
-    pj = os.path.join(d, "x.json"); json.dump(ref, open(pj, "w")); assert same(list(packmem.load_json(pj)), ref) and same(list(packmem.load_json(open(pj))), ref) and same(list(packmem.load_json(open(pj, 'rb'))), ref)
+    open(p, "w", encoding="utf-8").write("\n".join(json.dumps(row) for row in sub) + "\n")
+    ref = [json.loads(l) for l in open(p, encoding="utf-8")]
+    assert same(list(packmem.load_jsonl(p)), ref) and same(list(packmem.load_jsonl(open(p, encoding="utf-8"))), ref) and same(list(packmem.load_jsonl(open(p, "rb"))), ref)
+    pj = os.path.join(d, "x.json"); json.dump(ref, open(pj, "w", encoding="utf-8")); assert same(list(packmem.load_json(pj)), ref) and same(list(packmem.load_json(open(pj, encoding="utf-8"))), ref) and same(list(packmem.load_json(open(pj, 'rb'))), ref)
     import csv
     pc = os.path.join(d, "x.csv")
-    with open(pc, "w", newline="") as f:
+    with open(pc, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, ["cat", "small", "text"]); w.writeheader(); [w.writerow({k: row.get(k, "") for k in ("cat", "small", "text")}) for row in ref]
-    assert list(packmem.read_csv(pc)) == list(csv.DictReader(open(pc, newline="")))
+    assert list(packmem.read_csv(pc)) == list(csv.DictReader(open(pc, newline="", encoding="utf-8")))
     # small tables: packed by extend(), then appended to and updated across the packed/unpacked boundary
     for size in (1, 100, 5000, 20_000):
         m = [rand_row(r, i) for i in range(size)]; s = packmem.Table(m)

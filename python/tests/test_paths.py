@@ -72,12 +72,12 @@ def test_native_json():
     assert list(packmem.load_jsonl(lines)) == want
     assert list(packmem.load_jsonl([l.encode() for l in lines] + [b"", b"  \n"])) == want
     with tempfile.TemporaryDirectory() as d:
-        p = os.path.join(d, "x.jsonl"); open(p, "w").write("\n".join(lines) + "\n\n")
+        p = os.path.join(d, "x.jsonl"); open(p, "w", encoding="utf-8").write("\n".join(lines) + "\n\n")
         assert list(packmem.load_jsonl(p)) == want
-        q = os.path.join(d, "x.json"); open(q, "w").write(json.dumps(want, indent=1))
+        q = os.path.join(d, "x.json"); open(q, "w", encoding="utf-8").write(json.dumps(want, indent=1))
         assert list(packmem.load_json(q)) == want
         assert list(packmem.load_json(io.StringIO(json.dumps(want)))) == want
-        open(q, "w").write(json.dumps(want) + " trailing")
+        open(q, "w", encoding="utf-8").write(json.dumps(want) + " trailing")
         for bad in (lambda: packmem.load_json(q), lambda: packmem.load_json(io.StringIO("[{\"a\":1}, 5]")), lambda: packmem.load_jsonl(['{"a":1}', '{"a":1} x']),
                     lambda: packmem.load_jsonl(['{"a":1}', '[1]']), lambda: packmem.load_jsonl(['{"a":1}', '{"a":']), lambda: packmem.load_jsonl(['{"a":1,"b":{"c":}}'])):
             try: bad(); raise AssertionError("expected ValueError")
