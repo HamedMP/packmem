@@ -5,6 +5,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 ## Unreleased
 
 ### Added
+- `Table.set_column` sets a field on every record in one pass.
 - `read_csv` parses UTF-8 files natively and takes `infer=True` for typed columns.
 - `from_queryset` packs a Django queryset without model instances or dicts.
 - `default=` on `from_cursor` and `from_queryset` converts dates, decimals, UUIDs and bytes.

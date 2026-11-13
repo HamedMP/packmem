@@ -16,6 +16,7 @@ len(rows); rows[0]; rows[-5:]; rows.append({...}); rows.extend(more)
 rows.insert(0, {...}); rows.pop(); del rows[10:20]; rows.reverse()
 rows.sort(key="bytes")         # a column name, or a function of a record as in list.sort
 rows.take([3, 1, 2]); rows.copy(); rows.shuffle(); pickle.dumps(rows)
+rows.set_column("source", "a.jsonl")       # one value, or one value per record
 rows[3] = {...}                 # replace a record
 rows.update(3, status=500)      # change fields in place
 for r in rows: ...

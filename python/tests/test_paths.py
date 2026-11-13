@@ -219,6 +219,25 @@ def test_pickle_take_extend_and_surrogates():
 
 
 
+def test_set_column():
+    m = [{"id": i, "s": "v%d" % (i % 5), **({"opt": i} if i % 2 else {})} for i in range(40_000)]
+    t = packmem.Table(m[:39_000]); t.extend(m[39_000:])
+    t.set_column("path", "/data/a"); [row.update(path="/data/a") for row in m]
+    assert list(t) == m and t.count(path="/data/a") == len(m) and t.columns == ["id", "s", "opt", "path"]
+    vals = [None if i % 7 == 0 else i * 1.5 for i in range(len(m))]
+    t.set_column("opt", vals); [row.update(opt=v) for row, v in zip(m, vals)]            # replaces a sparse column
+    assert list(t) == m and t.sum("opt") == sum(v for v in vals if v is not None)
+    t.set_column("s", (x.upper() for x in t.column("s"))); [row.update(s=row["s"].upper()) for row in m]
+    assert list(t) == m and t.count(s="V3") == sum(1 for row in m if row["s"] == "V3")
+    t.set_column("nested", {"k": [1]}); assert t[0]["nested"] == {"k": [1]} and t[-1]["nested"] == {"k": [1]}
+    t.append({"id": -1}); assert t[-1] == {"id": -1} and len(t) == len(m) + 1
+    for bad in ([1, 2, 3], iter(range(10))):
+        try: t.set_column("x", bad); raise AssertionError("expected ValueError")
+        except ValueError: pass
+    assert "x" not in t[0]
+    e = packmem.Table(); e.set_column("a", 1); assert list(e) == []
+
+
 class Examples(packmem.Table):
     __slots__ = ("stats",)
 

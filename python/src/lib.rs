@@ -991,6 +991,39 @@ impl PyTable {
         }
         Ok(l)
     }
+    /// Set a whole column to one value.
+    fn fill_column(
+        &mut self,
+        py: Python<'_>,
+        name: &str,
+        value: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
+        let cell = to_cell(value)?;
+        self.t.set_column(name, |_| cell.clone());
+        self.sync_keys(py)
+    }
+    /// Set a whole column from one value per row.
+    fn set_column(
+        &mut self,
+        py: Python<'_>,
+        name: &str,
+        values: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
+        let mut cells = Vec::with_capacity(self.t.len());
+        for v in values.try_iter()? {
+            cells.push(to_cell(&v?)?)
+        }
+        if cells.len() != self.t.len() {
+            return Err(PyValueError::new_err(format!(
+                "{} values for {} rows",
+                cells.len(),
+                self.t.len()
+            )));
+        }
+        self.t
+            .set_column(name, |i| std::mem::replace(&mut cells[i], Cell::Missing));
+        self.sync_keys(py)
+    }
     /// A new table holding the given rows, in the given order.
     fn take(&self, py: Python<'_>, order: Vec<u32>) -> PyResult<PyTable> {
         let n = self.t.len();

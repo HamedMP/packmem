@@ -1276,6 +1276,29 @@ impl DynTable {
         t.set_bulk(false);
         t
     }
+    /// Replace or create a whole column from one value per row, packing it chunk by chunk. Far cheaper than updating
+    /// every row, which would patch each packed chunk over and over.
+    pub fn set_column(&mut self, name: &str, mut value: impl FnMut(usize) -> Cell) {
+        self.compact();
+        let c = self.col_or_create(name);
+        let (h, nfull, plen) = (self.hint, self.len / CHUNK, self.plen);
+        let mut t = Tail::default();
+        let mut seal = |start: usize, n: usize| {
+            t.clear();
+            for i in 0..n {
+                t.push(&value(start + i))
+            }
+            Chunk::seal(&t, h)
+        };
+        let chunks: Vec<Chunk> = (0..nfull).map(|k| seal(k * CHUNK, CHUNK)).collect();
+        let partial = (plen > 0).then(|| seal(nfull * CHUNK, plen));
+        self.cols[c] = Column {
+            chunks,
+            partial,
+            tail: Tail::default(),
+        };
+        self.epoch += 1;
+    }
     /// Append every row of `other`, matching columns by name, without leaving native code.
     pub fn extend_from(&mut self, other: &DynTable) {
         let map: Vec<usize> = other.names.iter().map(|n| self.col_or_create(n)).collect();

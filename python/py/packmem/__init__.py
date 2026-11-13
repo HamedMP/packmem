@@ -119,6 +119,16 @@ class Table:
         else:
             self._t.extend(rows)
 
+    def set_column(self, name, values):
+        """Set one field on every record: `values` is a single value, or one value per record.
+
+        Use this rather than updating row by row; it packs the column once.
+        """
+        if isinstance(values, (str, bytes, dict)) or not hasattr(values, "__iter__"):
+            self._t.fill_column(name, values)
+        else:
+            self._t.set_column(name, values)
+
     def take(self, indices):
         """A new Table holding the rows at `indices`, in that order (rows may repeat)."""
         n = len(self._t)
