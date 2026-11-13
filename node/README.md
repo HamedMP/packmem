@@ -24,6 +24,9 @@ rows.map(fn); rows.filter(fn); rows.reduce(fn, init);
 rows.push({ ... }); rows.extend(iterable);
 rows.set(3, { ... });                         // replace a record
 rows.update(3, { status: 500, note: undefined }); // change fields; undefined removes a key
+rows.splice(10, 2); rows.insert(0, { ... }); rows.pop(); rows.reverse();
+rows.sort({ key: "dest" }); rows.sort((a, b) => a.delay - b.delay);
+for (const r of rows.lazy()) total += r.distance; // reads only the fields the loop touches
 ```
 
 and gains queries that run on the packed data:
@@ -129,7 +132,11 @@ smaller than in Python, where the same servers used 3.7 to 10.2 times less memor
 - A returned row is a fresh object; mutating it does not change the table. Use `set` or `update`.
 - Key order in returned objects is the order columns were first seen.
 - `sum` adds numbers and booleans and skips everything else.
-- No `sort`, `splice` or `delete` yet.
+- `sort`, `splice`, `insert`, `pop`, `shift`, `unshift` and `reverse` each rebuild the table once, so they cost time
+  proportional to its size; batch them where you can.
+- Lazy rows (`rows.lazy()`) read one column per batch of 4,096 rows, only for the fields a loop touches: on the
+  flight data a loop reading one field took 23 ms against 343 ms with full objects. A loop over a plain array is
+  still faster (2.4 ms); for whole-column work use `rows.column(name)` or a query.
 - Strings with unpaired UTF-16 surrogates (`"\udd56"`, which `JSON.parse` accepts) are stored and read back
   exactly.
 - `rows[i]` does not work; use `rows.at(i)`. A `Table` is iterable and has `length`, but it is not an

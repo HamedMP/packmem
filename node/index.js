@@ -3,7 +3,9 @@ import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
-const { NativeTable } = require(`./packmem.${process.platform}-${process.arch}.node`);
+// musl Linux (Alpine) needs its own build: both report linux-x64, so tell them apart by the C library
+const isMusl = () => process.platform === "linux" && !process.report?.getReport?.()?.header?.glibcVersionRuntime;
+const { NativeTable } = require(`./packmem.${process.platform}-${process.arch}${isMusl() ? "-musl" : ""}.node`);
 
 const BATCH = 4096;
 const OPS = new Set(["eq", "gt", "gte", "lt", "lte", "between", "prefix", "contains"]);
@@ -103,6 +105,71 @@ function webStream(chunks) {
       else controller.enqueue(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
     },
   });
+}
+
+/** Order for sort keys: numbers, then strings, then booleans, then other values; null and missing keys last. */
+function compareKeys(x, y) {
+  const rank = (v) => (v === undefined ? 5 : v === null ? 4 : typeof v === "number" ? 0 : typeof v === "string" ? 1 : typeof v === "boolean" ? 2 : 3);
+  const rx = rank(x), ry = rank(y);
+  if (rx !== ry) return rx - ry;
+  if (rx === 0) return x - y;
+  if (rx === 1) return x < y ? -1 : x > y ? 1 : 0;
+  if (rx === 2) return Number(x) - Number(y);
+  if (rx === 3) {
+    const sx = JSON.stringify(x), sy = JSON.stringify(y);
+    return sx < sy ? -1 : sx > sy ? 1 : 0;
+  }
+  return 0;
+}
+
+/** Column `name` for a lazy row's batch, fetched once per batch on first use. */
+function batchColumn(batch, name) {
+  let c = batch.cols.get(name);
+  if (!c) {
+    const { json, missing } = batch.table._t.columnRange(name, batch.a, batch.b);
+    c = { values: JSON.parse(json), missing };
+    batch.cols.set(name, c);
+  }
+  return c;
+}
+
+/** A prototype with one getter and setter per column, so `row.carrier` and `row["carrier"]` read lazily. */
+function lazyPrototype(table, names) {
+  const proto = {
+    get(name) {
+      const c = batchColumn(this._batch, name);
+      const k = this._i - this._batch.a;
+      return c.missing[k] ? undefined : c.values[k];
+    },
+    toObject() {
+      return JSON.parse(table._t.jsonRange(this._i, this._i + 1))[0];
+    },
+    toJSON() {
+      return this.toObject();
+    },
+    get index() {
+      return this._i;
+    },
+  };
+  for (const name of names) {
+    if (name in proto) continue;
+    Object.defineProperty(proto, name, {
+      enumerable: true,
+      get() {
+        return this.get(name);
+      },
+      set(v) {
+        table.update(this._i, { [name]: v });
+        const c = this._batch.cols.get(name);
+        if (c) {
+          const k = this._i - this._batch.a;
+          c.values[k] = v === undefined ? null : JSON.parse(JSON.stringify(v));
+          c.missing[k] = v === undefined ? 1 : 0;
+        }
+      },
+    });
+  }
+  return proto;
 }
 
 class Rows {
@@ -291,6 +358,108 @@ export class Table extends Rows {
     const remove = Object.keys(fields).filter((k) => fields[k] === undefined);
     this._t.updateJson(j, JSON.stringify(fields), remove);
     this._version++;
+  }
+
+  // ---------- list operations: each is one rebuild of the packed table ----------
+
+  _reorder(ids) {
+    this._t.reorder(ids instanceof Uint32Array ? ids : Uint32Array.from(ids));
+    this._version++;
+  }
+  /** Remove `deleteCount` rows at `start` and insert `items` there, as Array.prototype.splice; returns the removed rows. */
+  splice(start, deleteCount, ...items) {
+    const n = this.length;
+    const s = start < 0 ? Math.max(0, n + Math.trunc(start)) : Math.min(n, Math.trunc(start) || 0);
+    const del = deleteCount === undefined ? n - s : Math.max(0, Math.min(n - s, Math.trunc(deleteCount) || 0));
+    const removed = del ? JSON.parse(this._t.jsonRange(s, s + del)) : [];
+    if (!del && !items.length) return removed;
+    this.extend(items); // appended at the end (all or nothing), then moved into place
+    const ids = new Uint32Array(n - del + items.length);
+    let k = 0;
+    for (let i = 0; i < s; i++) ids[k++] = i;
+    for (let i = 0; i < items.length; i++) ids[k++] = n + i;
+    for (let i = s + del; i < n; i++) ids[k++] = i;
+    this._reorder(ids);
+    return removed;
+  }
+  /** Insert one record before row `i`. */
+  insert(i, row) {
+    this.splice(i, 0, row);
+    return this.length;
+  }
+  pop() {
+    return this.length ? this.splice(-1, 1)[0] : undefined;
+  }
+  shift() {
+    return this.length ? this.splice(0, 1)[0] : undefined;
+  }
+  unshift(...rows) {
+    this.splice(0, 0, ...rows);
+    return this.length;
+  }
+  reverse() {
+    const n = this.length;
+    const ids = new Uint32Array(n);
+    for (let i = 0; i < n; i++) ids[i] = n - 1 - i;
+    this._reorder(ids);
+    return this;
+  }
+  clear() {
+    this._t.clear();
+    this._version++;
+  }
+  /**
+   * Sort in place, stably. Either `compareFn(a, b)` over plain records, as Array.prototype.sort, or
+   * `{ key, descending }` where `key` is a column name (fast: one column is read) or a function of a record.
+   */
+  sort(how) {
+    const n = this.length;
+    let order;
+    if (typeof how === "function") {
+      const rows = this.toArray();
+      order = Array.from({ length: n }, (_, i) => i).sort((a, b) => how(rows[a], rows[b]));
+    } else {
+      const { key, descending = false } = how ?? {};
+      if (key === undefined) throw new TypeError("sort needs a compare function or { key }");
+      const keys = typeof key === "string" ? this._keysOf(key) : this.map((r) => key(r));
+      order = Array.from({ length: n }, (_, i) => i).sort((a, b) => compareKeys(keys[a], keys[b]) * (descending ? -1 : 1) || a - b);
+    }
+    this._reorder(order);
+    return this;
+  }
+  _keysOf(column) {
+    const { json, missing } = this._t.columnRange(column, 0, this.length);
+    const v = JSON.parse(json);
+    for (let i = 0; i < missing.length; i++) if (missing[i]) v[i] = undefined;
+    return v;
+  }
+  /** A new table holding these rows, in this order (ids may repeat or be left out). */
+  take(ids) {
+    const out = new Table();
+    out._t = this._t.take(ids instanceof Uint32Array ? ids : Uint32Array.from(ids));
+    return out;
+  }
+  copy() {
+    return this.take(Uint32Array.from({ length: this.length }, (_, i) => i));
+  }
+
+  /**
+   * Iterate rows as lazy objects: a field is read from the packed column only when the loop touches it, one column per
+   * batch of 4,096 rows. Faster than full objects for loops that read a few fields; assigning a field writes to the table.
+   */
+  *lazy() {
+    const n = this.length;
+    const names = this.names;
+    const proto = lazyPrototype(this, names);
+    for (let a = 0; a < n; a += BATCH) {
+      const batch = { table: this, a, b: Math.min(a + BATCH, n), cols: new Map() };
+      for (let i = batch.a; i < batch.b; i++) {
+        const row = Object.create(proto);
+        row._batch = batch;
+        row._i = i;
+        yield row;
+      }
+    }
   }
 
   /** Rows matching every filter: `{ col: value }` or `{ col: { gt, gte, lt, lte, between, prefix, contains, eq } }`. */

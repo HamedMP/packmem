@@ -57,6 +57,21 @@ export declare class Table<R extends Row = Row> extends Rows<R> {
   set(i: number, row: R): void;
   /** A value of `undefined` removes the key. All or nothing. */
   update(i: number, fields: Partial<Record<keyof R, Json | undefined>>): void;
+  /** As Array.prototype.splice; returns the removed rows. Each call rebuilds the table once. */
+  splice(start: number, deleteCount?: number, ...items: R[]): R[];
+  insert(i: number, row: R): number;
+  pop(): R | undefined;
+  shift(): R | undefined;
+  unshift(...rows: R[]): number;
+  reverse(): this;
+  clear(): void;
+  /** Stable, in place: a compare function over records, or `{ key }` with a column name (fast) or a function of a record. */
+  sort(how: ((a: R, b: R) => number) | { key: string | ((row: R) => unknown); descending?: boolean }): this;
+  /** A new table holding these rows, in this order. */
+  take(ids: Iterable<number> | Uint32Array): Table<R>;
+  copy(): Table<R>;
+  /** Rows as lazy objects that read a field only when it is touched; assigning a field writes to the table. */
+  lazy(): Generator<LazyRow<R>>;
   where(filters: Filters): View<R>;
   count(filters?: Filters): number;
   sum(column: string, filters?: Filters): number;
@@ -103,3 +118,11 @@ export declare function fromPgResult<R extends Row = Row>(
   result: { fields: { name: string }[]; rows: unknown[] },
   opts?: { hint?: Hint },
 ): Table<R>;
+
+/** A row read on demand. Column names are properties; `get` reads any key; `toObject` builds the plain record. */
+export type LazyRow<R extends Row = Row> = { [K in keyof R]: R[K] | undefined } & {
+  get(name: string): Json | undefined;
+  toObject(): R;
+  toJSON(): R;
+  readonly index: number;
+};

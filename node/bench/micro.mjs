@@ -55,6 +55,33 @@ add(
   await time(() => t.sum("distance", { origin: "JFK" })),
 );
 
+add(
+  "Loop over every row, reading one field (full objects)",
+  await time(() => {
+    let s = 0;
+    for (const r of raw) s += r.distance;
+    return s;
+  }),
+  await time(() => {
+    let s = 0;
+    for (const r of t) s += r.distance;
+    return s;
+  }),
+);
+add(
+  "Same loop with lazy rows",
+  await time(() => {
+    let s = 0;
+    for (const r of raw) s += r.distance;
+    return s;
+  }),
+  await time(() => {
+    let s = 0;
+    for (const r of t.lazy()) s += r.distance;
+    return s;
+  }),
+);
+
 const url = process.env.PACKMEM_PG_URL;
 if (url) {
   const { default: pg } = await import("pg");

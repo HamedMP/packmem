@@ -86,6 +86,12 @@ fn num_out(n: Num) -> f64 {
     }
 }
 
+#[napi(object)]
+pub struct ColumnRange {
+    pub json: String,
+    pub missing: Buffer,
+}
+
 #[napi(js_name = "NativeTable")]
 pub struct NativeTable {
     t: DynTable,
@@ -251,6 +257,63 @@ impl NativeTable {
         if self.bulk_depth > 0 {
             self.t.set_bulk(true)
         }
+    }
+
+    /// Rebuild the table from these row ids, in this order (ids may repeat or be left out). Every list operation that
+    /// moves rows (sort, splice, reverse, pop) is one call to this.
+    #[napi]
+    pub fn reorder(&mut self, ids: Uint32Array) -> Result<()> {
+        self.check_ids(&ids)?;
+        self.t = self.t.take(&ids);
+        if self.bulk_depth > 0 {
+            self.t.set_bulk(true)
+        }
+        Ok(())
+    }
+
+    /// A new table holding these rows, in this order.
+    #[napi]
+    pub fn take(&self, ids: Uint32Array) -> Result<NativeTable> {
+        self.check_ids(&ids)?;
+        Ok(NativeTable { t: self.t.take(&ids), scratch: RefCell::new(Vec::new()), bulk_depth: 0 })
+    }
+
+    #[napi]
+    pub fn clear(&mut self) {
+        self.t = DynTable::new(self.t.hint)
+    }
+
+    /// One column for rows `a..b`: values as JSON text of an array (missing keys written as null) and a byte per row
+    /// that is 1 where the record has no such key, so a lazy row can tell a missing key from null.
+    #[napi]
+    pub fn column_range(&self, name: String, a: u32, b: u32) -> ColumnRange {
+        let (a, b) = (a as usize, (b as usize).min(self.t.len()));
+        let mut missing = vec![0u8; b.saturating_sub(a)];
+        let Some(c) = self.t.col_index(&name) else {
+            missing.fill(1);
+            return ColumnRange { json: format!("[{}]", vec!["null"; missing.len()].join(",")), missing: missing.into() };
+        };
+        let mut out = String::with_capacity((b - a) * 8 + 2);
+        out.push('[');
+        for (k, i) in (a..b).enumerate() {
+            if k > 0 {
+                out.push(',')
+            }
+            match self.t.get(i, c) {
+                Cell::Missing => {
+                    missing[k] = 1;
+                    out.push_str("null")
+                }
+                Cell::Null => out.push_str("null"),
+                Cell::Bool(v) => out.push_str(if v { "true" } else { "false" }),
+                Cell::Int(v) => out.push_str(itoa::Buffer::new().format(v)),
+                Cell::Float(v) => out.push_str(&json::js_number(v)),
+                Cell::Str(s) => out.push_str(&serde_json::to_string(&s).unwrap()),
+                Cell::Json(s) => out.push_str(&s),
+            }
+        }
+        out.push(']');
+        ColumnRange { json: out, missing: missing.into() }
     }
 
     /// Set and remove fields of one row as a unit: everything is parsed before anything is written.
