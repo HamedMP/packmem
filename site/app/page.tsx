@@ -41,19 +41,25 @@ function Code({ children }: { children: string }) {
 }
 
 const SNIPPETS = {
-  python: `import packmem
+  python: `pip install packmem
+
+import packmem
 
 rows = packmem.load_jsonl("events.jsonl")   # was: [json.loads(l) for l in f]
 rows.count(status=404)
 rows.group_count("country", path__prefix="/api/")
 rows.where(carrier="UA").to_json()`,
-  node: `import { loadJsonl } from "packmem"
+  node: `npm install packmem
+
+import { loadJsonl } from "packmem"
 
 const rows = loadJsonl("events.jsonl")      // was: lines.map(JSON.parse)
 rows.count({ status: 404 })
 rows.groupCount("country")
 return new Response(rows.where({ carrier: "UA" }).jsonWebStream())`,
-  rust: `let mut t = DynTable::new(Hint::Balanced);
+  rust: `# Cargo.toml: packmem = { git = "https://github.com/HamedMP/packmem" }
+
+let mut t = DynTable::new(Hint::Balanced);
 let ua = Pred::Eq(Cell::Str("UA".into()));
 let ids = t.select(carrier, &ua);
 let miles = t.sum(distance, Some(&ids));`,
@@ -384,7 +390,7 @@ export default function Page() {
               </TabsContent>
               <TabsContent value="node" className="flex flex-col gap-3">
                 <Code>{SNIPPETS.node}</Code>
-                <p className="text-sm text-muted-foreground">An array-like table for Node 20+, with Postgres loaders and JSON responses streamed from the columns.</p>
+                <p className="text-sm text-muted-foreground">An array-like table for Node 20+, with Postgres loaders and JSON responses streamed from the columns. Prebuilt for Linux x86-64 and arm64 (glibc 2.34+), macOS on Apple silicon and Windows x64; other platforms build from source with Rust.</p>
               </TabsContent>
               <TabsContent value="rust" className="flex flex-col gap-3">
                 <Code>{SNIPPETS.rust}</Code>
@@ -392,8 +398,10 @@ export default function Page() {
               </TabsContent>
             </Tabs>
             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <Badge variant="secondary">alpha</Badge>
-              Apache-2.0. Build from source today; prebuilt packages are on the way.
+              <Badge variant="secondary">0.1.0 alpha</Badge>
+              On <a className="underline underline-offset-4" href="https://pypi.org/project/packmem/">PyPI</a> and{" "}
+              <a className="underline underline-offset-4" href="https://www.npmjs.com/package/packmem">npm</a>, with prebuilt builds for Linux, macOS on Apple
+              silicon and Windows. Apache-2.0.
             </div>
           </Section>
 
