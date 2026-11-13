@@ -10,7 +10,5 @@ Drafts for the person launching packmem to post from their own accounts. Nothing
 
 If a benchmark is re-run, check the numbers here against `SOURCES.md` before posting.
 
-Before posting: the drafts describe main, not the published 0.1.0. These are not in 0.1.0 and need a 0.1.1 release
-on both registries first: Python `from_queryset`, `from_cursor(default=...)` and the native CSV loader; Node
-`fromPgCopy`, `fromQuery`, lazy rows, sort/splice, `loadCsv`/`parseCsv`, `packmem/wasm`, and the musl and Intel Mac
-builds. If posting before 0.1.1, drop those items and change "Alpha (0.1.0)".
+The drafts describe 0.1.1. Check that `npm view packmem version` and `pip index versions packmem` show it before
+posting.

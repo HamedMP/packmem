@@ -14,7 +14,7 @@ rows = [json.loads(line) for line in open("flights.jsonl")]   # 712 MB
 rows = packmem.load_jsonl("flights.jsonl")                    # 19.7 MB
 ```
 
-packmem is alpha (0.1.0), open source (Apache-2.0), on PyPI and npm (`pip install packmem`, `npm install packmem`), with a Rust
+packmem is alpha (0.1.1), open source (Apache-2.0), on PyPI and npm (`pip install packmem`, `npm install packmem`), with a Rust
 core. This post is about why that 36x is possible, where it holds, and where it does not.
 
 ## Where the memory goes
@@ -30,7 +30,7 @@ decompressed before any byte in it is read. The larger saving is not to create t
 ## Pack the columns, query them packed
 
 packmem stores each field as one column and picks an encoding for it from a sample of its values: a dictionary for
-`carrier` (16 distinct values, 4 bits a row), the offset from the column minimum for `distance`, run-length for long
+`carrier` (16 distinct values, 4 bits a row), the offset from the minimum for `arr_delay`, one stored value for `year`, run-length for long
 runs, FSST for text. Every encoding keeps fast access to a single value, so nothing is ever unpacked in bulk, and
 filters run on the packed form.
 

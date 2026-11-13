@@ -19,7 +19,7 @@
     access 6.7x slower, and below a few hundred rows there is no saving. polars tuned for memory comes within 1.6 to
     2.9x and loads faster; packmem is for code that wants a list, not a dataframe.
 
-    Alpha (0.1.0). pip install packmem — benchmarks, scripts and every results file: https://github.com/HamedMP/packmem
+    Alpha (0.1.1). pip install packmem — benchmarks, scripts and every results file: https://github.com/HamedMP/packmem
 
 ## r/node
 
@@ -39,4 +39,4 @@
     Honest part: V8 already stores same-shape objects compactly, so the gain in Node is memory more than speed, and a
     loop over every row is slower than over a plain array. Details and every number's source in the repo.
 
-    Alpha (0.1.0). npm install packmem — https://github.com/HamedMP/packmem
+    Alpha (0.1.1). npm install packmem — https://github.com/HamedMP/packmem

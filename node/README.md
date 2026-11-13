@@ -190,10 +190,10 @@ Needs Rust and Node 18 or later.
 Status: alpha. CI builds and tests the addon on Linux (x86-64 and arm64), macOS and Windows with Node 20
 and 22, and against Postgres 17.
 
-The npm package includes prebuilt addons for Linux x86-64 and arm64 (glibc 2.34 or later: Debian 12,
-Ubuntu 22.04, RHEL 9 and newer), macOS on Apple silicon, and Windows x64. It does not yet cover Alpine or
-other musl systems, Amazon Linux 2, or Intel Macs; there, build from source with `npm run build` (needs
-Rust). There is no WebAssembly build (for Cloudflare Workers and browsers) and no CSV or TSV loader yet.
+The npm package includes prebuilt addons for Linux x86-64 and arm64 (glibc 2.17 or later, and musl for
+Alpine), macOS on Apple silicon and Intel, and Windows x64, plus `packmem/wasm` for runtimes without native
+addons such as Cloudflare Workers. Elsewhere, build from source with `npm run build` (needs Rust). Each
+release is built and its packed tarball installed and tested on all seven platforms before it is published.
 
 ## Prior work
 
