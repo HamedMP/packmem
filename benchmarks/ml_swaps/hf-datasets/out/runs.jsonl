@@ -1,0 +1,125 @@
+{"run":"conv_B0_origfile","rc":0,"load_start":33.18,"load_end":29.78,"avail_gb":97,"wall_s":46.884419001}
+{"run":"hash_A","rc":0,"load_start":29.34,"load_end":26.56,"avail_gb":101,"wall_s":26.183736410}
+{"run":"hash_C","rc":0,"load_start":26.56,"load_end":26.38,"avail_gb":102,"wall_s":42.171675892}
+{"run":"hash_B0_origfile","rc":0,"load_start":26.38,"load_end":24.67,"avail_gb":97,"wall_s":23.632962458}
+{"run":"diff_B0_origfile","rc":0,"load_start":23.53,"load_end":23.00,"avail_gb":103,"wall_s":21.620297431}
+{"run":"try_mixed_none","rc":0,"load_start":25.23,"load_end":26.90,"avail_gb":103,"wall_s":31.555363579}
+{"run":"prep_ids","rc":0,"load_start":26.68,"load_end":37.66,"avail_gb":97,"wall_s":38.007766691}
+{"run":"conv_B1_1","rc":0,"load_start":38.33,"load_end":41.23,"avail_gb":93,"wall_s":26.906816441}
+{"run":"conv_B1_2","rc":0,"load_start":41.23,"load_end":40.97,"avail_gb":95,"wall_s":26.754074081}
+{"run":"conv_B1_3","rc":0,"load_start":40.97,"load_end":41.11,"avail_gb":93,"wall_s":28.635259699}
+{"run":"hash_B1","rc":0,"load_start":41.11,"load_end":46.90,"avail_gb":90,"wall_s":33.354231449}
+{"run":"conv_B4","rc":0,"load_start":46.48,"load_end":43.70,"avail_gb":88,"wall_s":87.669673006}
+{"run":"mkparquet","rc":0,"load_start":42.48,"load_end":43.49,"avail_gb":96,"wall_s":6.552259127}
+{"run":"conv_B3_1","rc":0,"load_start":43.49,"load_end":43.37,"avail_gb":95,"wall_s":3.723758222}
+{"run":"conv_B3_2","rc":0,"load_start":43.37,"load_end":43.37,"avail_gb":96,"wall_s":3.749666675}
+{"run":"conv_B3_3","rc":0,"load_start":43.37,"load_end":45.10,"avail_gb":97,"wall_s":3.589368120}
+{"run":"hash_B3","rc":0,"load_start":45.10,"load_end":43.03,"avail_gb":96,"wall_s":28.660501024}
+{"phase":"load","start":"2026-11-13T21:31:52+01:00"}
+{"run":"size_A","rc":0,"load_start":46.27,"load_end":45.48,"avail_gb":94,"wall_s":58.557394970}
+{"pcache":"warm","before":"full_A_1","r":{"op": "warm", "resident_bytes": 1029890048, "size_bytes": 1029887963, "resident_frac": 1.0}}
+{"run":"full_A_1","rc":0,"load_start":45.20,"load_end":44.97,"avail_gb":94,"wall_s":48.783494415}
+{"pcache":"warm","before":"full_C_1","r":{"op": "warm", "resident_bytes": 1029890048, "size_bytes": 1029887963, "resident_frac": 1.0}}
+{"run":"full_C_1","rc":0,"load_start":44.97,"load_end":45.63,"avail_gb":95,"wall_s":41.032445856}
+{"pcache":"warm","before":"full_B1warm_1","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B1warm_1","rc":0,"load_start":45.63,"load_end":42.46,"avail_gb":98,"wall_s":27.951214381}
+{"pcache":"drop","before":"full_B1cold_1","r":{"op": "drop", "resident_bytes": 0, "size_bytes": 785116248, "resident_frac": 0.0}}
+{"run":"full_B1cold_1","rc":0,"load_start":42.46,"load_end":37.08,"avail_gb":100,"wall_s":24.822251631}
+{"pcache":"warm","before":"full_B2_1","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B2_1","rc":0,"load_start":37.08,"load_end":35.88,"avail_gb":106,"wall_s":22.713397772}
+{"pcache":"warm","before":"full_B3_1","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B3_1","rc":0,"load_start":35.88,"load_end":32.79,"avail_gb":105,"wall_s":20.568267158}
+{"pcache":"warm","before":"full_A_2","r":{"op": "warm", "resident_bytes": 1029890048, "size_bytes": 1029887963, "resident_frac": 1.0}}
+{"run":"full_A_2","rc":0,"load_start":32.79,"load_end":27.75,"avail_gb":104,"wall_s":29.507978440}
+{"pcache":"warm","before":"full_C_2","r":{"op": "warm", "resident_bytes": 1029890048, "size_bytes": 1029887963, "resident_frac": 1.0}}
+{"run":"full_C_2","rc":0,"load_start":27.75,"load_end":23.80,"avail_gb":104,"wall_s":21.806290920}
+{"pcache":"warm","before":"full_B1warm_2","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B1warm_2","rc":0,"load_start":23.74,"load_end":23.24,"avail_gb":106,"wall_s":19.436431495}
+{"pcache":"drop","before":"full_B1cold_2","r":{"op": "drop", "resident_bytes": 0, "size_bytes": 785116248, "resident_frac": 0.0}}
+{"run":"full_B1cold_2","rc":0,"load_start":23.24,"load_end":22.35,"avail_gb":104,"wall_s":21.607366163}
+{"pcache":"warm","before":"full_B2_2","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B2_2","rc":0,"load_start":22.35,"load_end":22.63,"avail_gb":104,"wall_s":24.593864092}
+{"pcache":"warm","before":"full_B3_2","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B3_2","rc":0,"load_start":22.63,"load_end":22.14,"avail_gb":103,"wall_s":21.615858676}
+{"pcache":"warm","before":"full_A_3","r":{"op": "warm", "resident_bytes": 1029890048, "size_bytes": 1029887963, "resident_frac": 1.0}}
+{"run":"full_A_3","rc":0,"load_start":22.14,"load_end":22.12,"avail_gb":104,"wall_s":30.959668707}
+{"pcache":"warm","before":"full_C_3","r":{"op": "warm", "resident_bytes": 1029890048, "size_bytes": 1029887963, "resident_frac": 1.0}}
+{"run":"full_C_3","rc":0,"load_start":22.12,"load_end":22.61,"avail_gb":102,"wall_s":23.827779487}
+{"pcache":"warm","before":"full_B1warm_3","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B1warm_3","rc":0,"load_start":22.61,"load_end":20.76,"avail_gb":102,"wall_s":20.343188017}
+{"pcache":"drop","before":"full_B1cold_3","r":{"op": "drop", "resident_bytes": 0, "size_bytes": 785116248, "resident_frac": 0.0}}
+{"run":"full_B1cold_3","rc":0,"load_start":20.76,"load_end":22.02,"avail_gb":100,"wall_s":22.169572114}
+{"pcache":"warm","before":"full_B2_3","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B2_3","rc":0,"load_start":22.02,"load_end":20.92,"avail_gb":105,"wall_s":20.473022718}
+{"pcache":"warm","before":"full_B3_3","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B3_3","rc":0,"load_start":20.92,"load_end":21.16,"avail_gb":105,"wall_s":19.951002667}
+{"phase":"dl","start":"2026-11-13T21:41:23+01:00"}
+{"phase":"dl","start":"2026-11-13T21:42:25+01:00","note":"restarted with persistent_workers=True"}
+{"run":"dl_A_fork_1","rc":0,"load_start":13.70,"load_end":13.49,"avail_gb":107,"wall_s":13.471768828}
+{"pcache":"warm","before":"dl_B1_fork_1","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"dl_B1_fork_1","rc":0,"load_start":13.49,"load_end":12.97,"avail_gb":107,"wall_s":3.354730002}
+{"run":"dl_C_fork_1","rc":0,"load_start":12.97,"load_end":12.26,"avail_gb":109,"wall_s":12.786024755}
+{"run":"dl_E_fork_1","rc":0,"load_start":12.26,"load_end":11.84,"avail_gb":110,"wall_s":2.727713965}
+{"run":"dl_A_forkserver_1","rc":0,"load_start":11.84,"load_end":8.34,"avail_gb":110,"wall_s":63.469655374}
+{"pcache":"warm","before":"dl_B1_forkserver_1","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"dl_B1_forkserver_1","rc":0,"load_start":8.34,"load_end":8.34,"avail_gb":114,"wall_s":3.532418619}
+{"run":"dl_C_forkserver_1","rc":0,"load_start":8.34,"load_end":8.96,"avail_gb":114,"wall_s":15.712699223}
+{"run":"dl_E_forkserver_1","rc":0,"load_start":8.96,"load_end":8.96,"avail_gb":113,"wall_s":2.807991339}
+{"run":"dl_A_fork_2","rc":0,"load_start":8.96,"load_end":7.81,"avail_gb":114,"wall_s":10.553014364}
+{"pcache":"warm","before":"dl_B1_fork_2","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"dl_B1_fork_2","rc":0,"load_start":7.81,"load_end":7.43,"avail_gb":112,"wall_s":2.692250200}
+{"run":"dl_C_fork_2","rc":0,"load_start":7.43,"load_end":6.96,"avail_gb":113,"wall_s":10.984038818}
+{"run":"dl_E_fork_2","rc":0,"load_start":6.96,"load_end":7.12,"avail_gb":113,"wall_s":2.381649521}
+{"run":"dl_A_forkserver_2","rc":0,"load_start":7.12,"load_end":4.74,"avail_gb":114,"wall_s":55.680191007}
+{"pcache":"warm","before":"dl_B1_forkserver_2","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"dl_B1_forkserver_2","rc":0,"load_start":4.74,"load_end":4.74,"avail_gb":112,"wall_s":3.735884975}
+{"run":"dl_C_forkserver_2","rc":0,"load_start":4.74,"load_end":3.68,"avail_gb":113,"wall_s":15.830917612}
+{"run":"dl_E_forkserver_2","rc":0,"load_start":3.68,"load_end":3.68,"avail_gb":112,"wall_s":3.031298046}
+{"run":"dl_A_fork_3","rc":0,"load_start":3.68,"load_end":3.43,"avail_gb":113,"wall_s":10.170467743}
+{"pcache":"warm","before":"dl_B1_fork_3","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"dl_B1_fork_3","rc":0,"load_start":3.43,"load_end":3.55,"avail_gb":114,"wall_s":2.397628515}
+{"run":"dl_C_fork_3","rc":0,"load_start":3.55,"load_end":3.24,"avail_gb":114,"wall_s":10.402419573}
+{"run":"dl_E_fork_3","rc":0,"load_start":3.24,"load_end":3.24,"avail_gb":114,"wall_s":2.195158917}
+{"run":"dl_A_forkserver_3","rc":0,"load_start":3.24,"load_end":2.65,"avail_gb":114,"wall_s":55.189539412}
+{"pcache":"warm","before":"dl_B1_forkserver_3","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"dl_B1_forkserver_3","rc":0,"load_start":2.65,"load_end":2.60,"avail_gb":111,"wall_s":3.643251056}
+{"run":"dl_C_forkserver_3","rc":0,"load_start":2.60,"load_end":3.80,"avail_gb":113,"wall_s":16.071093911}
+{"run":"dl_E_forkserver_3","rc":0,"load_start":3.80,"load_end":3.58,"avail_gb":112,"wall_s":3.006105088}
+{"phase":"load-rerun","start":"2026-11-13T21:47:55+01:00","note":"rerun at lower load; the first load phase (load 20-46) is kept in out/load_highload"}
+{"run":"size_A","rc":0,"load_start":3.58,"load_end":3.01,"avail_gb":113,"wall_s":22.059033080}
+{"pcache":"warm","before":"full_A_1","r":{"op": "warm", "resident_bytes": 1029890048, "size_bytes": 1029887963, "resident_frac": 1.0}}
+{"run":"full_A_1","rc":0,"load_start":3.01,"load_end":3.22,"avail_gb":114,"wall_s":20.314210199}
+{"pcache":"warm","before":"full_C_1","r":{"op": "warm", "resident_bytes": 1029890048, "size_bytes": 1029887963, "resident_frac": 1.0}}
+{"run":"full_C_1","rc":0,"load_start":3.22,"load_end":3.42,"avail_gb":113,"wall_s":17.652075989}
+{"pcache":"warm","before":"full_B1warm_1","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B1warm_1","rc":0,"load_start":3.42,"load_end":4.73,"avail_gb":111,"wall_s":15.722783004}
+{"pcache":"drop","before":"full_B1cold_1","r":{"op": "drop", "resident_bytes": 0, "size_bytes": 785116248, "resident_frac": 0.0}}
+{"run":"full_B1cold_1","rc":0,"load_start":4.73,"load_end":4.06,"avail_gb":111,"wall_s":15.418827593}
+{"pcache":"warm","before":"full_B2_1","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B2_1","rc":0,"load_start":4.06,"load_end":3.92,"avail_gb":113,"wall_s":14.812448244}
+{"pcache":"warm","before":"full_B3_1","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B3_1","rc":0,"load_start":3.92,"load_end":3.78,"avail_gb":113,"wall_s":14.862400251}
+{"pcache":"warm","before":"full_A_2","r":{"op": "warm", "resident_bytes": 1029890048, "size_bytes": 1029887963, "resident_frac": 1.0}}
+{"run":"full_A_2","rc":0,"load_start":3.78,"load_end":3.05,"avail_gb":113,"wall_s":19.250976001}
+{"pcache":"warm","before":"full_C_2","r":{"op": "warm", "resident_bytes": 1029890048, "size_bytes": 1029887963, "resident_frac": 1.0}}
+{"run":"full_C_2","rc":0,"load_start":3.05,"load_end":2.97,"avail_gb":112,"wall_s":16.926836794}
+{"pcache":"warm","before":"full_B1warm_2","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B1warm_2","rc":0,"load_start":2.97,"load_end":3.57,"avail_gb":113,"wall_s":15.594289952}
+{"pcache":"drop","before":"full_B1cold_2","r":{"op": "drop", "resident_bytes": 0, "size_bytes": 785116248, "resident_frac": 0.0}}
+{"run":"full_B1cold_2","rc":0,"load_start":3.57,"load_end":4.42,"avail_gb":112,"wall_s":17.310697755}
+{"pcache":"warm","before":"full_B2_2","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B2_2","rc":0,"load_start":4.42,"load_end":6.23,"avail_gb":108,"wall_s":18.119863408}
+{"pcache":"warm","before":"full_B3_2","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B3_2","rc":0,"load_start":6.85,"load_end":8.92,"avail_gb":110,"wall_s":17.153848213}
+{"pcache":"warm","before":"full_A_3","r":{"op": "warm", "resident_bytes": 1029890048, "size_bytes": 1029887963, "resident_frac": 1.0}}
+{"run":"full_A_3","rc":0,"load_start":8.92,"load_end":15.17,"avail_gb":104,"wall_s":30.077518229}
+{"pcache":"warm","before":"full_C_3","r":{"op": "warm", "resident_bytes": 1029890048, "size_bytes": 1029887963, "resident_frac": 1.0}}
+{"run":"full_C_3","rc":0,"load_start":15.17,"load_end":29.45,"avail_gb":100,"wall_s":34.997377419}
+{"pcache":"warm","before":"full_B1warm_3","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B1warm_3","rc":0,"load_start":29.45,"load_end":37.76,"avail_gb":88,"wall_s":27.484835258}
+{"pcache":"drop","before":"full_B1cold_3","r":{"op": "drop", "resident_bytes": 0, "size_bytes": 785116248, "resident_frac": 0.0}}
+{"run":"full_B1cold_3","rc":0,"load_start":37.76,"load_end":41.10,"avail_gb":92,"wall_s":30.740611237}
+{"pcache":"warm","before":"full_B2_3","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B2_3","rc":0,"load_start":41.10,"load_end":38.13,"avail_gb":94,"wall_s":24.952850862}
+{"pcache":"warm","before":"full_B3_3","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B3_3","rc":0,"load_start":38.13,"load_end":33.25,"avail_gb":93,"wall_s":25.361000350}

@@ -72,6 +72,24 @@ model or GPU) and none of the repositories has tests covering the patched code. 
 and outputs are in [benchmarks/ml_swaps](benchmarks/ml_swaps); the Linux runs' raw traces were lost
 and only their summaries remain.
 
+### Against Hugging Face datasets
+
+packmem replaces Python lists, not Arrow. On the same 665,298 records on Linux, compared with a
+memory-mapped `datasets.Dataset` (packmem 0.1.1, before `Table.share()`):
+
+- **Where `datasets` wins:** workers share one memory-mapped copy and receive a 2 KB reference
+  rather than the data (node peak 1.8 GB against 2.8 GB under forkserver, first batch in 1.1 s
+  against 4.8 s); reloading from its cache takes 0.02 s against 8.5 s to parse the JSON again;
+  batched access is about twice as fast; a compressed parquet file is smaller at rest.
+- **Where packmem wins:** a random row as a dict takes 6 µs against 22 µs, which is the path a
+  map-style data loader uses; it holds about 2.5 times less than an in-memory Arrow dataset;
+  and it took the file as it was, where `datasets` needed a hand-written schema.
+- **Against the list** it was 5.6 to 5.7 times less node memory.
+
+If you already use memory-mapped `datasets` with worker processes, stay there. Memory figures are
+solid; the timings were taken on a shared server and are indicative. Details:
+[benchmarks/ml_swaps/hf-datasets](benchmarks/ml_swaps/hf-datasets).
+
 ### Where it loses
 
 - **Plain iteration is slower.** `for r in rows` rebuilds a dict per record and is about 5 times

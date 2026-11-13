@@ -103,3 +103,8 @@ set the main process after build holds 8,444 MB as a list and 1,239 MB with pack
 35.5 s), four fork workers peak at 6,143 MB against 486 MB in total, and a spawn worker reaches its first
 batch in 14.9 s against 2.5 s. The list arm was not run with four spawn workers on the full set, which
 would need about 29 GB per process.
+
+## Hugging Face datasets
+
+A three-way comparison (list, memory-mapped `datasets`, packmem) on the same records: see
+`hf-datasets/RESULT.md`. Its conclusion is that packmem replaces Python lists, not Arrow.
