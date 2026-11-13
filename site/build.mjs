@@ -32,9 +32,9 @@ const machineLine = ds.find((d) => d.machine)?.machine ?? {};
 const flights = (v) => ds.find((d) => d.variant === v && d.dataset === "flights");
 const holders = [
   ["list", "List of dicts"],
-  ["pandas", "pandas"],
-  ["pandas_arrow", "pandas, Arrow-backed"],
-  ["polars", "polars"],
+  ["pandas", "pandas, inferred types"],
+  ["pandas_arrow", "pandas, Arrow-backed, inferred types"],
+  ["polars", "polars, inferred types"],
   ["packmem", "packmem"],
 ].map(([k, label]) => ({ label, value: med(flights(k).rss_mb), peak: med(flights(k).peak_mb), load: med(flights(k).load_s), hi: k === "packmem", base: k === "list" }));
 const L = flights("list"), P = flights("packmem");
@@ -49,6 +49,29 @@ const QUERIES = [
 ];
 const queries = QUERIES.map(([k, label]) => ({ label, a: L.q[k].ms[0], b: P.q[k].ms[0] }));
 queries.push({ label: "Same loop, lazy rows", a: L.q["loop over every row"].ms[0], b: P.q["loop over every row, lazy rows"].ms[0] });
+
+// polars tuned for memory (enum strings, narrow integers, rechunk, allocator returning freed memory), from packmem-1d's runs
+const TUNED_DS = [
+  ["flights", "Flights, 337 thousand rows"],
+  ["logs", "Synthetic web log, 2 million rows"],
+  ["flights_big", "Flights repeated 10 times, 3.4 million rows"],
+];
+const tunedA = existsSync(root("benchmarks/results/mac-m4pro/polars_tuned.jsonl")) ? jsonl("benchmarks/results/mac-m4pro/polars_tuned.jsonl") : [];
+const tunedB = existsSync(root("benchmarks/results/mac-m4pro/polars_tuned_decay0.jsonl")) ? jsonl("benchmarks/results/mac-m4pro/polars_tuned_decay0.jsonl") : [];
+const tuned = tunedA.length && tunedB.length
+  ? TUNED_DS.map(([ds, label]) => {
+      const one = (v) => med(tunedA.find((r) => r.variant === v && r.dataset === ds).rss_mb);
+      const t = tunedB.filter((r) => r.dataset === ds && /^polars_.*\+decay0$/.test(r.variant ?? "")).map((r) => med(r.rss_mb));
+      return { ds, label, list: one("list"), polars: one("polars"), lo: Math.min(...t), hi: Math.max(...t), packmem: one("packmem") };
+    })
+  : null;
+const tunedRatio = tuned && { lo: Math.min(...tuned.map((r) => r.lo / r.packmem)), hi: Math.max(...tuned.map((r) => r.hi / r.packmem)) };
+const flightsTuned = tuned?.find((r) => r.ds === "flights");
+const ipGroup = (() => {
+  const row = (v) => tunedA.find((r) => r.variant === v && r.dataset === "logs")?.q?.["group count by ip"]?.ms?.[0];
+  const pol = ["polars", "polars_rechunk", "polars_tuned", "polars_tuned_scan", "polars_parquet"].map(row).filter((x) => x !== undefined);
+  return row("packmem") === undefined ? null : { packmem: row("packmem"), lo: Math.min(...pol), hi: Math.max(...pol) };
+})();
 
 const cross = jsonl("benchmarks/results/mac-m4pro/crossover_flights.jsonl").map((r) => ({ x: r.rows, a: r.list.mb, b: r.packmem.mb }));
 
@@ -250,6 +273,24 @@ const chartQueries = figure(
   "The two slower rows are the honest cost: plain loops rebuild a dict per record. Lazy rows decode only the fields a loop reads.",
 );
 
+const chartTuned = tuned
+  ? figure(
+      "Against polars tuned for memory",
+      "Resident memory. Tuned polars casts every string column to an enum, uses the smallest integer types, rechunks, and tells its allocator to return freed memory; three ways of loading were tried and the range is shown.",
+      tuned
+        .map(
+          (r) => `<p class="grp">${esc(r.label)}</p>${hbars([
+            { label: "polars, inferred types", value: r.polars },
+            { label: "polars, tuned (best of 3)", value: r.lo },
+            { label: "packmem", value: r.packmem, hi: true },
+          ])}`,
+        )
+        .join(""),
+      table(["Dataset", "List of dicts MB", "polars default MB", "polars tuned MB", "packmem MB"], tuned.map((r) => [r.label, r.list.toFixed(0), r.polars.toFixed(0), `${r.lo.toFixed(0)} to ${r.hi.toFixed(0)}`, r.packmem.toFixed(0)])),
+      `packmem holds ${tunedRatio.lo.toFixed(1)} to ${tunedRatio.hi.toFixed(1)} times less than tuned polars, and tuned polars needs the schema known and set by hand. Recorded on a busy machine; the memory figures were stable across runs, the timings were not.`,
+    )
+  : "";
+
 const chartCross = figure(
   "When it starts to pay off",
   "Resident memory against number of rows loaded from the flight data, both axes log scale.",
@@ -317,7 +358,7 @@ const html = `<!doctype html>
   <p class="eyebrow">Open-source research project · Rust core, Python and Node packages</p>
   <h1>Your data is 104 MB.<br>Your program holds ${nf.format(Math.round(hero.a))} MB.</h1>
   <p class="lede">Load 336,776 flight records into Python and the list of dicts takes ${mb(hero.a)}. packmem holds the same records in <strong>${mb(hero.b)}</strong>, and your code still indexes them, loops over them, appends to them and filters them, without decompressing anything.</p>
-  <div class="herofig"><span class="big">${Math.round(hero.a / hero.b)}×</span><span>less memory than a list of dicts, from changing one line. Against polars with its default settings it is ${(med(flights("polars").rss_mb) / hero.b).toFixed(0)}× less.</span></div>
+  <div class="herofig"><span class="big">${Math.round(hero.a / hero.b)}×</span><span>less memory than a list of dicts, from changing one line. Against polars with inferred types it is ${(med(flights("polars").rss_mb) / hero.b).toFixed(0)}× less${flightsTuned ? `, and against polars tuned for memory ${(flightsTuned.lo / flightsTuned.packmem).toFixed(1)} to ${(flightsTuned.hi / flightsTuned.packmem).toFixed(1)}× less` : ""}.</span></div>
   ${code(`rows = [json.loads(line) for line in open("flights.jsonl")]   # ${mb(hero.a)}
 rows = packmem.load_jsonl("flights.jsonl")                    # ${mb(hero.b)}`)}
   <div class="tiles">
@@ -352,8 +393,9 @@ rows = packmem.load_jsonl("flights.jsonl")                    # ${mb(hero.b)}`)}
 <section id="results">
   <p class="kicker">Chapter 3</p>
   <h2>On real data, in Python</h2>
-  <p>The flight data is the public nycflights13 set: 19 columns of integers, floats, short strings and timestamps, with missing values. packmem used less memory than pandas and polars with their default settings, while still behaving like a list.</p>
+  <p>The flight data is the public nycflights13 set: 19 columns of integers, floats, short strings and timestamps, with missing values. packmem used less memory than pandas and polars with inferred types${tunedRatio ? `, and ${tunedRatio.lo.toFixed(1)} to ${tunedRatio.hi.toFixed(1)} times less than polars tuned for memory` : ""}, while still behaving like a list.</p>
   ${chartHolders}
+  ${chartTuned}
   ${chartQueries}
   <div class="grid2">${chartCross}${chartTools}</div>
 </section>
@@ -373,7 +415,7 @@ rows = packmem.load_jsonl("flights.jsonl")                    # ${mb(hero.b)}`)}
   <ul class="limits">
     <li><strong>Plain loops over every row are slower.</strong> Each record is rebuilt as a dict or object on demand: ${speed(L.q["loop over every row"].ms[0], P.q["loop over every row"].ms[0]).text} than the list in Python. Lazy rows fix this for loops that read a few fields; rewriting the loop as a query fixes it entirely.</li>
     <li><strong>Random access to whole rows costs more</strong>: ${speed(L.q["10k random rows as dicts"].ms[0], P.q["10k random rows as dicts"].ms[0]).text} for 10,000 random rows.</li>
-    <li><strong>Dataframes still win analytics.</strong> polars loads ${Math.round(med(P.load_s) / med(flights("polars").load_s))} times faster than packmem, and pandas is faster on some float filters (${ms(flights("pandas").q["count dep_delay>60"].ms[0])} against ${ms(P.q["count dep_delay>60"].ms[0])} for delays over 60 minutes). packmem is for code that wants a list, not a dataframe.</li>
+    <li><strong>Dataframes still win analytics.</strong> polars loads ${Math.round(med(P.load_s) / med(flights("polars").load_s))} times faster than packmem, and pandas is faster on some float filters (${ms(flights("pandas").q["count dep_delay>60"].ms[0])} against ${ms(P.q["count dep_delay>60"].ms[0])} for delays over 60 minutes). Tuned for memory, polars comes within ${tunedRatio ? `${tunedRatio.lo.toFixed(1)} to ${tunedRatio.hi.toFixed(1)} times` : "a few times"} of packmem. packmem is for code that wants a list, not a dataframe.</li>${ipGroup ? `\n    <li><strong>Group-by on a column with very many distinct values is slow.</strong> Counting 436 thousand distinct IP addresses over 2 million rows took ${ms(ipGroup.packmem)} in the recorded run, against ${ms(ipGroup.lo)} to ${ms(ipGroup.hi)} in polars. A later change (commit 5a3b59c) made this path about 2.3 times faster, which still leaves it far behind.</li>` : ""}
     <li><strong>Loading from Postgres is slower in Node.</strong> Rows cross from the driver into the native code as JSON text, so <code>fromPg</code> took ${range([pgLoad("express"), pgLoad("nextjs")])} times as long as a plain query. In Python, <code>from_cursor</code> took ${pgLoad("fastapi").toFixed(1)} times as long as psycopg's dict rows.</li>
     <li><strong>Small tables gain nothing.</strong> Below about 300 rows packmem uses more memory than the list.</li>
     <li><strong>Sort, insert and delete rebuild the table.</strong> The Python package has them, tested against a plain list, but each costs time proportional to the table. The Node package has none yet.</li>
