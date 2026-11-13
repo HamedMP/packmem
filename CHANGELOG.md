@@ -13,5 +13,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - Python package: `Table`, `load_jsonl`, `load_json`, `read_csv`, `from_records`, filters,
   `sum`, `group_count`, lazy rows through `Table.lazy()`, and the list methods `sort`, `insert`,
   `pop`, `reverse`, `clear` and `del`.
+- JSON output straight from the columns: `to_json` and `iter_json` on tables and filtered views,
+  and `offset` for paging through `View.rows`.
 - Benchmarks on nycflights13 and nginx logs, one-line swaps in sqlite-utils and jello, and
   recorded results for Linux x86-64 and macOS arm64.

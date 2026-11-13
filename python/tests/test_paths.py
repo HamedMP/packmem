@@ -132,6 +132,30 @@ def test_sort_insert_delete():
     except TypeError: pass
 
 
+
+def test_json_output():
+    r = random.Random(5)
+    dump = lambda rows: json.dumps(rows, separators=(",", ":"), ensure_ascii=False).encode()
+    floats = [0.0, -0.0, 1.0, 2.5, 1e16, 1.5e16, 9999999999999998.0, 1e-4, 1e-5, 1.2345e-7, 5e-324, 1.7976931348623157e308, 123456789012345.6, 0.1 + 0.2, -3e22, float("nan"), float("inf"), -float("inf")]
+    m = [{"id": i, "f": r.choice(floats + [r.random(), round(r.uniform(0, 500), 2)]), "s": r.choice(["GET", "é 日本", 'q"\\\n\t\x01\x7f', ""]),
+          "u": "id-%d" % r.randrange(10**9), "b": r.random() < .5, "n": None if i % 5 == 0 else i, **({"opt": -i} if i % 3 else {})} for i in range(40_000)]
+    t = packmem.Table(m)
+    assert t.to_json() == dump(m)                                         # byte-identical for flat records
+    assert b"".join(t.iter_json(batch=777)) == dump(m)
+    # floats of any magnitude read back as the same value (the text can differ from repr() where two shortest forms exist)
+    wide = [{"f": r.random() * 10 ** r.randint(-30, 30) * r.choice([1, -1])} for _ in range(40_000)]
+    assert [x["f"] for x in json.loads(packmem.Table(wide).to_json())] == [x["f"] for x in wide]
+    v = t.where(s="GET"); want = [x for x in m if x["s"] == "GET"]
+    assert v.to_json() == dump(want) and b"".join(v.iter_json(batch=100)) == dump(want)
+    assert v.to_json(limit=10, offset=7) == dump(want[7:17]) and dump(v.rows(limit=10, offset=7)) == dump(want[7:17])
+    assert v.to_json(offset=10**9) == b"[]" and packmem.Table().to_json() == b"[]" and t.where(s="nope").to_json() == b"[]"
+    t.update(3, s="patched", extra={"k": [1, 2.5, None]}); m[3] = {**m[3], "s": "patched", "extra": {"k": [1, 2.5, None]}}
+    nested = [{"a": {"x": [1, 2.0, "é", None, True]}, "big": 2**70, "mixed": i if i % 2 else "s"} for i in range(300)]
+    for rows in (m, nested, [{}], [{"a": 1}, {}, {"b": float("nan")}]):
+        got = json.loads(packmem.Table(rows).to_json() if rows is not m else t.to_json())
+        assert len(got) == len(rows) and all(g == w or (g != g) or str(g) == str(w) for g, w in zip(got, rows)), rows[:2]
+
+
 if __name__ == "__main__":
     for name, f in list(globals().items()):
         if name.startswith("test_"): f(); print("ok", name)

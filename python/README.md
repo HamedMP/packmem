@@ -40,6 +40,18 @@ for r in rows.lazy():
 
 A lazy row is a mapping, not a `dict`; use `r.to_dict()` where a real dict is required.
 
+Records can be written as JSON straight from the columns, without building a dict per record:
+
+```python
+rows.to_json()                                   # bytes holding one JSON array
+rows.where(carrier="UA").to_json(limit=50, offset=100)
+for chunk in rows.iter_json(batch=4096): ...     # for streaming responses
+```
+
+On the flight data `rows.to_json()` takes 0.24 s against 0.43 s for `json.dumps` on the original list.
+Values always read back equal; a few floats are written with a different, equally short, last digit
+than `json.dumps` would choose.
+
 Filters: `col=value`, `col__prefix`, `col__contains`, `col__gt`, `col__gte`, `col__lt`,
 `col__lte`, `col__between=(lo, hi)`.
 

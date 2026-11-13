@@ -13,6 +13,18 @@ from ._packmem import _Table, Selection, Row
 
 __all__ = ["Table", "View", "Row", "load_jsonl", "load_json", "from_records", "read_csv"]
 __version__ = "0.1.0"
+
+
+def _json_chunks(n, batch, part):
+    """Yield bytes that concatenate to one JSON array, `batch` rows at a time."""
+    if n == 0:
+        yield b"[]"
+        return
+    for a in range(0, n, batch):
+        b = min(a + batch, n)
+        yield (b"[" if a == 0 else b",") + part(a, b) + (b"]" if b == n else b"")
+
+
 _OPS = ("prefix", "contains", "gte", "lte", "gt", "lt", "between")
 
 
@@ -63,6 +75,14 @@ class Table:
         n, step = len(self._t), 2048
         for a in range(0, n, step):
             yield from self._t.rows_range(a, min(a + step, n))
+
+    def to_json(self):
+        """All records as one JSON array, in bytes, written straight from the columns (no dict per record)."""
+        return b"".join(self.iter_json(batch=1 << 16))
+
+    def iter_json(self, batch=4096):
+        """The same JSON array as `to_json`, yielded in chunks of `batch` records: suits streaming responses."""
+        return _json_chunks(len(self._t), batch, self._t.json_range)
 
     def lazy(self):
         """Iterate records as `Row` objects that decode a field only when it is read.
@@ -184,8 +204,19 @@ class View:
     def column(self, name):
         return self._t.column(name, self._sel)
 
-    def rows(self, limit=None):
-        return self._t.rows(self._sel, limit)
+    def rows(self, limit=None, offset=0):
+        """Matching records as dicts; `offset` and `limit` page through them."""
+        return self._t.rows(self._sel, limit, offset)
+
+    def to_json(self, limit=None, offset=0):
+        """Matching records as one JSON array, in bytes, without building dicts."""
+        return b"".join(self.iter_json(1 << 16, limit, offset))
+
+    def iter_json(self, batch=4096, limit=None, offset=0):
+        """The same JSON array yielded in chunks of `batch` records."""
+        n = max(0, len(self._sel) - offset)
+        n = n if limit is None else min(n, limit)
+        return _json_chunks(n, batch, lambda a, b: self._t.json_sel(self._sel, offset + a, offset + b))
 
     def __iter__(self):
         return iter(self._t.rows(self._sel))

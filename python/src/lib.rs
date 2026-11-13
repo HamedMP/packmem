@@ -3,7 +3,7 @@ use packmem::dynamic::{from_text, to_text, RowVisitor};
 use packmem::{Cell, DynTable, Hint, Num, Pred};
 use pyo3::exceptions::{PyIndexError, PyKeyError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyBool, PyDict, PyFloat, PyInt, PyList, PyString, PyTuple};
+use pyo3::types::{PyBool, PyBytes, PyDict, PyFloat, PyInt, PyList, PyString, PyTuple};
 use serde::de::{DeserializeSeed, MapAccess, SeqAccess, Visitor};
 use serde_json::value::RawValue;
 use serde_json::Value;
@@ -648,12 +648,34 @@ impl PyTable {
         self.visit(py, &l, b.saturating_sub(a) >= 64, std::iter::once((a, b)))?;
         Ok(l)
     }
-    #[pyo3(signature = (sel, limit = None))]
+    /// Rows `a..b` as JSON objects separated by commas (no surrounding brackets), as bytes.
+    fn json_range<'py>(&self, py: Python<'py>, a: usize, b: usize) -> Bound<'py, PyBytes> {
+        let mut sink = JsonSink::new(self.t.names(), b.saturating_sub(a) >= 64);
+        self.t.visit_rows(a, b, &mut sink);
+        PyBytes::new(py, &sink.out)
+    }
+    /// Selected rows `start..stop` (positions within the selection) as comma-separated JSON objects.
+    fn json_sel<'py>(
+        &self,
+        py: Python<'py>,
+        sel: PyRef<'_, Selection>,
+        start: usize,
+        stop: usize,
+    ) -> Bound<'py, PyBytes> {
+        let ids = &sel.ids[start.min(sel.ids.len())..stop.min(sel.ids.len())];
+        let mut sink = JsonSink::new(self.t.names(), ids.len() >= 64);
+        for &i in ids {
+            self.t.visit_rows(i as usize, i as usize + 1, &mut sink)
+        }
+        PyBytes::new(py, &sink.out)
+    }
+    #[pyo3(signature = (sel, limit = None, offset = 0))]
     fn rows<'py>(
         &self,
         py: Python<'py>,
         sel: PyRef<'_, Selection>,
         limit: Option<usize>,
+        offset: usize,
     ) -> PyResult<Bound<'py, PyList>> {
         let l = PyList::empty(py);
         self.visit(
@@ -662,6 +684,7 @@ impl PyTable {
             sel.ids.len() >= 64,
             sel.ids
                 .iter()
+                .skip(offset)
                 .take(limit.unwrap_or(usize::MAX))
                 .map(|&i| (i as usize, i as usize + 1)),
         )?;
@@ -871,6 +894,140 @@ impl PyTable {
     }
     fn tail_rows(&self) -> usize {
         self.t.tail_rows()
+    }
+}
+
+/// A float as Python's `repr` writes it, which is what `json.dumps` emits.
+fn py_float(out: &mut Vec<u8>, f: f64) {
+    use std::io::Write;
+    if f.is_nan() {
+        return out.extend_from_slice(b"NaN");
+    }
+    if f.is_infinite() {
+        return out.extend_from_slice(if f > 0.0 { b"Infinity" } else { b"-Infinity" });
+    }
+    let sci = format!("{f:e}");
+    let (mant, exp) = sci.split_once('e').unwrap();
+    let exp: i32 = exp.parse().unwrap();
+    if (-4..16).contains(&exp) {
+        let start = out.len();
+        write!(out, "{f}").unwrap();
+        if !out[start..].contains(&b'.') {
+            out.extend_from_slice(b".0")
+        }
+    } else {
+        write!(
+            out,
+            "{mant}e{}{:02}",
+            if exp < 0 { '-' } else { '+' },
+            exp.abs()
+        )
+        .unwrap()
+    }
+}
+
+/// Writes visited rows as comma-separated JSON objects straight from the columns, without building Python objects.
+/// The text follows `json.dumps(rows, separators=(",", ":"), ensure_ascii=False)`; values always read back equal, and the
+/// bytes are identical for flat records except for rare floats that have two equally short decimal forms.
+struct JsonSink {
+    out: Vec<u8>,
+    keys: Vec<Vec<u8>>,
+    rows: usize,
+    first: bool,
+    use_cache: bool,
+    cache: Vec<(usize, Vec<Option<Box<[u8]>>>)>,
+}
+impl JsonSink {
+    fn new(names: &[String], use_cache: bool) -> Self {
+        let keys = names
+            .iter()
+            .map(|n| {
+                let mut k = serde_json::to_vec(n).unwrap();
+                k.push(b':');
+                k
+            })
+            .collect();
+        JsonSink {
+            out: Vec::new(),
+            keys,
+            rows: 0,
+            first: true,
+            use_cache,
+            cache: vec![],
+        }
+    }
+    #[inline]
+    fn key(&mut self, col: usize) {
+        if !self.first {
+            self.out.push(b',')
+        }
+        self.first = false;
+        self.out.extend_from_slice(&self.keys[col])
+    }
+}
+impl RowVisitor for JsonSink {
+    fn begin(&mut self) {
+        if self.rows > 0 {
+            self.out.push(b',')
+        }
+        self.out.push(b'{');
+        self.first = true
+    }
+    fn end(&mut self) {
+        self.out.push(b'}');
+        self.rows += 1
+    }
+    fn null(&mut self, col: usize) {
+        self.key(col);
+        self.out.extend_from_slice(b"null")
+    }
+    fn boolean(&mut self, col: usize, v: bool) {
+        self.key(col);
+        self.out
+            .extend_from_slice(if v { b"true" } else { b"false" })
+    }
+    fn int(&mut self, col: usize, v: i64) {
+        use std::io::Write;
+        self.key(col);
+        write!(self.out, "{v}").unwrap()
+    }
+    fn float(&mut self, col: usize, v: f64) {
+        self.key(col);
+        py_float(&mut self.out, v)
+    }
+    fn str(&mut self, col: usize, s: &str) {
+        self.key(col);
+        serde_json::to_writer(&mut self.out, s).unwrap()
+    }
+    fn dict_str(
+        &mut self,
+        col: usize,
+        seg: usize,
+        code: u32,
+        dict_len: usize,
+        value: &mut dyn FnMut() -> String,
+    ) {
+        self.key(col);
+        if !self.use_cache {
+            return serde_json::to_writer(&mut self.out, &value()).unwrap();
+        }
+        if self.cache.is_empty() {
+            self.cache = (0..self.keys.len()).map(|_| (usize::MAX, vec![])).collect()
+        }
+        let slot = &mut self.cache[col];
+        if slot.0 != seg {
+            *slot = (seg, (0..dict_len).map(|_| None).collect())
+        }
+        let text = slot.1[code as usize]
+            .get_or_insert_with(|| serde_json::to_vec(&value()).unwrap().into_boxed_slice());
+        self.out.extend_from_slice(text)
+    }
+    fn other(&mut self, col: usize, c: &Cell) {
+        self.key(col);
+        match c {
+            Cell::Json(s) => self.out.extend_from_slice(s.as_bytes()),
+            other => self.out.extend_from_slice(to_text(other).as_bytes()),
+        }
     }
 }
 
