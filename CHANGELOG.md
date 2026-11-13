@@ -4,6 +4,8 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## Unreleased
 
+## 0.1.1 - 2026-11-13
+
 ### Added
 - `Table.set_column` sets a field on every record in one pass.
 - `read_csv` parses UTF-8 files natively and takes `infer=True` for typed columns.
@@ -12,9 +14,14 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - The core crate's LZ4 and Zstandard dependencies are behind a default-on `baselines` feature, so
   bindings and WebAssembly builds carry no C code.
 
+### Changed
+- Serialising a table (`to_bytes`, pickling) writes once into the output buffer.
+
 ### Fixed
 - Subclasses of `Table` keep their type and attributes through pickling and `from_bytes`.
 - Tests no longer depend on the platform's default text encoding; CI runs on Windows.
+- Integer columns with a long tail of distinct values (token ids) no longer get a dictionary that is larger than
+  plain storage.
 
 ## 0.1.0 - 2026-11-13
 

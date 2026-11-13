@@ -13,7 +13,11 @@ from collections.abc import MutableSequence as _MutableSequence
 from ._packmem import _Table, Selection, Row
 
 __all__ = ["Table", "View", "Row", "load_jsonl", "load_json", "from_records", "from_cursor", "from_queryset", "read_csv"]
-__version__ = "0.1.0"
+try:
+    from importlib.metadata import version as _version
+    __version__ = _version("packmem")
+except Exception:  # running from a source tree without the package installed
+    __version__ = "unknown"
 
 
 def _restore(cls, data):

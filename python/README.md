@@ -93,8 +93,7 @@ def destinations(carrier: str):
 ```
 
 From a database, rows go into columns without model instances or dicts. `default=` converts
-values that are not JSON-like, such as dates and decimals (`from_queryset`, `default=` and the
-native CSV path are in the repository and will be in 0.1.1; 0.1.0 has `from_cursor`):
+values that are not JSON-like, such as dates and decimals:
 
 ```python
 orders = packmem.from_queryset(Order.objects.filter(year=2026), default=str)                 # Django
