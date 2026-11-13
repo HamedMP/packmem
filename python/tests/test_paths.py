@@ -238,6 +238,31 @@ def test_set_column():
     e = packmem.Table(); e.set_column("a", 1); assert list(e) == []
 
 
+def test_text_heavy_load_uses_background_packing():
+    # chunks with megabytes of text are packed on a background thread; the result must not depend on that
+    r = random.Random(2); words = ["alpha", "beta", "gamma", "delta", "épsilon", "日本", "zeta"]
+    def rec(i):
+        turns = [{"from": "human" if k % 2 == 0 else "gpt", "value": " ".join(r.choice(words) for _ in range(r.randint(20, 90)))} for k in range(r.choice([2, 4]))]
+        out = {"id": i if i % 3 else str(i), "conversations": turns, "note": " ".join(r.choice(words) for _ in range(40))}
+        if i > 30_000: out["late"] = i                    # a column that first appears after chunks were handed off
+        if i % 11 == 0: del out["note"]
+        return out
+    m = [rec(i) for i in range(52_000)]
+    lines = [json.dumps(x, ensure_ascii=False) for x in m]
+    blobs = []
+    for threads in ("0", "1", "3"):
+        os.environ["PACKMEM_LOAD_THREADS"] = threads
+        try:
+            t = packmem.load_jsonl(lines)
+            assert list(t) == m and t.columns == ["id", "conversations", "note", "late"] and t.count(late=40_000) == 1
+            t.append({"id": -1}); assert t[-1] == {"id": -1} and len(t) == len(m) + 1
+            u = packmem.Table(m[:40_000]); u.extend(m[40_000:]); assert list(u) == m
+            blobs.append(packmem.load_jsonl(lines).to_bytes())
+        finally:
+            del os.environ["PACKMEM_LOAD_THREADS"]
+    assert blobs[0] == blobs[1] == blobs[2]                # byte-identical packed form with or without threads
+
+
 def _worker_reads(t):
     return (len(t), t.sum("id"), t.count(g="x"), t.shared)
 

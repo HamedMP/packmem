@@ -7,7 +7,6 @@ use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyBytes, PyDict, PyFloat, PyInt, PyList, PyString, PyTuple};
 use serde::de::{DeserializeSeed, MapAccess, SeqAccess, Visitor};
 use serde_json::value::RawValue;
-use serde_json::Value;
 use std::io::{BufRead, BufReader};
 use std::marker::PhantomData;
 
@@ -88,6 +87,32 @@ impl<'de> Raw<'de> for Box<RawValue> {
     }
 }
 
+/// Nested JSON text with the whitespace between tokens removed. The parser has already validated it, so it is kept
+/// as written (escapes, number text and key order included) instead of being parsed into a tree and written back.
+fn compact_json(t: &str) -> String {
+    let mut out = Vec::with_capacity(t.len());
+    let (mut in_string, mut escaped) = (false, false);
+    for &c in t.as_bytes() {
+        if in_string {
+            out.push(c);
+            if escaped {
+                escaped = false
+            } else if c == b'\\' {
+                escaped = true
+            } else if c == b'"' {
+                in_string = false
+            }
+        } else if c == b'"' {
+            in_string = true;
+            out.push(c)
+        } else if !matches!(c, b' ' | b'\n' | b'\r' | b'\t') {
+            out.push(c)
+        }
+    }
+    // only ASCII whitespace outside strings was dropped, so the bytes are still valid UTF-8
+    String::from_utf8(out).expect("compacting JSON keeps it valid UTF-8")
+}
+
 fn raw_cell(t: &str) -> Result<Cell, String> {
     let b = t.as_bytes();
     Ok(match b.first() {
@@ -101,11 +126,7 @@ fn raw_cell(t: &str) -> Result<Cell, String> {
         Some(b'n') => Cell::Null,
         Some(b't') => Cell::Bool(true),
         Some(b'f') => Cell::Bool(false),
-        Some(b'[' | b'{') => Cell::Json(
-            serde_json::from_str::<Value>(t)
-                .map_err(|e| e.to_string())?
-                .to_string(),
-        ),
+        Some(b'[' | b'{') => Cell::Json(compact_json(t)),
         // numbers keep their source text: integers beyond 64 bits stay exact, floats parse exactly
         _ => {
             if !b.iter().any(|c| matches!(c, b'.' | b'e' | b'E')) {
@@ -519,7 +540,15 @@ impl PyTable {
     }
     /// Run a bulk load: rows are packed a chunk at a time, and whatever was loaded before an error stays consistent.
     fn bulk<T>(&mut self, py: Python<'_>, f: impl FnOnce(&mut Self) -> PyResult<T>) -> PyResult<T> {
-        self.t.set_bulk(true);
+        // pack finished chunks on spare cores while this thread keeps parsing; the table is not readable until it ends
+        let spare = std::thread::available_parallelism()
+            .map_or(1, |n| n.get())
+            .saturating_sub(1);
+        let threads = std::env::var("PACKMEM_LOAD_THREADS")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(1);
+        self.t.set_bulk_parallel(threads.min(spare));
         let r = f(self);
         self.t.set_bulk(false);
         self.sync_keys(py)?;

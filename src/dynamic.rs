@@ -725,6 +725,8 @@ struct Column {
     tail: Tail,
 }
 const MIN_COMPACT: usize = 8192;
+/// A chunk with at least this much string data is packed on a background thread during a parallel bulk load.
+const PARALLEL_TEXT_BYTES: usize = 4 << 20;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Num {
@@ -790,6 +792,11 @@ pub struct DynTable {
     epoch: u64,
     cur: usize,
     bulk: bool,
+    /// Chunks being packed on background threads during a parallel bulk load, oldest first.
+    sealers: std::collections::VecDeque<std::thread::JoinHandle<(Vec<Chunk>, Vec<Tail>)>>,
+    /// Emptied tail buffers handed back by finished background threads, reused for the next chunk.
+    spare_tails: Vec<Tail>,
+    seal_threads: usize,
     pub hint: Hint,
 }
 
@@ -804,6 +811,9 @@ impl DynTable {
             epoch: 0,
             cur: 0,
             bulk: false,
+            sealers: std::collections::VecDeque::new(),
+            spare_tails: Vec::new(),
+            seal_threads: 0,
             hint,
         }
     }
@@ -823,7 +833,8 @@ impl DynTable {
         if let Some(&i) = self.index.get(name) {
             return i;
         }
-        let nch = self.len / CHUNK;
+        // chunks still being packed in the background are added when they finish, for every column
+        let nch = self.len / CHUNK - self.sealers.len();
         let tl = self.tail_len();
         let pl = self.plen;
         self.cols.push(Column {
@@ -890,7 +901,32 @@ impl DynTable {
             }
         }
         self.len += 1;
-        if self.len % CHUNK == 0 {
+        // Compressing text is what makes packing slow, so a chunk holding a lot of it is handed to a background thread
+        // while parsing continues. Chunks of numbers and short strings are packed here: handing them off would only
+        // keep more unpacked buffers alive.
+        let heavy = self.len % CHUNK == 0
+            && self.bulk
+            && self.seal_threads > 0
+            && self.plen == 0
+            && self.cols.iter().map(|c| c.tail.text.len()).sum::<usize>() >= PARALLEL_TEXT_BYTES;
+        if heavy {
+            if self.sealers.len() >= self.seal_threads {
+                self.join_oldest()
+            }
+            let h = self.hint;
+            let spares = &mut self.spare_tails;
+            let tails: Vec<Tail> = self
+                .cols
+                .iter_mut()
+                .map(|c| std::mem::replace(&mut c.tail, spares.pop().unwrap_or_default()))
+                .collect();
+            self.sealers.push_back(std::thread::spawn(move || {
+                let chunks = tails.iter().map(|t| Chunk::seal(t, h)).collect();
+                (chunks, tails)
+            }));
+            self.epoch += 1
+        } else if self.len % CHUNK == 0 {
+            self.join_all();
             let (h, keep) = (self.hint, self.bulk);
             for c in &mut self.cols {
                 let ch = c.seal_open(h, keep);
@@ -909,11 +945,41 @@ impl DynTable {
             c.tail.truncate(slot)
         }
     }
+    /// Like `set_bulk(true)`, and full chunks are packed on up to `threads` background threads while the caller keeps
+    /// appending. The table must not be read until `set_bulk(false)`, which waits for them. The result is identical
+    /// to a single-threaded load; up to `threads` unpacked chunks are held at once.
+    pub fn set_bulk_parallel(&mut self, threads: usize) {
+        self.bulk = true;
+        self.seal_threads = threads
+    }
+    fn join_oldest(&mut self) {
+        let Some(h) = self.sealers.pop_front() else {
+            return;
+        };
+        let (chunks, mut tails) = h.join().unwrap_or_else(|e| std::panic::resume_unwind(e));
+        for t in &mut tails {
+            t.clear()
+        }
+        self.spare_tails.append(&mut tails);
+        let mut chunks = chunks.into_iter();
+        for c in &mut self.cols {
+            // a column created after this chunk was handed off has no values in it
+            c.chunks
+                .push(chunks.next().unwrap_or_else(|| Chunk::absent(CHUNK)))
+        }
+    }
+    fn join_all(&mut self) {
+        while !self.sealers.is_empty() {
+            self.join_oldest()
+        }
+    }
     /// While on, rows are only packed when a chunk fills, which avoids re-packing the open chunk as it grows. Turning it off packs what is left.
     pub fn set_bulk(&mut self, on: bool) {
         self.bulk = on;
         if !on {
+            self.seal_threads = 0;
             self.compact();
+            self.spare_tails = Vec::new();
             for c in &mut self.cols {
                 if c.tail.len() == 0 {
                     c.tail = Tail::default()
@@ -959,6 +1025,7 @@ impl DynTable {
     }
     /// Pack the rows that are still uncompressed. Called automatically as the table grows (amortised), and by bulk loaders when they finish.
     pub fn compact(&mut self) {
+        self.join_all();
         if self.tail_len() == 0 {
             return;
         }
