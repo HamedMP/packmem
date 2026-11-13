@@ -13,6 +13,12 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - `default=` on `from_cursor` and `from_queryset` converts dates, decimals, UUIDs and bytes.
 - The core crate's LZ4 and Zstandard dependencies are behind a default-on `baselines` feature, so
   bindings and WebAssembly builds carry no C code.
+- Node: `sort`, `splice`, `push`, `pop`, `shift`, `unshift`, `reverse` and lazy rows (`table.lazy()`).
+- Node: `loadCsv`, `loadTsv` and `parseCsv` on the core CSV loader.
+- Node: `fromPgCopy` loads Postgres through `COPY` with no row objects; `fromQuery` takes Drizzle and Kysely queries.
+- Node: `packmem/wasm`, a WebAssembly build for Cloudflare Workers and other runtimes without native addons.
+- Node: prebuilt addons for musl (Alpine) and Intel Macs; Linux glibc builds now need glibc 2.17 instead of 2.34.
+- Node releases are built, tested on every platform and published with provenance from CI.
 
 ### Changed
 - Serialising a table (`to_bytes`, pickling) writes once into the output buffer.
