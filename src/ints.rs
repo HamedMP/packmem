@@ -71,7 +71,8 @@ macro_rules! each {
 }
 
 impl Store {
-    pub fn pack(vals: impl Iterator<Item = u64> + Clone, n: usize, max: u64, hint: Hint) -> Store {
+    /// The field width `pack` will use for codes up to `max` (aligned, or exact bits), and whether it is bit-packed.
+    fn layout(max: u64, hint: Hint) -> (u8, bool) {
         let w = width(max);
         let aligned = match w {
             0..=8 => 8,
@@ -86,6 +87,14 @@ impl Store {
                 Hint::Balanced => aligned as f64 / w.max(1) as f64 >= 1.34,
                 Hint::Speed => false,
             };
+        (if use_bits { w } else { aligned }, use_bits)
+    }
+    pub fn pack(vals: impl Iterator<Item = u64> + Clone, n: usize, max: u64, hint: Hint) -> Store {
+        let w = width(max);
+        let (aligned, use_bits) = match Self::layout(max, hint) {
+            (_, true) => (0, true),
+            (a, false) => (a, false),
+        };
         if use_bits {
             return Store::Bits(BitPacked::new(vals, n, w));
         }
@@ -334,6 +343,17 @@ impl PackedInts {
                 for &v in vals {
                     set.insert(v);
                     if set.len() > 65536 {
+                        return Self::encode_as(vals, Scheme::For, hint, st);
+                    }
+                }
+                // The choice was made from a sample, which undercounts distinct values when the tail is long (token ids,
+                // Zipf-like keys). Now that the real dictionary is known, keep it only if it is actually smaller.
+                let range = (st.max as i128 - st.min as i128) as u128;
+                if range <= u64::MAX as u128 {
+                    let dict_bits = Store::layout(set.len() as u64 - 1, hint).0 as u128 * n as u128
+                        + set.len() as u128 * 64;
+                    let for_bits = Store::layout(range as u64, hint).0 as u128 * n as u128;
+                    if dict_bits >= for_bits {
                         return Self::encode_as(vals, Scheme::For, hint, st);
                     }
                 }

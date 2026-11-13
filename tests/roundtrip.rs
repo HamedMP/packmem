@@ -179,3 +179,45 @@ fn strings_match_plain_vec() {
         }
     }
 }
+
+/// A long-tailed column (token ids): the sample sees a few thousand distinct values, the column has all 32,000.
+/// The dictionary that the sample suggests must not be kept when plain offsets are smaller.
+#[test]
+fn long_tail_does_not_keep_an_oversized_dictionary() {
+    let n = 2_000_000usize;
+    let mut x = 0x9E37_79B9_7F4A_7C15u64;
+    let mut next = || {
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        x
+    };
+    // Zipf-like: id = floor(32000 * u^6), so a few hundred ids carry most of the mass; then make every id occur
+    let mut v: Vec<i64> = (0..n)
+        .map(|_| {
+            let u = (next() >> 11) as f64 / (1u64 << 53) as f64;
+            (32_000.0 * u.powi(6)) as i64
+        })
+        .collect();
+    for id in 0..32_000 {
+        v[(next() % n as u64) as usize] = id;
+    }
+    for hint in [Hint::Memory, Hint::Balanced, Hint::Speed] {
+        let p = PackedInts::encode(&v, hint);
+        let bits = p.bytes() as f64 * 8.0 / n as f64;
+        assert!(
+            bits <= 16.01,
+            "{hint:?}: {} at {bits:.2} bits per value",
+            p.describe()
+        );
+        assert_eq!(p.sum(), v.iter().sum::<i64>());
+        assert_eq!(
+            p.count_range(100, 20_000),
+            v.iter().filter(|&&a| (100..=20_000).contains(&a)).count()
+        );
+        for i in (0..n).step_by(9973) {
+            assert_eq!(p.get(i), v[i]);
+        }
+        println!("{hint:?}: {} {bits:.2} bits", p.describe());
+    }
+}
