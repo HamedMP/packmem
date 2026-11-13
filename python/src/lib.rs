@@ -141,25 +141,32 @@ fn raw_cell(t: &str) -> Result<Cell, String> {
     })
 }
 
-struct KeySeed<'a>(&'a mut DynTable);
+/// Keys to keep when loading; `None` keeps every key.
+type Only<'a> = Option<&'a std::collections::HashSet<String>>;
+
+/// Resolves a record key to its column, or `None` when the key is filtered out.
+struct KeySeed<'a>(&'a mut DynTable, Only<'a>);
 impl<'de, 'a> DeserializeSeed<'de> for KeySeed<'a> {
-    type Value = usize;
-    fn deserialize<D: serde::Deserializer<'de>>(self, d: D) -> Result<usize, D::Error> {
+    type Value = Option<usize>;
+    fn deserialize<D: serde::Deserializer<'de>>(self, d: D) -> Result<Option<usize>, D::Error> {
         d.deserialize_str(self)
     }
 }
 impl<'de, 'a> Visitor<'de> for KeySeed<'a> {
-    type Value = usize;
+    type Value = Option<usize>;
     fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         f.write_str("a key")
     }
-    fn visit_str<E: serde::de::Error>(self, k: &str) -> Result<usize, E> {
-        Ok(self.0.col_for(k))
+    fn visit_str<E: serde::de::Error>(self, k: &str) -> Result<Option<usize>, E> {
+        Ok(match self.1 {
+            Some(only) if !only.contains(k) => None,
+            _ => Some(self.0.col_for(k)),
+        })
     }
 }
 
 /// Fills the cells of one record. The caller finishes with `end_row`, or `abort_row` on error.
-struct RowSeed<'a, R>(&'a mut DynTable, PhantomData<R>);
+struct RowSeed<'a, R>(&'a mut DynTable, Only<'a>, PhantomData<R>);
 impl<'de, 'a, R: Raw<'de>> DeserializeSeed<'de> for RowSeed<'a, R> {
     type Value = ();
     fn deserialize<D: serde::Deserializer<'de>>(self, d: D) -> Result<(), D::Error> {
@@ -172,8 +179,13 @@ impl<'de, 'a, R: Raw<'de>> Visitor<'de> for RowSeed<'a, R> {
         f.write_str("a JSON object for each record")
     }
     fn visit_map<A: MapAccess<'de>>(self, mut m: A) -> Result<(), A::Error> {
-        let t = self.0;
-        while let Some(c) = m.next_key_seed(KeySeed(&mut *t))? {
+        let (t, only) = (self.0, self.1);
+        while let Some(c) = m.next_key_seed(KeySeed(&mut *t, only))? {
+            let Some(c) = c else {
+                // a field that was not asked for: skipped without being stored
+                m.next_value::<serde::de::IgnoredAny>()?;
+                continue;
+            };
             let r: R = m.next_value()?;
             let x = r.text();
             let b = x.as_bytes();
@@ -187,9 +199,9 @@ impl<'de, 'a, R: Raw<'de>> Visitor<'de> for RowSeed<'a, R> {
     }
 }
 
-fn push_line(t: &mut DynTable, line: &str) -> Result<(), String> {
+fn push_line(t: &mut DynTable, line: &str, only: Only<'_>) -> Result<(), String> {
     let mut de = serde_json::Deserializer::from_str(line);
-    match RowSeed::<&RawValue>(&mut *t, PhantomData)
+    match RowSeed::<&RawValue>(&mut *t, only, PhantomData)
         .deserialize(&mut de)
         .and_then(|_| de.end())
     {
@@ -232,7 +244,7 @@ impl<'py> std::io::Read for PyReader<'py> {
     }
 }
 
-struct ArraySink<'a>(&'a mut DynTable);
+struct ArraySink<'a>(&'a mut DynTable, Only<'a>);
 impl<'de, 'a> DeserializeSeed<'de> for ArraySink<'a> {
     type Value = usize;
     fn deserialize<D: serde::Deserializer<'de>>(self, d: D) -> Result<usize, D::Error> {
@@ -245,10 +257,10 @@ impl<'de, 'a> Visitor<'de> for ArraySink<'a> {
         f.write_str("a JSON array of objects")
     }
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<usize, A::Error> {
-        let t = self.0;
+        let (t, only) = (self.0, self.1);
         let mut n = 0;
         loop {
-            match seq.next_element_seed(RowSeed::<Box<RawValue>>(&mut *t, PhantomData)) {
+            match seq.next_element_seed(RowSeed::<Box<RawValue>>(&mut *t, only, PhantomData)) {
                 Ok(Some(())) => {
                     t.end_row();
                     n += 1
@@ -321,6 +333,8 @@ struct PyTable {
     seen_keys: Vec<(Py<PyAny>, usize)>,
     /// Set on tables that are shared with other processes: every change is refused, so the copies cannot diverge.
     frozen: bool,
+    /// Set by the Python loaders while a load with `fields=` runs: only these keys are stored.
+    only: Option<std::collections::HashSet<String>>,
 }
 
 /// Builds one dict per visited row by copying a template that already holds every key, then replacing values.
@@ -518,7 +532,7 @@ impl PyTable {
     /// One JSON record from text. Text the native parser rejects gets a second chance with Python's `json.loads`,
     /// which also accepts `NaN` and `Infinity`; if that fails too, the native error is reported.
     fn push_text(&mut self, py: Python<'_>, line: &str, lineno: usize) -> PyResult<()> {
-        let Err(e) = push_line(&mut self.t, line) else {
+        let Err(e) = push_line(&mut self.t, line, self.only.as_ref()) else {
             return Ok(());
         };
         let err = || PyValueError::new_err(format!("line {lineno}: {e}"));
@@ -527,7 +541,19 @@ impl PyTable {
             .getattr("loads")?
             .call1((line,))
             .map_err(|_| err())?;
-        self.push(v.downcast::<PyDict>().map_err(|_| err())?)
+        let d = v.downcast::<PyDict>().map_err(|_| err())?;
+        let Some(only) = &self.only else {
+            return self.push(d);
+        };
+        let kept = PyDict::new(py);
+        for (k, v) in d.iter() {
+            if k.downcast::<PyString>()
+                .is_ok_and(|k| k.to_cow().is_ok_and(|k| only.contains(&*k)))
+            {
+                kept.set_item(k, v)?
+            }
+        }
+        self.push(&kept)
     }
     fn push_any(&mut self, py: Python<'_>, row: &Bound<'_, PyAny>) -> PyResult<()> {
         match row.downcast::<PyDict>() {
@@ -601,6 +627,7 @@ impl PyTable {
             template: None,
             seen_keys: vec![],
             frozen: false,
+            only: None,
         })
     }
     fn __len__(&self) -> usize {
@@ -777,7 +804,7 @@ impl PyTable {
         self.bulk(py, |s| {
             let mut de =
                 serde_json::Deserializer::from_reader(BufReader::with_capacity(1 << 20, f));
-            let n = ArraySink(&mut s.t)
+            let n = ArraySink(&mut s.t, s.only.as_ref())
                 .deserialize(&mut de)
                 .map_err(|e| PyValueError::new_err(e.to_string()))?;
             de.end().map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -793,7 +820,7 @@ impl PyTable {
                 buf: vec![],
                 pos: 0,
             });
-            let n = ArraySink(&mut s.t)
+            let n = ArraySink(&mut s.t, s.only.as_ref())
                 .deserialize(&mut de)
                 .map_err(|e| PyValueError::new_err(e.to_string()))?;
             de.end().map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -1087,6 +1114,7 @@ impl PyTable {
             template: None,
             seen_keys: vec![],
             frozen: false,
+            only: None,
         };
         t.sync_keys(py)?;
         Ok(t)
@@ -1147,9 +1175,15 @@ impl PyTable {
             template: None,
             seen_keys: vec![],
             frozen: true,
+            only: None,
         };
         t.sync_keys(py)?;
         Ok(t)
+    }
+    /// Keys to keep in the JSON loads that follow; `None` keeps every key again.
+    #[pyo3(signature = (fields = None))]
+    fn set_fields(&mut self, fields: Option<Vec<String>>) {
+        self.only = fields.map(|f| f.into_iter().collect())
     }
     fn set_frozen(&mut self, on: bool) {
         self.frozen = on
@@ -1166,6 +1200,7 @@ impl PyTable {
             template: None,
             seen_keys: vec![],
             frozen: false,
+            only: None,
         };
         t.sync_keys(py)?;
         Ok(t)

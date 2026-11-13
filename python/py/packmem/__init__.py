@@ -436,29 +436,48 @@ def from_queryset(queryset, fields=None, hint="balanced", default=None):
     return t
 
 
-def load_jsonl(src, hint="balanced"):
-    """Load JSON lines from a path or an iterable of lines. Paths are parsed natively."""
+def _only(fields):
+    if fields is None:
+        return None
+    if isinstance(fields, str):
+        raise TypeError("fields must be a list of key names, not a single string")
+    return list(fields)
+
+
+def load_jsonl(src, hint="balanced", fields=None):
+    """Load JSON lines from a path or an iterable of lines. Paths are parsed natively.
+
+    `fields` keeps only those top-level keys; the others are skipped while parsing and never stored.
+    """
     t = Table(hint=hint)
-    if isinstance(src, (str, _os.PathLike)):
-        t._t.load_jsonl_path(_os.fspath(src))
-    else:
-        t._t.extend_json(src)
+    t._t.set_fields(_only(fields))
+    try:
+        if isinstance(src, (str, _os.PathLike)):
+            t._t.load_jsonl_path(_os.fspath(src))
+        else:
+            t._t.extend_json(src)
+    finally:
+        t._t.set_fields(None)
     return t
 
 
-def load_json(src, hint="balanced"):
+def load_json(src, hint="balanced", fields=None):
     """Load one JSON array of objects from a path or an open file, streaming element by element.
 
     Replaces `json.load(f)` when the file holds a list of records; the full list of dicts is never built.
+    `fields` keeps only those top-level keys; the others are skipped while parsing and never stored.
     """
+    fields = _only(fields)
     path = isinstance(src, (str, _os.PathLike))
     start = src.tell() if not path and getattr(src, "seekable", lambda: False)() else None
     t = Table(hint=hint)
+    t._t.set_fields(fields)
     try:
         if path:
             t._t.load_json_array_path(_os.fspath(src))
         else:
             t._t.load_json_array_file(src)
+        t._t.set_fields(None)
     except ValueError:
         # Python's json also accepts NaN and Infinity; retry with it when the input can be read again
         import json
@@ -472,6 +491,9 @@ def load_json(src, hint="balanced"):
             raise
         if not isinstance(data, list) or not all(isinstance(r, dict) for r in data):
             raise
+        if fields is not None:
+            keep = set(fields)
+            data = ({k: v for k, v in r.items() if k in keep} for r in data)
         t = Table(data, hint=hint)
     return t
 

@@ -82,6 +82,21 @@ def test_native_json():
                     lambda: packmem.load_jsonl(['{"a":1}', '[1]']), lambda: packmem.load_jsonl(['{"a":1}', '{"a":']), lambda: packmem.load_jsonl(['{"a":1,"b":{"c":}}'])):
             try: bad(); raise AssertionError("expected ValueError")
             except ValueError: pass
+    # fields=: other keys are skipped while parsing, on every loader and on the Python-parser fallback (NaN)
+    src = [{"id": i, "big": "x" * 50, "nest": {"k": [i]}, "v": float("nan") if i == 7 else i / 2, **({"opt": i} if i % 2 else {})} for i in range(300)]
+    keep = lambda ks: [{k: r[k] for k in r if k in ks} for r in src]
+    same_nan = lambda a, b: json.dumps(a) == json.dumps(b)
+    jl = [json.dumps(x) for x in src]
+    for ks in (["id"], ["opt", "id"], ["nest", "v"], ["missing"], []):
+        assert same_nan(list(packmem.load_jsonl(jl, fields=ks)), keep(ks)), ks
+        assert same_nan(list(packmem.load_json(io.StringIO(json.dumps(src)), fields=ks)), keep(ks)), ks
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "f.jsonl"); open(p, "w", encoding="utf-8").write("\n".join(jl))
+        q = os.path.join(d, "f.json"); json.dump(src, open(q, "w", encoding="utf-8"))
+        assert same_nan(list(packmem.load_jsonl(p, fields=["id", "v"])), keep(["id", "v"])) and same_nan(list(packmem.load_json(q, fields=("id", "v"))), keep(["id", "v"]))
+        t = packmem.load_jsonl(p, fields=["id"]); assert t.columns == ["id"]; t.append({"other": 1}); assert t[-1] == {"other": 1}     # the filter ends with the load
+    try: packmem.load_jsonl(jl, fields="id"); raise AssertionError("expected TypeError")
+    except TypeError: pass
     assert list(packmem.load_jsonl(['{"a":1,"a":2,"b":3}'])) == [{"a": 2, "b": 3}]   # duplicate keys: last wins, as in json.loads
     # key order differing between records, and keys appearing late
     mixed = [{"a": 1, "b": 2}, {"b": 3, "a": 4}, {"c": 5}, {"b": 6, "c": 7, "a": 8}] * 6000
