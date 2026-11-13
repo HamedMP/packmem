@@ -93,3 +93,11 @@ worker re-imports torch.
   pickle buffers. Partly fixed in 694c651; not re-measured. glibc returns large blocks, so this is
   probably macOS-only.
 - Every result covers annotations only: no images, no model, no GPU.
+
+## NVIDIA NeMo Automodel
+
+A fourth repository, measured later on the Mac: see `nemo-automodel/RESULT.md`. On the full 665,298-record
+set the main process after build holds 8,444 MB as a list and 1,239 MB with packmem (build 20.5 s against
+35.5 s), four fork workers peak at 6,143 MB against 486 MB in total, and a spawn worker reaches its first
+batch in 14.9 s against 2.5 s. The list arm was not run with four spawn workers on the full set, which
+would need about 29 GB per process.

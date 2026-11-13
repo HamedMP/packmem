@@ -1,0 +1,106 @@
+diff --git a/nemo_automodel/components/datasets/vlm/datasets.py b/nemo_automodel/components/datasets/vlm/datasets.py
+index 65181ac..aceb61e 100644
+--- a/nemo_automodel/components/datasets/vlm/datasets.py
++++ b/nemo_automodel/components/datasets/vlm/datasets.py
+@@ -27,6 +27,7 @@ from concurrent.futures import ThreadPoolExecutor
+ from dataclasses import dataclass
+ from typing import ClassVar
+ 
++import packmem
+ import torch
+ import torch.utils.data
+ from datasets import Dataset, load_dataset
+@@ -875,16 +876,14 @@ def _load_json_or_jsonl(file_path):
+         file_path (str): Path to the JSON or JSONL file.
+ 
+     Returns:
+-        list[dict]: List of data examples.
++        packmem.Table: The data examples, held as packed columns.
+     """
+-    with open(file_path) as f:
+-        if file_path.endswith(".jsonl"):
+-            return [json.loads(line) for line in f if line.strip()]
+-        else:
+-            data = json.load(f)
+-            if isinstance(data, list):
+-                return data
+-            raise ValueError(f"Expected a JSON array in {file_path}, got {type(data).__name__}")
++    if file_path.endswith(".jsonl"):
++        return packmem.load_jsonl(file_path)
++    try:
++        return packmem.load_json(file_path)
++    except ValueError as e:
++        raise ValueError(f"Expected a JSON array in {file_path}: {e}") from e
+ 
+ 
+ def _load_jsonl_for_rank(file_path, sample_ratio, rank, world_size):
+@@ -1151,12 +1150,13 @@ def _log_dataset_loading_summary(timings, wall_time, total_samples, rank=None):
+     logger.info("\n".join(lines))
+ 
+ 
+-class _ExamplesWithStats(list):
+-    """list subclass that carries pre-computed dataset statistics.
++class _ExamplesWithStats(packmem.Table):
++    """Packed sequence of examples that carries pre-computed dataset statistics.
+ 
+     Attached by :func:`make_meta_dataset` so downstream code (e.g.
+     ``_log_global_dataset_stats``) can read aggregated stats without
+-    re-scanning all examples.
++    re-scanning all examples. Pickles as the packed columns plus ``stats``,
++    so spawned DataLoader workers receive a compact copy.
+     """
+ 
+     __slots__ = ("stats",)
+@@ -1353,10 +1353,11 @@ def make_meta_dataset(
+         t_io = time.monotonic() - t_io_start
+ 
+         t_convert_start = time.monotonic()
+-        examples = [
++        examples = packmem.Table(
+             _convert_sharegpt_to_conversation(example, columns=columns, tags=tags, media_dir=media_dir)
+             for example in raw_data
+-        ]
++        )
++        del raw_data
+         t_convert = time.monotonic() - t_convert_start
+ 
+         t_total = time.monotonic() - t_start
+@@ -1393,7 +1394,7 @@ def make_meta_dataset(
+     # (important for StatefulDataLoader resume).
+     ordered_names = sorted(selected.keys())
+     num_workers = min(len(ordered_names), os.cpu_count() or 8, 32)
+-    all_examples = []
++    all_examples = _ExamplesWithStats()
+     all_timings = {}  # name -> timing dict
+ 
+     t_load_start = time.monotonic()
+@@ -1426,7 +1427,7 @@ def make_meta_dataset(
+ 
+     # Attach aggregated stats to the returned list so callers can do an
+     # all_reduce without re-scanning all examples.
+-    result = _ExamplesWithStats(all_examples)
++    result = all_examples
+     result.stats = {
+         k: sum(t.get(k, 0) for t in all_timings.values())
+         for k in ("n_images", "n_videos", "n_text_only", "n_text_tokens", "n_media_tokens")
+diff --git a/nemo_automodel/components/datasets/vlm/samplers.py b/nemo_automodel/components/datasets/vlm/samplers.py
+index 80bc51c..ab4ca13 100644
+--- a/nemo_automodel/components/datasets/vlm/samplers.py
++++ b/nemo_automodel/components/datasets/vlm/samplers.py
+@@ -16,6 +16,7 @@ import logging
+ import math
+ import time
+ 
++import packmem
+ import torch
+ from torch.utils.data import Sampler
+ 
+@@ -171,7 +172,7 @@ class LengthGroupedSampler(Sampler):
+         raw = dataset
+         while hasattr(raw, "dataset"):
+             raw = raw.dataset
+-        if isinstance(raw, list):
++        if isinstance(raw, (list, packmem.Table)):
+             return raw
+         return None
+ 
