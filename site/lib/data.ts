@@ -172,7 +172,7 @@ export const demo = read("demos/bench/results/darwin-arm64.json")!
 export const demoPg = read("demos/bench/results/darwin-arm64-postgres.json")
 export const linuxDemo = read("demos/bench/results/linux-x64.json")
 export const linuxDemoPg = read("demos/bench/results/linux-x64-postgres.json")
-export const linuxDs = jsonl("benchmarks/results/linux-x86-fast-ci-dev/datasets.jsonl")
+export const linuxDs = jsonl("benchmarks/results/linux-x86-server/datasets.jsonl")
 
 const pick = (d: Rec | null, f: string, m: string): Rec | undefined => d?.results.find((r: Rec) => r.framework === f && r.mode === m)
 export type Server = { label: string; f: string; a: number; b: number; pa: number; pb: number; la: number; lb: number }

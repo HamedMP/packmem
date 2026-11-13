@@ -1,4 +1,4 @@
-# linux-x86-fast-ci-dev
+# linux-x86-server
 
 - AMD Ryzen 9 7950X3D, 16 cores / 32 threads, 124 GB
 - Ubuntu 24.04.5, kernel 6.8.0-139-generic, glibc 2.39

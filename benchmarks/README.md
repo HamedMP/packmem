@@ -14,4 +14,4 @@
 Memory on macOS is the physical footprint, which counts compressed pages; on Linux it is
 resident set size. Results are in `results/<machine>/`, each with the machine line that
 `run_all.py` records. `linux-x86-sandbox` predates the optimisation pass described in the report and was run in a
-2-core sandbox; `linux-x86-fast-ci-dev` is the current build on a dedicated machine.
+2-core sandbox; `linux-x86-server` is the current build on a dedicated machine.

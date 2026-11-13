@@ -133,7 +133,7 @@ The same suite on an AMD Ryzen 9 7950X3D (Ubuntu 24.04, glibc 2.39, load average
 - **Break-even is the same:** more memory than the list at 100 records, less from 300 on; 633 MB against 11 MB at 300,000.
 - **Lazy rows only match the list here** (31 ms each); plain iteration is 5.6 times slower and random row access 9 times slower.
 - **Against polars tuned for memory** (memory only; both attempts ran while CI jobs loaded the machine, and agree within 2.5%): 12 MB against 47 to 71 MB on the flight data, 76 against 245 to 276 MB on the 2-million-row log, 94 against 185 to 209 MB on the flights repeated 10 times.
-- **Rust core benchmark** on 2 million records: same answers and sizes as before (`experiments/results/bench_2m_linux_fast_ci_dev.txt`).
+- **Rust core benchmark** on 2 million records: same answers and sizes as before (`experiments/results/bench_2m_linux_server.txt`).
 
 ### Where the remaining memory is
 
