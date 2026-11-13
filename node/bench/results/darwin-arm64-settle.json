@@ -1,0 +1,86 @@
+{
+  "machine": {
+    "cpu": "Apple M4 Pro",
+    "node": "v22.22.3",
+    "platform": "darwin-arm64",
+    "date": "2026-11-13T16:11:06.449Z",
+    "loadavg_before": 6.46,
+    "loadavg_after": 6.46
+  },
+  "runs": [
+    {
+      "source": "file",
+      "rows": 336776,
+      "load_ms": 292,
+      "samples": [
+        {
+          "at_s": 0,
+          "rss_mb": 65,
+          "heap_used_mb": 4,
+          "pooled_pages": null
+        },
+        {
+          "at_s": 20,
+          "rss_mb": 65,
+          "heap_used_mb": 4,
+          "pooled_pages": null
+        },
+        {
+          "at_s": 60,
+          "rss_mb": 65,
+          "heap_used_mb": 4,
+          "pooled_pages": null
+        },
+        {
+          "at_s": 120,
+          "rss_mb": 65,
+          "heap_used_mb": 4,
+          "pooled_pages": null
+        },
+        {
+          "at_s": 180,
+          "rss_mb": 65,
+          "heap_used_mb": 4,
+          "pooled_pages": null
+        }
+      ]
+    },
+    {
+      "source": "postgres",
+      "rows": 336776,
+      "load_ms": 1047,
+      "samples": [
+        {
+          "at_s": 0,
+          "rss_mb": 170,
+          "heap_used_mb": 6,
+          "pooled_pages": null
+        },
+        {
+          "at_s": 20,
+          "rss_mb": 83,
+          "heap_used_mb": 6,
+          "pooled_pages": null
+        },
+        {
+          "at_s": 60,
+          "rss_mb": 83,
+          "heap_used_mb": 6,
+          "pooled_pages": null
+        },
+        {
+          "at_s": 120,
+          "rss_mb": 83,
+          "heap_used_mb": 6,
+          "pooled_pages": null
+        },
+        {
+          "at_s": 180,
+          "rss_mb": 83,
+          "heap_used_mb": 6,
+          "pooled_pages": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "machine": {
+    "cpu": "AMD Ryzen 9 7950X3D 16-Core Processor",
+    "node": "v24.22.0",
+    "platform": "linux-x64",
+    "date": "2026-11-13T16:11:10.526Z",
+    "loadavg_before": 76.85,
+    "loadavg_after": 84.48
+  },
+  "runs": [
+    {
+      "source": "file",
+      "rows": 336776,
+      "load_ms": 1039,
+      "samples": [
+        {
+          "at_s": 0,
+          "rss_mb": 68,
+          "heap_used_mb": 5,
+          "pooled_pages": 27
+        },
+        {
+          "at_s": 20,
+          "rss_mb": 68,
+          "heap_used_mb": 5,
+          "pooled_pages": 27
+        },
+        {
+          "at_s": 60,
+          "rss_mb": 69,
+          "heap_used_mb": 6,
+          "pooled_pages": 27
+        },
+        {
+          "at_s": 120,
+          "rss_mb": 69,
+          "heap_used_mb": 5,
+          "pooled_pages": 27
+        },
+        {
+          "at_s": 180,
+          "rss_mb": 69,
+          "heap_used_mb": 6,
+          "pooled_pages": 27
+        }
+      ]
+    },
+    {
+      "source": "postgres",
+      "rows": 336776,
+      "load_ms": 3881,
+      "samples": [
+        {
+          "at_s": 0,
+          "rss_mb": 210,
+          "heap_used_mb": 7,
+          "pooled_pages": 572
+        },
+        {
+          "at_s": 20,
+          "rss_mb": 210,
+          "heap_used_mb": 9,
+          "pooled_pages": 572
+        },
+        {
+          "at_s": 60,
+          "rss_mb": 211,
+          "heap_used_mb": 11,
+          "pooled_pages": 572
+        },
+        {
+          "at_s": 120,
+          "rss_mb": 93,
+          "heap_used_mb": 7,
+          "pooled_pages": 29
+        },
+        {
+          "at_s": 180,
+          "rss_mb": 93,
+          "heap_used_mb": 8,
+          "pooled_pages": 29
+        }
+      ]
+    }
+  ]
+}

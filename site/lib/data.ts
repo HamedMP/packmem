@@ -236,4 +236,10 @@ export const pyFlights = (rows: Rec[]) => {
   return v("list") && v("packmem") ? { list: med(v("list")!.rss_mb), packmem: med(v("packmem")!.rss_mb) } : null
 }
 
+// how long memory takes to settle after loading, per source (node/bench/settle.mjs)
+type Settle = { source: string; samples: { at_s: number; rss_mb: number; pooled_pages: number | null }[] }
+const settleOf = (p: string) => (read(p) as { runs: Settle[] } | null)?.runs ?? []
+export const settleMac = settleOf("node/bench/results/darwin-arm64-settle.json")
+export const settleLinux = settleOf("node/bench/results/linux-x64-settle.json")
+
 export const builtOn = new Date().toISOString().slice(0, 10)

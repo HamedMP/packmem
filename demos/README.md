@@ -130,6 +130,54 @@ Reading it:
 - **Next.js exports are slow in both modes**, so that cost is in Next's web-stream response path, not in
   packmem.
 
+### Results on Linux, AMD Ryzen 9 7950X3D, Ubuntu 24.04, Node 24.22, Python 3.12
+
+The same code, data and scripts on a quiet Linux machine (resident set size here; the Mac figures are the
+resident size of the process tree, so compare ratios rather than megabytes).
+
+**Loaded from the JSON-lines file**
+
+Source: file. AMD Ryzen 9 7950X3D 16-Core Processor, 32 cores, Node v24.22.0; 1-minute load average at the start of each run: Express 0.6 to 0.84, Next.js 1.03 to 1.1, FastAPI 1.03 to 1.04. Every response was identical between modes.
+
+|  | Express baseline | Express packmem | Next.js baseline | Next.js packmem | FastAPI baseline | FastAPI packmem |
+| --- | --- | --- | --- | --- | --- | --- |
+| RSS 1 s after load, MB | 205 | 100 | 273 | 141 | 723 | 58 |
+| Idle RSS, settled, MB | 205 | 100 | 199 | 131 | 723 | 58 |
+| Peak RSS during the run, MB | 644 | 204 | 693 | 229 | 987 | 100 |
+| Load, ms | 488 | 299 | 514 | 304 | 1,208 | 291 |
+| Page of 50 rows, ms | 4.18 | 2.17 | 5.77 | 3.03 | 182 | 2.87 |
+| Group by dest, ms | 5.91 | 1.13 | 8.73 | 1.77 | 120 | 1.79 |
+| Summary, ms | 5.56 | 3.14 | 10.2 | 3.38 | 132 | 3.41 |
+| Export 58,665 rows, ms | 88.7 | 80.9 | 236 | 203 | 364 | 87.9 |
+| Export all 336,776 rows, ms | 610 | 451 | 1,360 | 1,130 | 1,258 | 579 |
+| 8 concurrent exports of 58,665 rows, wall ms | 848 | 485 | 1,211 | 775 | 2,810 | 705 |
+
+**Loaded from Postgres 17**
+
+Source: postgres. AMD Ryzen 9 7950X3D 16-Core Processor, 32 cores, Node v24.22.0; 1-minute load average at the start of each run: Express 0.83 to 1.12, Next.js 0.81 to 0.92, FastAPI 1.27 to 1.29. Every response was identical between modes.
+
+|  | Express baseline | Express packmem | Next.js baseline | Next.js packmem | FastAPI baseline | FastAPI packmem |
+| --- | --- | --- | --- | --- | --- | --- |
+| RSS 1 s after load, MB | 303 | 228 | 354 | 245 | 433 | 111 |
+| Idle RSS, settled, MB | 303 | 228 | 240 | 145 | 433 | 111 |
+| Peak RSS during the run, MB | 664 | 316 | 794 | 233 | 659 | 153 |
+| Load, ms | 670 | 1,250 | 701 | 1,256 | 962 | 958 |
+| Page of 50 rows, ms | 8.68 | 1.90 | 40.2 | 3.90 | 154 | 2.56 |
+| Group by dest, ms | 10.1 | 1.09 | 39.2 | 2.35 | 67.6 | 2.02 |
+| Summary, ms | 9.01 | 3.05 | 40.0 | 33.5 | 80.7 | 3.39 |
+| Export 58,665 rows, ms | 118 | 76.5 | 243 | 203 | 285 | 89.7 |
+| Export all 336,776 rows, ms | 678 | 448 | 1,401 | 1,129 | 1,212 | 610 |
+| 8 concurrent exports of 58,665 rows, wall ms | 1,023 | 496 | 1,370 | 750 | 2,380 | 703 |
+
+- Python saves more on Linux (FastAPI 12.5x at rest) because glibc returns load buffers that the macOS
+  allocator keeps. Node saves less (2.0x Express, 1.5x Next.js from the file) because V8 keeps plain
+  objects leaner on Linux.
+- The Postgres rows are an upper bound for Node. Loading from Postgres leaves freed V8 heap pages that V8
+  returns between 60 and 120 seconds after loading on Linux, after these 20-second readings; on the Mac it
+  returns them within 20 seconds. `node/bench/settle.mjs` records the timeline
+  (`node/bench/results/*-settle.json`): a Postgres-loaded table on Linux held 210 MB until 60 s and 93 MB
+  from 120 s.
+
 ### Caveats
 
 - One machine, one dataset, client and server (and Postgres) on the same host, not otherwise idle. Small-endpoint timings include about

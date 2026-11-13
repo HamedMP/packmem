@@ -73,6 +73,20 @@ export default function Page() {
   const linuxPg = d.serversOf(d.linuxDemoPg)
   const linuxPy = d.pyFlights(d.linuxDs)
   const linuxAccess = d.pyAccess(d.linuxDs)
+  // first sample at which memory has dropped below the starting level, per platform, for the Postgres load
+  const settleSummary = (runs: typeof d.settleLinux) => {
+    const r = runs.find((x) => x.source === "postgres")
+    if (!r || r.samples.length < 2) return null
+    const first = r.samples[0]
+    const settledIdx = r.samples.findIndex((s) => s.rss_mb < first.rss_mb * 0.75)
+    if (settledIdx < 1) return null
+    return { early: first.rss_mb, lateBefore: r.samples[settledIdx - 1].at_s, settled: r.samples[settledIdx].rss_mb, settledAt: r.samples[settledIdx].at_s }
+  }
+  const pgSettle = (() => {
+    const linux = settleSummary(d.settleLinux)
+    const mac = settleSummary(d.settleMac)
+    return linux && mac ? { linux, mac } : null
+  })()
   const ql = d.queries
   const qmax = Math.max(...ql.flatMap((q) => [q.a, q.b]))
 
@@ -311,8 +325,10 @@ export default function Page() {
                 </p>
               )}
               <p className="text-base leading-relaxed text-foreground/90">
-                Node keeps plain objects leaner on Linux, so its saving is smaller there. One result we have not explained yet: loaded
-                from Postgres, the Node servers on Linux kept more memory at rest than when loaded from the file.
+                Node keeps plain objects leaner on Linux, so its saving is smaller there. The Postgres rows on Linux need a caveat:
+                {pgSettle
+                  ? ` loading from Postgres leaves freed V8 heap pages that V8 keeps for a while before returning them. A table loaded from Postgres on Linux held ${pgSettle.linux.early} MB until ${pgSettle.linux.lateBefore} s after loading and ${pgSettle.linux.settled} MB by ${pgSettle.linux.settledAt} s (on the Mac, ${pgSettle.mac.early} MB falling to ${pgSettle.mac.settled} MB within ${pgSettle.mac.settledAt} s). The servers were measured at 20 seconds, before that point on Linux, so their Postgres figures above are an upper bound.`
+                  : " loaded from Postgres, the Node servers on Linux kept more memory at rest than when loaded from the file."}
               </p>
               <Figure title="A web server holding the dataset, on Linux" sub="Settled resident memory after loading the flights from the file.">
                 <Dumbbell rows={linux} unit="mb" lo={0} hi={800} ticks={[0, 200, 400, 600, 800]} aName="Plain objects" verdict="memory" />
