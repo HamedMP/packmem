@@ -113,10 +113,14 @@ loader = DataLoader(MyDataset(rows), num_workers=4, multiprocessing_context="spa
 ```
 
 On a 2-million-row table with four spawned workers, each worker's memory went from 298 MB to 96 MB
-and the parent's from +132 MB to no increase. A shared table refuses changes (`copy()` gives a private,
+and the parent's from +132 MB to no increase. In a Qwen3-VL fine-tuning data loader on 665,298 real
+records (4 spawn workers, annotations only), parent plus workers peaked at 4.5 GB with plain pickling
+and 2.7 GB with `share()`, and the first batch arrived in 1.2 s instead of 4.1 s. A shared table refuses changes (`copy()` gives a private,
 writable one; `unshare()` makes the original writable again and removes the file). The file is readable only by
 its owner and is removed when the table is unshared or garbage-collected, and `packmem.cleanup_stale()` clears files left by a
 crashed process. Each worker still holds its own copy of the packed data; they do not yet share one.
+The file is the size of the packed table and goes to `/dev/shm` on Linux (memory) and to the temp
+directory elsewhere (disk, on macOS and Windows); pass `share(dir=...)` to choose.
 
 ## What to expect
 
