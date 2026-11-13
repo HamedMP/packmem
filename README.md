@@ -39,7 +39,7 @@ smallest integer types, a rechunk, and its allocator told to return freed memory
 | Synthetic web log, 2 million rows | 3,053 MB | 764 MB | 256 to 271 MB | 98 MB |
 | Flights repeated 10 times, 3.4 million rows | 7,101 MB | 1,203 MB | 175 to 198 MB | 113 MB |
 
-So packmem holds 1.5 to 2.9 times less than tuned polars, and tuned polars needs the schema to be
+So packmem holds 1.6 to 2.9 times less than tuned polars, and tuned polars needs the schema to be
 known and set by hand. In return polars loads 4 to 5 times faster from JSON lines and far faster
 from parquet, and its filters are 2 to 4 times faster at millions of rows. These runs were taken
 on a busy machine; the memory figures are stable, the timings are not final.
