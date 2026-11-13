@@ -157,4 +157,4 @@ jobs:
         run: |
           tag=latest
           case "$VERSION" in *-*) tag=next ;; esac
-          npm publish ./pkg/packmem-*.tgz --provenance --access public --tag "$tag"
+          npm publish ./pkg/packmem-*.tgz --provenance --access public --tag "$tag" --loglevel verbose
