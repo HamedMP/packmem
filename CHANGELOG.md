@@ -4,6 +4,10 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## Unreleased
 
+## 0.1.0 - 2026-11-13
+
+First release. Alpha: the API and the `to_bytes` format may change between versions.
+
 ### Added
 - Rust core: integer encodings (constant, frame of reference, sorted dictionary, run-length,
   block frame of reference), string encodings (dictionary, FSST), a sampling selector with

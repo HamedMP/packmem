@@ -65,6 +65,8 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with: { pattern: "wheel-*", path: wheels, merge-multiple: true }
       - run: pip install --no-index --find-links wheels packmem
+      - name: the installed package carries its licence
+        run: python -c "import importlib.metadata as m; fs = [str(f) for f in m.files('packmem')]; assert any('LICENSE' in f for f in fs), fs"
       - run: python python/tests/test_packmem.py
       - run: python python/tests/test_paths.py
 
