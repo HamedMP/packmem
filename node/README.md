@@ -47,9 +47,12 @@ return new Response(rows.where({ carrier: "UA" }).jsonWebStream(), { headers: { 
 rows.jsonBuffer();
 ```
 
-Output is byte-identical to `JSON.stringify` of the same records (tested on all 336,776 flight records).
-On that data, writing every row takes 107 ms against 140 ms for `Buffer.from(JSON.stringify(array))`,
-and only one batch of bytes exists at a time.
+Numbers are written by the same rules as `JSON.stringify`, so for flat records the output is
+byte-identical (tested on all 336,776 flight records and on edge values such as `1e-7`, `1e21` and
+`5e-324`). Numbers inside nested arrays and objects loaded from JSON text are not reformatted (`1.0` stays `1.0`,
+`2.50` stays `2.50`), so those bytes can differ from `JSON.stringify` while the values are equal. Only one batch of bytes exists at a time; see the timings below. Over HTTP the gain is memory, not
+speed: in the Express demo a full export was 10% slower than `res.json` from the file and 29% slower from
+Postgres (`../demos/README.md`).
 
 ## Loading
 
@@ -84,24 +87,35 @@ it. Values arrive as node-postgres types them: `int8` and `numeric` as strings, 
 `jsonb` as nested values. Any table or iterable of arrays works the same way through
 `table.extendArrays(columnNames, rows)`.
 
-Loading 336,776 flights from Postgres 17 took 0.96 s against 0.46 s for a plain object-mode query: rows
-cross into Rust as JSON text, which costs a second parse. The memory saving is the same as from a file.
+Loading is slower than a plain object-mode query, because rows cross into Rust as JSON text and are parsed
+a second time; see the last row of the timings below. The memory saving is about the same as from a file.
 
 ## What to expect
 
-Measured on 336,776 flight records (nycflights13, 104 MB as JSON lines), Apple M4 Pro:
+Measured on 336,776 flight records (nycflights13, 104 MB as JSON lines), Apple M4 Pro. Every figure here
+comes from a recorded results file.
 
-- Packed size 8.1 MB. A whole Express or Next.js server holding the data settles at 94 to 119 MB RSS
-  against 386 to 411 MB with an array of objects loaded from the file, and 101 to 128 MB against 199 to
-  222 MB loaded from Postgres. Peak memory while serving is 4 to 5 times lower (see `../demos`).
-- Filtered pages are about 2 times faster than plain JS loops, and a filtered group-by 2 to 4 times
-  faster (0.68 ms against 2.8 ms in-process). A filter plus a sum is level with a JS loop: V8 scans
-  same-shape objects quickly.
-- Iterating every row builds plain objects through `JSON.parse` in batches, so a loop over all rows costs
-  about as much as parsing the JSON again.
+| In-process, flights data | Plain JS, ms | packmem, ms |
+| --- | --- | --- |
+| All 336,776 rows as JSON bytes | 161.12 | 128.51 |
+| Group by dest where carrier = UA | 4.87 | 0.76 |
+| Sum distance where origin = JFK | 3.45 | 1.37 |
+| Load the flights table from Postgres | 473.12 | 1100.17 |
 
-In Node the gain is mainly memory. V8 already stores objects of the same shape compactly, so the ratio
-is smaller than Python's: 2 to 4 times at rest and 4 to 5 times at peak, against 4.5 to 30 times in Python.
+Recorded in `bench/results/darwin-arm64.json` by `bench/micro.mjs`: Apple M4 Pro, Node v22.22.3, median of 9, load average 13.98 (the machine was busy; expect noise of tens of percent).
+
+In the demo servers (`../demos/README.md`, recorded in `../demos/bench/results/`, load average 5 to 10):
+
+- Packed size 8.1 MB. An Express or Next.js server holding the data settles at 94 to 119 MB against 386 to
+  411 MB with an array of objects loaded from the file, and 101 to 128 MB against 199 to 222 MB loaded
+  from Postgres: 1.7 to 4.1 times less. Peak memory while serving is 4.2 to 5.1 times lower.
+- Filtered pages are 1.5 to 3.4 times faster than JS loops and group-by 1.6 to 4.5 times faster; the
+  summary query (count, sum and a nested filter) is level to 1.8 times faster.
+- Single exports are within about 30% either way. Iterating every row builds plain objects through
+  `JSON.parse` in batches, so a loop over all rows costs about as much as parsing the JSON again.
+
+In Node the gain is mainly memory. V8 already stores objects of the same shape compactly, so the ratio is
+smaller than in Python, where the same servers used 4.5 to 10 times less memory at rest.
 
 ## Semantics to know
 
@@ -120,5 +134,12 @@ Needs Rust and Node 18 or later.
     npm run build     # cargo build --release, then copies the addon to packmem.<platform>-<arch>.node
     npm test          # model tests against plain arrays, and a full round trip of data/flights.jsonl if present
 
-Status: alpha. macOS arm64 built and tested. Linux and Windows builds, prebuilt binaries per platform and
-a WASM build (for Cloudflare Workers and browsers) are not done.
+Status: alpha. CI builds and tests the addon on Linux (x86-64 and arm64), macOS and Windows with Node 20
+and 22, and against Postgres 17. Prebuilt binaries are not published yet, and there is no WebAssembly
+build (for Cloudflare Workers and browsers).
+
+## Prior work
+
+None of the encodings is new: analytical databases use them, notably BtrBlocks and Vortex, and the string
+scheme is FSST (Boncz, Neumann, Leis, VLDB 2020). What packmem adds is putting them behind the containers
+programs already use: here, an array of objects.

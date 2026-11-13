@@ -93,7 +93,8 @@ Source: file. Apple M4 Pro, 12 cores, Node v22.22.3, load average 5.34 before an
 | 8 concurrent exports of 58,665 rows, wall ms | 312 | 233 | 1,297 | 564 | 2,108 | 544 |
 
 **Loaded from Postgres 17** (node-postgres object rows and psycopg `dict_row` against `fromPg` and
-`packmem.from_cursor` on a named cursor fetching 50,000 rows at a time)
+`packmem.from_cursor`; in this run the psycopg baseline used a client-side `fetchall` and packmem a named
+cursor fetching 50,000 rows at a time)
 
 Source: postgres. Apple M4 Pro, 12 cores, Node v22.22.3, load average 10.36 before and 8.51 after. Every response was identical between modes.
 
@@ -124,8 +125,10 @@ Reading it:
   with no consistent winner; concurrent exports are level to 2.3x faster because no full-size string is
   built per request.
 - **Loading from Postgres is slower in Node.** `fromPg` took about 1.8 times as long as a plain query (rows
-  cross into the native code as JSON text). In Python, `from_cursor` matched psycopg's `dict_row` when
-  both fetch the same way.
+  cross into the native code as JSON text). In the recorded Python run, `from_cursor` took 1.17 times
+  as long as psycopg's `dict_row` (677 against 581 ms), but the two did not fetch the same way: the
+  baseline fetched everything in one round trip and packmem used a named cursor. The demo now uses the
+  same named cursor for both, and this table will be replaced by a like-for-like run.
 - **Next.js exports are slow in both modes**, so that cost is in Next's web-stream response path, not in
   packmem.
 

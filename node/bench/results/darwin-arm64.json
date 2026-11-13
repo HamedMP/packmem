@@ -1,0 +1,35 @@
+{
+  "machine": {
+    "cpu": "Apple M4 Pro",
+    "node": "v22.22.3",
+    "platform": "darwin-arm64",
+    "date": "2026-11-13T13:05:35.858Z",
+    "loadavg_before": 13.98,
+    "loadavg_after": 14.04,
+    "reps": 9
+  },
+  "rows": [
+    {
+      "name": "All 336,776 rows as JSON bytes",
+      "plain_ms": 161.12,
+      "packmem_ms": 128.51,
+      "note": "Buffer.from(JSON.stringify(array)) against jsonChunks()"
+    },
+    {
+      "name": "Group by dest where carrier = UA",
+      "plain_ms": 4.87,
+      "packmem_ms": 0.76
+    },
+    {
+      "name": "Sum distance where origin = JFK",
+      "plain_ms": 3.45,
+      "packmem_ms": 1.37
+    },
+    {
+      "name": "Load the flights table from Postgres",
+      "plain_ms": 473.12,
+      "packmem_ms": 1100.17,
+      "note": "node-postgres object rows against fromPg"
+    }
+  ]
+}
