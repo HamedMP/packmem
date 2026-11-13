@@ -52,7 +52,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test test/table.test.js test/review.test.js test/listops.test.js test/csv.test.js test/wasm.test.js test/pg.test.js",
+    "test": "node --test test/table.test.js test/review.test.js test/listops.test.js test/csv.test.js test/load.test.js test/wasm.test.js test/pg.test.js",
     "build:wasm": "node scripts/build-wasm.mjs"
   },
   "peerDependencies": {

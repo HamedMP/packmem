@@ -78,6 +78,12 @@ it, or null with `emptyIsNull: true`; in a typed numeric, boolean or JSON column
 Parsing happens in Rust, straight into columns. `JSON.parse` must be skipped to get the memory benefit:
 once V8 has built the objects, the peak memory is already spent.
 
+Nested objects and arrays are stored as the JSON text they were written as, with the whitespace between tokens
+removed; escapes such as `é`, number text and key order are kept. For records with long text (chat messages,
+documents), `PACKMEM_LOAD_THREADS=1` lets the file loaders and `parse` compress full chunks on a background thread
+while parsing continues: a 100 MB file loaded about a quarter faster, and the process stayed about 22 MB larger.
+It is off by default.
+
 ## Postgres
 
 ```js

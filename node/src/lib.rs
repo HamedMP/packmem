@@ -15,6 +15,14 @@ fn err(e: impl std::fmt::Display) -> Error {
     Error::from_reason(e.to_string())
 }
 
+/// Background threads that pack text-heavy chunks during a load: PACKMEM_LOAD_THREADS, never more than the spare cores.
+/// Off by default: one thread made a 100 MB text-heavy load about a quarter faster but left the process about 22 MB
+/// larger once settled, whatever the file size. Number-heavy chunks are always packed on the loading thread.
+fn load_threads() -> usize {
+    let spare = std::thread::available_parallelism().map_or(1, |n| n.get()).saturating_sub(1);
+    std::env::var("PACKMEM_LOAD_THREADS").ok().and_then(|v| v.parse::<usize>().ok()).unwrap_or(0).min(spare)
+}
+
 #[napi(object)]
 pub struct ColumnRange {
     pub json: String,
@@ -57,7 +65,7 @@ impl NativeTable {
     pub fn load_jsonl_path(&mut self, path: String) -> Result<u32> {
         let f = File::open(&path).map_err(|e| err(format!("{path}: {e}")))?;
         self.e
-            .bulk(|t| {
+            .bulk_parallel(load_threads(), |t| {
                 let mut n = 0;
                 for (i, line) in BufReader::with_capacity(1 << 20, f).lines().enumerate() {
                     let line = line.map_err(|e| e.to_string())?;
@@ -76,13 +84,16 @@ impl NativeTable {
     #[napi]
     pub fn load_json_array_path(&mut self, path: String) -> Result<u32> {
         let f = File::open(&path).map_err(|e| err(format!("{path}: {e}")))?;
-        self.e.bulk(|t| load::push_array(t, BufReader::with_capacity(1 << 20, f))).map(|n| n as u32).map_err(err)
+        self.e
+            .bulk_parallel(load_threads(), |t| load::push_array(t, BufReader::with_capacity(1 << 20, f)))
+            .map(|n| n as u32)
+            .map_err(err)
     }
     /// A CSV or TSV file, read in 1 MB chunks.
     #[napi]
     pub fn load_csv_path(&mut self, path: String, options: String) -> Result<u32> {
         let mut f = File::open(&path).map_err(|e| err(format!("{path}: {e}")))?;
-        self.e.csv_begin(&options).map_err(err)?;
+        self.e.csv_begin_parallel(&options, load_threads()).map_err(err)?;
         let mut buf = vec![0u8; 1 << 20];
         loop {
             let n = match f.read(&mut buf) {
@@ -106,11 +117,11 @@ impl NativeTable {
     #[napi]
     pub fn push_jsonl_buffer(&mut self, buf: Buffer) -> Result<u32> {
         let text = std::str::from_utf8(&buf).map_err(err)?;
-        self.e.push_jsonl(text).map_err(err)
+        self.e.bulk_parallel(load_threads(), |t| load::push_lines(t, text)).map(|n| n as u32).map_err(err)
     }
     #[napi]
     pub fn push_json_array_buffer(&mut self, buf: Buffer) -> Result<u32> {
-        self.e.push_json_array(&buf).map_err(err)
+        self.e.bulk_parallel(load_threads(), |t| load::push_array(t, &buf[..])).map(|n| n as u32).map_err(err)
     }
     #[napi]
     pub fn push_arrays_jsonl(&mut self, names: Vec<String>, text: String) -> Result<u32> {

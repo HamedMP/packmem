@@ -142,6 +142,32 @@ impl Engine {
         self.end_bulk();
         r
     }
+    /// `bulk`, with text-heavy chunks packed on `threads` background threads while `f` keeps appending. Only for a load
+    /// that finishes inside this call: in a bulk session opened from JavaScript the table can be read between calls,
+    /// so there this is plain `bulk`. WebAssembly has no threads, so the wasm build does not have it.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn bulk_parallel<T>(&mut self, threads: usize, f: impl FnOnce(&mut DynTable) -> Res<T>) -> Res<T> {
+        if self.bulk_depth > 0 || threads == 0 {
+            return self.bulk(f);
+        }
+        self.t.set_bulk_parallel(threads);
+        self.bulk_depth = 1;
+        let r = f(&mut self.t);
+        // ending bulk mode waits for the background threads
+        self.end_bulk();
+        r
+    }
+    /// `csv_begin`, packing text-heavy chunks on `threads` background threads, for a CSV stream fed and finished
+    /// without returning to JavaScript in between.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn csv_begin_parallel(&mut self, options: &str, threads: usize) -> Res<()> {
+        let outer = self.bulk_depth > 0;
+        self.csv_begin(options)?;
+        if !outer && threads > 0 {
+            self.t.set_bulk_parallel(threads)
+        }
+        Ok(())
+    }
     pub fn begin_bulk(&mut self) {
         if self.bulk_depth == 0 {
             self.t.set_bulk(true)
@@ -160,6 +186,8 @@ impl Engine {
     pub fn push_jsonl(&mut self, text: &str) -> Res<u32> {
         self.bulk(|t| load::push_lines(t, text)).map(|n| n as u32)
     }
+    // the Node build parses arrays through `bulk_parallel`; the wasm build uses this
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
     pub fn push_json_array(&mut self, bytes: &[u8]) -> Res<u32> {
         self.bulk(|t| load::push_array(t, bytes)).map(|n| n as u32)
     }
