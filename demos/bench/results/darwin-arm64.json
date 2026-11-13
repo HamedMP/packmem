@@ -5,57 +5,76 @@
     "mem_gb": 48,
     "node": "v22.22.3",
     "platform": "darwin-arm64",
-    "date": "2026-11-13T12:44:53.134Z",
+    "date": "2026-11-13T13:54:33.711Z",
     "loadavg_before": [
-      5.34,
-      6.05,
-      9.22
+      7.22,
+      5.86,
+      5.78
     ],
     "loadavg_after": [
-      10.36,
-      8.28,
-      9.55
+      4.8,
+      5.44,
+      5.63
     ],
-    "source": "file"
+    "source": "file",
+    "merged_from_earlier_run": {
+      "cpu": "Apple M4 Pro",
+      "cores": 12,
+      "mem_gb": 48,
+      "node": "v22.22.3",
+      "platform": "darwin-arm64",
+      "date": "2026-11-13T13:49:38.441Z",
+      "loadavg_before": [
+        2.96,
+        2.9,
+        5.4
+      ],
+      "loadavg_after": [
+        3.22,
+        3.19,
+        5.09
+      ],
+      "source": "file"
+    }
   },
   "results": [
     {
       "framework": "express",
       "mode": "baseline",
       "rows": 336776,
-      "load_ms": 333,
-      "ready_ms": 516,
-      "rss_after_load_mb": 422,
-      "idle_rss_mb": 386,
+      "load_ms": 313,
+      "ready_ms": 520,
+      "rss_after_load_mb": 423,
+      "idle_rss_mb": 390,
       "endpoints": [
         {
           "name": "page of 50 rows",
           "path": "/api/flights?carrier=UA&min_delay=60&limit=50",
-          "median_ms": 3.83,
+          "median_ms": 3.44,
           "bytes": 15079,
-          "peak_rss_mb": 389,
+          "peak_rss_mb": 392,
           "hash": "603b31b48a9e"
         },
         {
           "name": "group by dest",
           "path": "/api/stats/by-dest?carrier=UA",
-          "median_ms": 2.67,
+          "median_ms": 2.6,
           "bytes": 457,
-          "peak_rss_mb": 389,
+          "peak_rss_mb": 393,
           "hash": "ebacd3c6b99d"
         },
         {
           "name": "summary",
           "path": "/api/stats/summary?origin=JFK",
-          "median_ms": 2.87,
+          "median_ms": 2.47,
           "bytes": 68,
-          "peak_rss_mb": 392,
+          "peak_rss_mb": 395,
           "hash": "b9225d3f0ffc"
         },
         {
           "name": "export 58,665 rows",
           "path": "/api/flights/export?carrier=UA",
-          "median_ms": 37.82,
+          "median_ms": 38.79,
           "bytes": 17638481,
           "peak_rss_mb": 435,
           "hash": "f83683437d53"
@@ -63,36 +82,36 @@
         {
           "name": "export all 336,776 rows",
           "path": "/api/flights/export",
-          "median_ms": 209.79,
+          "median_ms": 166.72,
           "bytes": 101191267,
-          "peak_rss_mb": 704,
+          "peak_rss_mb": 705,
           "hash": "6bff57360d2f"
         },
         {
           "name": "8 concurrent exports of 58,665 rows",
           "path": "/api/flights/export?carrier=UA",
-          "median_ms": 311.7,
+          "median_ms": 270.7,
           "bytes": 17638481,
-          "peak_rss_mb": 797,
+          "peak_rss_mb": 798,
           "hash": "f83683437d53",
           "wall": true
         }
       ],
-      "peak_rss_mb": 797
+      "peak_rss_mb": 798
     },
     {
       "framework": "express",
       "mode": "packmem",
       "rows": 336776,
-      "load_ms": 272,
-      "ready_ms": 410,
+      "load_ms": 265,
+      "ready_ms": 411,
       "rss_after_load_mb": 97,
       "idle_rss_mb": 94,
       "endpoints": [
         {
           "name": "page of 50 rows",
           "path": "/api/flights?carrier=UA&min_delay=60&limit=50",
-          "median_ms": 2.1,
+          "median_ms": 1.59,
           "bytes": 15079,
           "peak_rss_mb": 97,
           "hash": "603b31b48a9e"
@@ -100,15 +119,15 @@
         {
           "name": "group by dest",
           "path": "/api/stats/by-dest?carrier=UA",
-          "median_ms": 1.24,
+          "median_ms": 0.87,
           "bytes": 457,
-          "peak_rss_mb": 99,
+          "peak_rss_mb": 98,
           "hash": "ebacd3c6b99d"
         },
         {
           "name": "summary",
           "path": "/api/stats/summary?origin=JFK",
-          "median_ms": 2.68,
+          "median_ms": 2.31,
           "bytes": 68,
           "peak_rss_mb": 104,
           "hash": "b9225d3f0ffc"
@@ -116,44 +135,44 @@
         {
           "name": "export 58,665 rows",
           "path": "/api/flights/export?carrier=UA",
-          "median_ms": 40.45,
+          "median_ms": 36.86,
           "bytes": 17638481,
-          "peak_rss_mb": 145,
+          "peak_rss_mb": 148,
           "hash": "f83683437d53"
         },
         {
           "name": "export all 336,776 rows",
           "path": "/api/flights/export",
-          "median_ms": 230.33,
+          "median_ms": 173.99,
           "bytes": 101191267,
-          "peak_rss_mb": 173,
+          "peak_rss_mb": 160,
           "hash": "6bff57360d2f"
         },
         {
           "name": "8 concurrent exports of 58,665 rows",
           "path": "/api/flights/export?carrier=UA",
-          "median_ms": 233.2,
+          "median_ms": 196.5,
           "bytes": 17638481,
-          "peak_rss_mb": 186,
+          "peak_rss_mb": 197,
           "hash": "f83683437d53",
           "wall": true
         }
       ],
-      "peak_rss_mb": 186
+      "peak_rss_mb": 197
     },
     {
       "framework": "nextjs",
       "mode": "baseline",
       "rows": 336776,
-      "load_ms": 376,
-      "ready_ms": 769,
-      "rss_after_load_mb": 450,
+      "load_ms": 320,
+      "ready_ms": 553,
+      "rss_after_load_mb": 441,
       "idle_rss_mb": 411,
       "endpoints": [
         {
           "name": "page of 50 rows",
           "path": "/api/flights?carrier=UA&min_delay=60&limit=50",
-          "median_ms": 6.04,
+          "median_ms": 4.79,
           "bytes": 15079,
           "peak_rss_mb": 416,
           "hash": "603b31b48a9e"
@@ -161,7 +180,7 @@
         {
           "name": "group by dest",
           "path": "/api/stats/by-dest?carrier=UA",
-          "median_ms": 4.64,
+          "median_ms": 3.14,
           "bytes": 457,
           "peak_rss_mb": 419,
           "hash": "ebacd3c6b99d"
@@ -169,7 +188,7 @@
         {
           "name": "summary",
           "path": "/api/stats/summary?origin=JFK",
-          "median_ms": 4.82,
+          "median_ms": 3.11,
           "bytes": 68,
           "peak_rss_mb": 425,
           "hash": "b9225d3f0ffc"
@@ -177,44 +196,44 @@
         {
           "name": "export 58,665 rows",
           "path": "/api/flights/export?carrier=UA",
-          "median_ms": 200.85,
+          "median_ms": 160.54,
           "bytes": 17638481,
-          "peak_rss_mb": 482,
+          "peak_rss_mb": 479,
           "hash": "f83683437d53"
         },
         {
           "name": "export all 336,776 rows",
           "path": "/api/flights/export",
-          "median_ms": 929.69,
+          "median_ms": 834.42,
           "bytes": 101191267,
-          "peak_rss_mb": 896,
+          "peak_rss_mb": 902,
           "hash": "6bff57360d2f"
         },
         {
           "name": "8 concurrent exports of 58,665 rows",
           "path": "/api/flights/export?carrier=UA",
-          "median_ms": 1297,
+          "median_ms": 488,
           "bytes": 17638481,
-          "peak_rss_mb": 979,
+          "peak_rss_mb": 1109,
           "hash": "f83683437d53",
           "wall": true
         }
       ],
-      "peak_rss_mb": 979
+      "peak_rss_mb": 1109
     },
     {
       "framework": "nextjs",
       "mode": "packmem",
       "rows": 336776,
-      "load_ms": 370,
-      "ready_ms": 812,
-      "rss_after_load_mb": 130,
-      "idle_rss_mb": 119,
+      "load_ms": 272,
+      "ready_ms": 499,
+      "rss_after_load_mb": 129,
+      "idle_rss_mb": 118,
       "endpoints": [
         {
           "name": "page of 50 rows",
           "path": "/api/flights?carrier=UA&min_delay=60&limit=50",
-          "median_ms": 4.09,
+          "median_ms": 2.63,
           "bytes": 15079,
           "peak_rss_mb": 124,
           "hash": "603b31b48a9e"
@@ -222,60 +241,61 @@
         {
           "name": "group by dest",
           "path": "/api/stats/by-dest?carrier=UA",
-          "median_ms": 2.89,
+          "median_ms": 1.55,
           "bytes": 457,
-          "peak_rss_mb": 126,
+          "peak_rss_mb": 128,
           "hash": "ebacd3c6b99d"
         },
         {
           "name": "summary",
           "path": "/api/stats/summary?origin=JFK",
-          "median_ms": 4.44,
+          "median_ms": 3.05,
           "bytes": 68,
-          "peak_rss_mb": 131,
+          "peak_rss_mb": 133,
           "hash": "b9225d3f0ffc"
         },
         {
           "name": "export 58,665 rows",
           "path": "/api/flights/export?carrier=UA",
-          "median_ms": 235.51,
+          "median_ms": 158.95,
           "bytes": 17638481,
-          "peak_rss_mb": 171,
+          "peak_rss_mb": 178,
           "hash": "f83683437d53"
         },
         {
           "name": "export all 336,776 rows",
           "path": "/api/flights/export",
-          "median_ms": 967.65,
+          "median_ms": 837.27,
           "bytes": 101191267,
-          "peak_rss_mb": 198,
+          "peak_rss_mb": 196,
           "hash": "6bff57360d2f"
         },
         {
           "name": "8 concurrent exports of 58,665 rows",
           "path": "/api/flights/export?carrier=UA",
-          "median_ms": 563.8,
+          "median_ms": 401,
           "bytes": 17638481,
-          "peak_rss_mb": 209,
+          "peak_rss_mb": 210,
           "hash": "f83683437d53",
           "wall": true
         }
       ],
-      "peak_rss_mb": 209
+      "peak_rss_mb": 210
     },
     {
       "framework": "fastapi",
       "mode": "baseline",
+      "loadavg_at_start": 7.22,
       "rows": 336776,
-      "load_ms": 787,
-      "ready_ms": 1127,
+      "load_ms": 625,
+      "ready_ms": 820,
       "rss_after_load_mb": 731,
       "idle_rss_mb": 731,
       "endpoints": [
         {
           "name": "page of 50 rows",
           "path": "/api/flights?carrier=UA&min_delay=60&limit=50",
-          "median_ms": 123.58,
+          "median_ms": 103.76,
           "bytes": 15579,
           "peak_rss_mb": 731,
           "hash": "603b31b48a9e"
@@ -283,7 +303,7 @@
         {
           "name": "group by dest",
           "path": "/api/stats/by-dest?carrier=UA",
-          "median_ms": 81.67,
+          "median_ms": 60.17,
           "bytes": 457,
           "peak_rss_mb": 731,
           "hash": "ebacd3c6b99d"
@@ -291,7 +311,7 @@
         {
           "name": "summary",
           "path": "/api/stats/summary?origin=JFK",
-          "median_ms": 81.55,
+          "median_ms": 59.58,
           "bytes": 68,
           "peak_rss_mb": 731,
           "hash": "b9225d3f0ffc"
@@ -299,23 +319,23 @@
         {
           "name": "export 58,665 rows",
           "path": "/api/flights/export?carrier=UA",
-          "median_ms": 279.2,
+          "median_ms": 202.04,
           "bytes": 18217357,
-          "peak_rss_mb": 873,
+          "peak_rss_mb": 874,
           "hash": "f83683437d53"
         },
         {
           "name": "export all 336,776 rows",
           "path": "/api/flights/export",
-          "median_ms": 749.38,
+          "median_ms": 616.93,
           "bytes": 104470861,
-          "peak_rss_mb": 1473,
+          "peak_rss_mb": 1475,
           "hash": "6bff57360d2f"
         },
         {
           "name": "8 concurrent exports of 58,665 rows",
           "path": "/api/flights/export?carrier=UA",
-          "median_ms": 2108.2,
+          "median_ms": 1620.6,
           "bytes": 18217357,
           "peak_rss_mb": 1619,
           "hash": "f83683437d53",
@@ -327,16 +347,17 @@
     {
       "framework": "fastapi",
       "mode": "packmem",
+      "loadavg_at_start": 5.96,
       "rows": 336776,
-      "load_ms": 312,
-      "ready_ms": 623,
+      "load_ms": 253,
+      "ready_ms": 413,
       "rss_after_load_mb": 72,
       "idle_rss_mb": 72,
       "endpoints": [
         {
           "name": "page of 50 rows",
           "path": "/api/flights?carrier=UA&min_delay=60&limit=50",
-          "median_ms": 2.39,
+          "median_ms": 1.89,
           "bytes": 15579,
           "peak_rss_mb": 72,
           "hash": "603b31b48a9e"
@@ -344,7 +365,7 @@
         {
           "name": "group by dest",
           "path": "/api/stats/by-dest?carrier=UA",
-          "median_ms": 1.35,
+          "median_ms": 1.23,
           "bytes": 457,
           "peak_rss_mb": 72,
           "hash": "ebacd3c6b99d"
@@ -352,7 +373,7 @@
         {
           "name": "summary",
           "path": "/api/stats/summary?origin=JFK",
-          "median_ms": 3.28,
+          "median_ms": 2.38,
           "bytes": 68,
           "peak_rss_mb": 72,
           "hash": "b9225d3f0ffc"
@@ -360,7 +381,7 @@
         {
           "name": "export 58,665 rows",
           "path": "/api/flights/export?carrier=UA",
-          "median_ms": 78.4,
+          "median_ms": 50.95,
           "bytes": 18217357,
           "peak_rss_mb": 82,
           "hash": "f83683437d53"
@@ -368,22 +389,22 @@
         {
           "name": "export all 336,776 rows",
           "path": "/api/flights/export",
-          "median_ms": 366.11,
+          "median_ms": 278.13,
           "bytes": 104470861,
-          "peak_rss_mb": 85,
+          "peak_rss_mb": 82,
           "hash": "6bff57360d2f"
         },
         {
           "name": "8 concurrent exports of 58,665 rows",
           "path": "/api/flights/export?carrier=UA",
-          "median_ms": 544.1,
+          "median_ms": 397,
           "bytes": 18217357,
-          "peak_rss_mb": 106,
+          "peak_rss_mb": 105,
           "hash": "f83683437d53",
           "wall": true
         }
       ],
-      "peak_rss_mb": 106
+      "peak_rss_mb": 105
     }
   ]
 }

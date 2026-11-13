@@ -67,13 +67,29 @@ const tuned = tunedA.length && tunedB.length
   : null;
 const tunedRatio = tuned && { lo: Math.min(...tuned.map((r) => r.lo / r.packmem)), hi: Math.max(...tuned.map((r) => r.hi / r.packmem)) };
 const flightsTuned = tuned?.find((r) => r.ds === "flights");
+// high-cardinality group-by: packmem and the list from the post-fix run, polars from the tuned comparison
 const ipGroup = (() => {
-  const row = (v) => tunedA.find((r) => r.variant === v && r.dataset === "logs")?.q?.["group count by ip"]?.ms?.[0];
-  const pol = ["polars", "polars_rechunk", "polars_tuned", "polars_tuned_scan", "polars_parquet"].map(row).filter((x) => x !== undefined);
-  return row("packmem") === undefined ? null : { packmem: row("packmem"), lo: Math.min(...pol), hi: Math.max(...pol) };
+  const logs = existsSync(root("benchmarks/results/mac-m4pro/logs_2m.jsonl")) ? jsonl("benchmarks/results/mac-m4pro/logs_2m.jsonl") : [];
+  const after = (v) => logs.find((r) => r.variant === v)?.q?.["group count by ip"]?.ms?.[0];
+  const pol = ["polars", "polars_rechunk", "polars_tuned", "polars_tuned_scan", "polars_parquet"]
+    .map((v) => tunedA.find((r) => r.variant === v && r.dataset === "logs")?.q?.["group count by ip"]?.ms?.[0])
+    .filter((x) => x !== undefined);
+  return after("packmem") === undefined || !pol.length ? null : { packmem: after("packmem"), list: after("list"), lo: Math.min(...pol), hi: Math.max(...pol) };
 })();
+// Python runs record 1-minute load averages at start and end
+const pyLoads = ds
+  .flatMap((d) => [d.loadavg_start, d.loadavg_end])
+  .filter(Array.isArray)
+  .map((x) => x[0]);
+const pyLoadText = pyLoads.length ? `${Math.min(...pyLoads).toFixed(1)} to ${Math.max(...pyLoads).toFixed(1)} for the Python runs` : "3 to 5 for the Python runs (recorded in docs/report.md)";
 
 const cross = jsonl("benchmarks/results/mac-m4pro/crossover_flights.jsonl").map((r) => ({ x: r.rows, a: r.list.mb, b: r.packmem.mb }));
+// largest measured size where packmem still used more memory than the list, and the next size, where it used less
+const lastWorse = cross.filter((c) => c.b >= c.a).at(-1);
+const firstBetter = cross.find((c) => c.x > (lastWorse?.x ?? 0) && c.b < c.a);
+const breakEven = lastWorse && firstBetter
+  ? `At ${lastWorse.x.toLocaleString("en-US")} rows packmem used more memory than the list (${lastWorse.b.toFixed(2)} against ${lastWorse.a.toFixed(2)} MB); from ${firstBetter.x.toLocaleString("en-US")} rows on it used less.`
+  : "packmem used less memory than the list at every size measured.";
 
 const apps = jsonl("benchmarks/results/mac-m4pro/apps.jsonl");
 const appMed = (prefix, kind, field) => {
@@ -296,7 +312,7 @@ const chartCross = figure(
   "Resident memory against number of rows loaded from the flight data, both axes log scale.",
   lines(cross, { id: "cross", aName: "List of dicts", bName: "packmem", xLo: 100, xHi: 1_000_000, yLo: 0.1, yHi: 3000, xTicks: [100, 1000, 10000, 100000, 1000000], yTicks: [0.1, 1, 10, 100, 1000] }),
   table(["Rows", "List MB", "packmem MB"], cross.map((c) => [nf.format(c.x), c.a.toFixed(2), c.b.toFixed(2)])),
-  "Break-even is near 300 rows. Below about 10,000 rows most of what packmem holds is load buffers, not data.",
+  `${breakEven} Below about 10,000 rows most of what packmem holds is load buffers, not data.`,
 );
 
 const chartTools = figure(
@@ -415,9 +431,9 @@ rows = packmem.load_jsonl("flights.jsonl")                    # ${mb(hero.b)}`)}
   <ul class="limits">
     <li><strong>Plain loops over every row are slower.</strong> Each record is rebuilt as a dict or object on demand: ${speed(L.q["loop over every row"].ms[0], P.q["loop over every row"].ms[0]).text} than the list in Python. Lazy rows fix this for loops that read a few fields; rewriting the loop as a query fixes it entirely.</li>
     <li><strong>Random access to whole rows costs more</strong>: ${speed(L.q["10k random rows as dicts"].ms[0], P.q["10k random rows as dicts"].ms[0]).text} for 10,000 random rows.</li>
-    <li><strong>Dataframes still win analytics.</strong> polars loads ${Math.round(med(P.load_s) / med(flights("polars").load_s))} times faster than packmem, and pandas is faster on some float filters (${ms(flights("pandas").q["count dep_delay>60"].ms[0])} against ${ms(P.q["count dep_delay>60"].ms[0])} for delays over 60 minutes). Tuned for memory, polars comes within ${tunedRatio ? `${tunedRatio.lo.toFixed(1)} to ${tunedRatio.hi.toFixed(1)} times` : "a few times"} of packmem. packmem is for code that wants a list, not a dataframe.</li>${ipGroup ? `\n    <li><strong>Group-by on a column with very many distinct values is slow.</strong> Counting 436 thousand distinct IP addresses over 2 million rows took ${ms(ipGroup.packmem)} in the recorded run, against ${ms(ipGroup.lo)} to ${ms(ipGroup.hi)} in polars. A later change (commit 5a3b59c) made this path about 2.3 times faster, which still leaves it far behind.</li>` : ""}
+    <li><strong>Dataframes still win analytics.</strong> polars loads ${Math.round(med(P.load_s) / med(flights("polars").load_s))} times faster than packmem, and pandas is faster on some float filters (${ms(flights("pandas").q["count dep_delay>60"].ms[0])} against ${ms(P.q["count dep_delay>60"].ms[0])} for delays over 60 minutes). Tuned for memory, polars comes within ${tunedRatio ? `${tunedRatio.lo.toFixed(1)} to ${tunedRatio.hi.toFixed(1)} times` : "a few times"} of packmem. packmem is for code that wants a list, not a dataframe.</li>${ipGroup ? `\n    <li><strong>Group-by on a column with very many distinct values is slow.</strong> Counting 436 thousand distinct IP addresses over 2 million rows took ${ms(ipGroup.packmem)}, against ${ms(ipGroup.lo)} to ${ms(ipGroup.hi)} in polars (a list of dicts took ${ms(ipGroup.list)}).</li>` : ""}
     <li><strong>Loading from Postgres is slower in Node.</strong> Rows cross from the driver into the native code as JSON text, so <code>fromPg</code> took ${range([pgLoad("express"), pgLoad("nextjs")])} times as long as a plain query. In Python, <code>from_cursor</code> took ${pgLoad("fastapi").toFixed(1)} times as long as psycopg's dict rows.</li>
-    <li><strong>Small tables gain nothing.</strong> Below about 300 rows packmem uses more memory than the list.</li>
+    <li><strong>Small tables gain nothing.</strong> ${breakEven}</li>
     <li><strong>Sort, insert and delete rebuild the table.</strong> The Python package has them, tested against a plain list, but each costs time proportional to the table. The Node package has none yet.</li>
     <li><strong>A one-line swap can cost time.</strong> sqlite-utils used ${times(tools[0].a, tools[0].b)} memory but took ${tools[0].tb.toFixed(2)} s against ${tools[0].ta.toFixed(2)} s.</li>
     <li><strong>Unchanged programs gain nothing.</strong> You have to swap the container. For code you cannot change, page compression is still the tool, and the two combine.</li>
@@ -456,7 +472,7 @@ let km = t.sum(distance, Some(&ids));`)}</div>
   <p class="kicker">Method</p>
   <h2>How these numbers were made</h2>
   <ul class="method">
-    <li>Python and server results: ${esc(machineLine["machdep.cpu.brand_string"] ?? "Apple M4 Pro")}, ${Math.round(Number(machineLine["hw.memsize"] ?? 51539607552) / 2 ** 30)} GB, macOS, Python ${esc(machineLine.python ?? "3.12")}, ${esc(demo.machine.node)}. Medians of fresh processes. The machine was in normal use: load average 3 to 5 for the Python runs (recorded in docs/report.md) and ${loadRange} for the server runs (recorded in the results files), so treat differences under about 15% as noise.</li>
+    <li>Python and server results: ${esc(machineLine["machdep.cpu.brand_string"] ?? "Apple M4 Pro")}, ${Math.round(Number(machineLine["hw.memsize"] ?? 51539607552) / 2 ** 30)} GB, macOS, Python ${esc(machineLine.python ?? "3.12")}, ${esc(demo.machine.node)}. Medians of fresh processes. The machine was in normal use: load average ${pyLoadText} and ${loadRange} for the server runs (recorded in the results files), so treat differences under about 15% as noise.</li>
     <li>Memory on macOS is the physical footprint or resident size of the whole process tree; on Linux, resident anonymous memory read from <code>/proc</code>. Server memory is measured after a forced garbage collection and 20 seconds idle, because runtimes hand freed memory back to the system lazily; measured one second after loading, the Node servers read up to ${Math.round(earlyExcess * 100)}% higher.</li>
     <li>The runtime comparison in chapter 1 is older: a 2-core Linux sandbox and a synthetic log. It is not on the same axis as the Mac numbers.</li>
     <li>Every packmem query and response was checked against the plain-container answer.</li>

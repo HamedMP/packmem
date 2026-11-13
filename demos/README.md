@@ -71,64 +71,62 @@ baseline response (compared after parsing, with keys sorted). Results go to `ben
 
 Memory is the resident size of the whole server process tree. "Settled" is measured after a forced
 garbage collection and 20 seconds idle: runtimes hand freed memory back to the system lazily, so a reading
-taken right after loading partly measures garbage-collector timing. The machine was in normal use
-(load average 5 to 10, recorded in the results files), so treat timing differences under about 15% as
-noise.
+taken right after loading partly measures garbage-collector timing. Each framework is launched once,
+untimed, before it is measured, so one-off costs of a freshly built binary stay out of the numbers. Load
+averages are recorded per run; treat timing differences under about 15% as noise, more where the load
+average was high.
 
 **Loaded from the JSON-lines file**
 
-Source: file. Apple M4 Pro, 12 cores, Node v22.22.3, load average 5.34 before and 10.36 after. Every response was identical between modes.
+Source: file. Apple M4 Pro, 12 cores, Node v22.22.3; 1-minute load average at the start of each run: Express 2.96 to 3.22, Next.js 2.96 to 3.22, FastAPI 5.96 to 7.22. Some frameworks were re-run separately and merged into this file. Every response was identical between modes.
 
 |  | Express baseline | Express packmem | Next.js baseline | Next.js packmem | FastAPI baseline | FastAPI packmem |
 | --- | --- | --- | --- | --- | --- | --- |
-| RSS 1 s after load, MB | 422 | 97 | 450 | 130 | 731 | 72 |
-| Idle RSS, settled, MB | 386 | 94 | 411 | 119 | 731 | 72 |
-| Peak RSS during the run, MB | 797 | 186 | 979 | 209 | 1,619 | 106 |
-| Load, ms | 333 | 272 | 376 | 370 | 787 | 312 |
-| Page of 50 rows, ms | 3.83 | 2.10 | 6.04 | 4.09 | 124 | 2.39 |
-| Group by dest, ms | 2.67 | 1.24 | 4.64 | 2.89 | 81.7 | 1.35 |
-| Summary, ms | 2.87 | 2.68 | 4.82 | 4.44 | 81.5 | 3.28 |
-| Export 58,665 rows, ms | 37.8 | 40.5 | 201 | 236 | 279 | 78.4 |
-| Export all 336,776 rows, ms | 210 | 230 | 930 | 968 | 749 | 366 |
-| 8 concurrent exports of 58,665 rows, wall ms | 312 | 233 | 1,297 | 564 | 2,108 | 544 |
+| RSS 1 s after load, MB | 423 | 97 | 441 | 129 | 731 | 72 |
+| Idle RSS, settled, MB | 390 | 94 | 411 | 118 | 731 | 72 |
+| Peak RSS during the run, MB | 798 | 197 | 1,109 | 210 | 1,619 | 105 |
+| Load, ms | 313 | 265 | 320 | 272 | 625 | 253 |
+| Page of 50 rows, ms | 3.44 | 1.59 | 4.79 | 2.63 | 104 | 1.89 |
+| Group by dest, ms | 2.60 | 0.87 | 3.14 | 1.55 | 60.2 | 1.23 |
+| Summary, ms | 2.47 | 2.31 | 3.11 | 3.05 | 59.6 | 2.38 |
+| Export 58,665 rows, ms | 38.8 | 36.9 | 161 | 159 | 202 | 51.0 |
+| Export all 336,776 rows, ms | 167 | 174 | 834 | 837 | 617 | 278 |
+| 8 concurrent exports of 58,665 rows, wall ms | 271 | 197 | 488 | 401 | 1,621 | 397 |
 
 **Loaded from Postgres 17** (node-postgres object rows and psycopg `dict_row` against `fromPg` and
-`packmem.from_cursor`; in this run the psycopg baseline used a client-side `fetchall` and packmem a named
-cursor fetching 50,000 rows at a time)
+`packmem.from_cursor`; both Python modes read through the same named cursor, 50,000 rows per round trip)
 
-Source: postgres. Apple M4 Pro, 12 cores, Node v22.22.3, load average 10.36 before and 8.51 after. Every response was identical between modes.
+Source: postgres. Apple M4 Pro, 12 cores, Node v22.22.3; 1-minute load average at the start of each run: Express 3.22 to 10.49, Next.js 3.22 to 10.49, FastAPI 3.22 to 10.49. Every response was identical between modes.
 
 |  | Express baseline | Express packmem | Next.js baseline | Next.js packmem | FastAPI baseline | FastAPI packmem |
 | --- | --- | --- | --- | --- | --- | --- |
-| RSS 1 s after load, MB | 226 | 184 | 251 | 228 | 533 | 118 |
-| Idle RSS, settled, MB | 199 | 101 | 222 | 128 | 533 | 118 |
-| Peak RSS during the run, MB | 824 | 194 | 1,041 | 205 | 1,418 | 158 |
-| Load, ms | 615 | 1,133 | 558 | 1,023 | 581 | 677 |
-| Page of 50 rows, ms | 7.61 | 2.26 | 8.34 | 3.34 | 91.5 | 1.95 |
-| Group by dest, ms | 6.27 | 1.38 | 6.00 | 2.31 | 40.6 | 1.46 |
-| Summary, ms | 6.02 | 3.30 | 5.88 | 3.61 | 42.1 | 2.84 |
-| Export 58,665 rows, ms | 74.0 | 66.8 | 243 | 188 | 204 | 66.1 |
-| Export all 336,776 rows, ms | 244 | 315 | 999 | 964 | 698 | 312 |
-| 8 concurrent exports of 58,665 rows, wall ms | 497 | 333 | 884 | 845 | 1,814 | 420 |
+| RSS 1 s after load, MB | 228 | 183 | 252 | 224 | 439 | 118 |
+| Idle RSS, settled, MB | 200 | 100 | 222 | 125 | 439 | 118 |
+| Peak RSS during the run, MB | 823 | 226 | 1,039 | 209 | 1,325 | 156 |
+| Load, ms | 461 | 997 | 457 | 963 | 726 | 733 |
+| Page of 50 rows, ms | 5.29 | 1.56 | 6.00 | 2.46 | 82.1 | 2.04 |
+| Group by dest, ms | 4.42 | 0.94 | 4.68 | 1.54 | 41.0 | 1.17 |
+| Summary, ms | 4.10 | 2.36 | 4.27 | 2.88 | 41.2 | 2.45 |
+| Export 58,665 rows, ms | 42.7 | 35.8 | 159 | 158 | 190 | 48.0 |
+| Export all 336,776 rows, ms | 189 | 166 | 835 | 829 | 570 | 271 |
+| 8 concurrent exports of 58,665 rows, wall ms | 358 | 196 | 553 | 395 | 1,499 | 395 |
 
 Reading it:
 
 - **Memory is the consistent result, and the peak is where it shows most.** Peak memory while serving was
-  4.2 to 5.1 times lower in Node and 9 to 15 times lower in FastAPI, from either source.
+  3.6 to 5.3 times lower in Node and 8.5 to 15.4 times lower in FastAPI.
 - **Settled memory depends on the runtime and the source.** From the file: 4.1x (Express), 3.5x
   (Next.js), 10.2x (FastAPI). From Postgres the Node baselines are lighter (node-postgres rows took about
-  half the memory of `JSON.parse` here), so the saving is 1.7 to 2.0x in Node and 4.5x in FastAPI.
-- **Python gets faster too.** Filters and aggregates are 15 to 60 times faster than loops over dicts, and
-  exports 2 to 3.6 times faster.
-- **Node is ahead on queries and mixed on exports.** packmem is faster on filtered pages and group-by
-  (1.5 to 4.5x) and level to 1.8x faster on the summary. Single exports land within about 30% either way,
-  with no consistent winner; concurrent exports are level to 2.3x faster because no full-size string is
+  half the memory of `JSON.parse` here), so the saving is 1.8 to 2.0x in Node and 3.7x in FastAPI.
+- **Python gets faster too.** Filters and aggregates are 17 to 55 times faster than loops over dicts, and
+  exports 2.1 to 4.0 times faster.
+- **Node is ahead on queries and level on exports.** packmem is faster on filtered pages (1.8 to 3.4x)
+  and group-by (2.0 to 4.7x), and level to 1.7x faster on the summary. Single exports range from 4%
+  slower to 1.2x faster; concurrent exports are 1.2 to 1.8 times faster because no full-size string is
   built per request.
-- **Loading from Postgres is slower in Node.** `fromPg` took about 1.8 times as long as a plain query (rows
-  cross into the native code as JSON text). In the recorded Python run, `from_cursor` took 1.17 times
-  as long as psycopg's `dict_row` (677 against 581 ms), but the two did not fetch the same way: the
-  baseline fetched everything in one round trip and packmem used a named cursor. The demo now uses the
-  same named cursor for both, and this table will be replaced by a like-for-like run.
+- **Loading from Postgres is slower in Node.** `fromPg` took 2.1 to 2.2 times as long as a plain query
+  (rows cross into the native code as JSON text). In Python, `from_cursor` took the same time as
+  psycopg's `dict_row` with the same fetch pattern (733 against 726 ms).
 - **Next.js exports are slow in both modes**, so that cost is in Next's web-stream response path, not in
   packmem.
 

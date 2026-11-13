@@ -17,7 +17,17 @@ const rows = [
 ];
 const same = results.every((r) => r.endpoints.every((e, i) => e.hash === get(r.framework, "baseline").endpoints[i].hash));
 
-console.log(`Source: ${machine.source ?? "file"}. ${machine.cpu}, ${machine.cores} cores, Node ${machine.node}, load average ${machine.loadavg_before?.[0]} before and ${machine.loadavg_after?.[0]} after. ${same ? "Every response was identical between modes." : "SOME RESPONSES DIFFERED BETWEEN MODES."}\n`);
+const earlier = machine.merged_from_earlier_run;
+const startLoads = FW.map(([f, l]) => {
+  const xs = results.filter((r) => r.framework === f).map((r) => r.loadavg_at_start).filter((x) => x !== undefined);
+  if (xs.length) return `${l} ${Math.min(...xs)} to ${Math.max(...xs)}`;
+  // runs recorded before per-run load averages existed: use the whole run's before/after values
+  const m = earlier ?? machine;
+  return m.loadavg_before ? `${l} ${m.loadavg_before[0]} to ${m.loadavg_after[0]}` : null;
+}).filter(Boolean);
+const loadNote = startLoads.length ? `1-minute load average at the start of each run: ${startLoads.join(", ")}` : `load average ${machine.loadavg_before?.[0]} before and ${machine.loadavg_after?.[0]} after`;
+const merged = machine.merged_from_earlier_run ? " Some frameworks were re-run separately and merged into this file." : "";
+console.log(`Source: ${machine.source ?? "file"}. ${machine.cpu}, ${machine.cores} cores, Node ${machine.node}; ${loadNote}.${merged} ${same ? "Every response was identical between modes." : "SOME RESPONSES DIFFERED BETWEEN MODES."}\n`);
 console.log(`| ${head.join(" | ")} |`);
 console.log(`| ${head.map(() => "---").join(" | ")} |`);
 for (const [label, f] of rows) console.log(`| ${label} | ${FW.flatMap(([fw]) => [f(get(fw, "baseline")), f(get(fw, "packmem"))]).join(" | ")} |`);

@@ -2,7 +2,7 @@
 // Usage: [FLIGHTS_PG_URL=postgres://...] node bench.mjs [express|nextjs|fastapi ...]     results: results/<platform>-<arch>.json and a markdown table on stdout
 import { spawn, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { cpus, loadavg, totalmem } from "node:os";
 import { fileURLToPath } from "node:url";
 
@@ -81,8 +81,23 @@ async function portFree() {
   }
 }
 
+/** Start and stop a server once, untimed: the first launch after a rebuild pays one-off costs (macOS scans new binaries). */
+async function warmUp(framework) {
+  const s = SERVERS[framework];
+  const proc = spawn(s.cmd[0], s.cmd.slice(1), { cwd: s.cwd, env: { ...process.env, ...s.env, MODE: "packmem" }, stdio: "ignore" });
+  for (let i = 0; i < 600 && proc.exitCode === null; i++) {
+    try { await fetchBody("/api/health"); break; } catch { await sleep(100); }
+  }
+  if (proc.exitCode === null) {
+    const exited = new Promise((r) => proc.once("exit", r));
+    proc.kill("SIGTERM");
+    await exited;
+  }
+}
+
 async function run(framework, mode) {
   if (!(await portFree())) throw new Error(`port ${PORT} is already serving; stop that process first`);
+  const loadavgAtStart = +loadavg()[0].toFixed(2);
   const s = SERVERS[framework];
   const proc = spawn(s.cmd[0], s.cmd.slice(1), { cwd: s.cwd, env: { ...process.env, ...s.env, MODE: mode }, stdio: ["ignore", "ignore", "pipe"] });
   let stderr = "";
@@ -101,7 +116,7 @@ async function run(framework, mode) {
   // steady state is measured after a quiet period
   await sleep(SETTLE_MS - 1000);
   const idle = treeRss(proc.pid);
-  const result = { framework, mode, rows: health.rows, load_ms: health.load_ms, ready_ms: Math.round(readyMs), rss_after_load_mb: Math.round(justLoaded), idle_rss_mb: Math.round(idle), endpoints: [] };
+  const result = { framework, mode, loadavg_at_start: loadavgAtStart, rows: health.rows, load_ms: health.load_ms, ready_ms: Math.round(readyMs), rss_after_load_mb: Math.round(justLoaded), idle_rss_mb: Math.round(idle), endpoints: [] };
 
   for (const e of ENDPOINTS) {
     for (let i = 0; i < 2; i++) await fetchBody(e.path);
@@ -132,6 +147,8 @@ const pick = process.argv.slice(2);
 const frameworks = pick.length ? pick : Object.keys(SERVERS);
 const results = [];
 for (const f of frameworks) {
+  process.stderr.write(`${f} warm-up ...\n`);
+  await warmUp(f);
   for (const mode of ["baseline", "packmem"]) {
     process.stderr.write(`${f} ${mode} ...\n`);
     results.push(await run(f, mode));
@@ -143,7 +160,14 @@ mkdirSync(here("./results"), { recursive: true });
 const source = process.env.FLIGHTS_PG_URL ? "postgres" : "file";
 machine.source = source;
 const file = here(`./results/${process.platform}-${process.arch}${source === "postgres" ? "-postgres" : ""}.json`);
-writeFileSync(file, JSON.stringify({ machine, results }, null, 2));
+// a run of some frameworks replaces only their rows in an existing results file
+let merged = results;
+if (pick.length && existsSync(file)) {
+  const prev = JSON.parse(readFileSync(file, "utf8"));
+  merged = [...prev.results.filter((r) => !frameworks.includes(r.framework)), ...results];
+  machine.merged_from_earlier_run = prev.machine;
+}
+writeFileSync(file, JSON.stringify({ machine, results: merged }, null, 2));
 
 // markdown
 const lines = [];
