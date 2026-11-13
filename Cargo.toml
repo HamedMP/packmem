@@ -1,6 +1,6 @@
 [package]
 name = "packmem"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 rust-version = "1.85"
 description = "Packed, operation-aware columns for record collections: filter and aggregate in memory without decompressing."
