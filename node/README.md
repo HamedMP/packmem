@@ -119,6 +119,37 @@ loaded as fast as plain node-postgres rows (see the timings below). It types val
 numeric as strings, json as nested values) except dates and timestamps, which stay as Postgres prints them, in the
 session's time zone, instead of becoming `Date`s.
 
+## Sharing a table with worker threads
+
+A table sent to a worker thread through `workerData` or `postMessage` cannot be cloned, and an array of objects sent
+that way is copied into every worker. `share()` makes the table read-only and returns a small handle; a worker passes it
+to `Table.fromShared` and reads the same table, with no copy:
+
+```js
+// main thread
+const rows = loadJsonl("logs.jsonl");
+const handle = rows.share();
+new Worker("./worker.js", { workerData: handle });
+
+// worker.js
+import { workerData } from "node:worker_threads";
+import { Table } from "packmem";
+const rows = Table.fromShared(workerData);
+rows.count({ status: 404 });
+```
+
+On a 2-million-row web log (65 MB packed), a process whose main thread and 4 workers all read it settled at 428 MB with
+one shared table, against 701 MB when each worker loaded its own copy, and the workers were ready in 1.7 s instead of
+3.4 s. On the flights (8 MB packed) it was 254 MB against 314 MB, and 1,072 MB with plain objects cloned into each
+worker. The same five threads holding nothing take 86 MB. (Apple M4 Pro, medians of 5 fresh processes, after garbage
+collection and 20 s idle; `bench/share.mjs`.)
+
+A shared table refuses changes, in the owner and in every worker: `copy()` gives a private, writable one, and `unshare()`
+makes the owner writable again (without copying when no worker still holds the table; otherwise the owner gets its own
+copy and the workers keep theirs, and new `fromShared` calls with the old handle fail). The table stays alive as long as
+any thread still uses it. This shares one copy across the worker threads of one process; separate processes (`cluster`,
+`child_process`) are not covered yet, and the WebAssembly build has no `share()`.
+
 ## WebAssembly: Cloudflare Workers, Deno, browsers
 
 Where a native addon cannot load, `packmem/wasm` gives the same API (without file paths and Node streams), compiled

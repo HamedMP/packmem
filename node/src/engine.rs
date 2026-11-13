@@ -4,6 +4,8 @@ use crate::{json, load};
 use packmem::csv::{ColType, CsvLoader, CsvOptions};
 use packmem::{Cell, DynTable, Hint, Num, Pred};
 use serde_json::Value;
+use std::ops::Deref;
+use std::sync::Arc;
 
 pub type Res<T> = Result<T, String>;
 
@@ -109,8 +111,36 @@ pub fn csv_options(text: &str) -> Res<CsvOptions> {
     Ok(o)
 }
 
+/// The table behind an `Engine`: owned and writable, or shared read-only with other threads by `share()`.
+pub enum Store {
+    Own(DynTable),
+    Shared(Arc<DynTable>),
+}
+impl Deref for Store {
+    type Target = DynTable;
+    fn deref(&self) -> &DynTable {
+        match self {
+            Store::Own(t) => t,
+            Store::Shared(t) => t,
+        }
+    }
+}
+
+const READ_ONLY: &str = "the table is shared and read-only; call unshare() first";
+
+/// A private copy of a table, from its byte form: the packed columns are copied, not re-encoded.
+fn copy_of(t: &DynTable) -> Res<DynTable> {
+    let mut buf = Vec::new();
+    t.write_to(&mut |b| {
+        buf.extend_from_slice(b);
+        Ok(())
+    })
+    .map_err(|e| e.to_string())?;
+    DynTable::from_bytes(&buf).map_err(|e| e.to_string())
+}
+
 pub struct Engine {
-    pub t: DynTable,
+    pub t: Store,
     /// Reused output buffer for JSON; callers copy out of it into memory the JavaScript engine owns.
     pub scratch: Vec<u8>,
     /// Nesting depth of bulk loads; rows are packed only when the outermost one ends.
@@ -121,10 +151,72 @@ pub struct Engine {
 
 impl Engine {
     pub fn new(hint: Hint) -> Self {
-        Engine { t: DynTable::new(hint), scratch: Vec::new(), bulk_depth: 0, csv: None }
+        Self::from_table(DynTable::new(hint))
     }
     fn from_table(t: DynTable) -> Self {
-        Engine { t, scratch: Vec::new(), bulk_depth: 0, csv: None }
+        Engine { t: Store::Own(t), scratch: Vec::new(), bulk_depth: 0, csv: None }
+    }
+    /// A read-only engine over a table another thread shared.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    pub fn from_shared(t: Arc<DynTable>) -> Self {
+        Engine { t: Store::Shared(t), scratch: Vec::new(), bulk_depth: 0, csv: None }
+    }
+    /// The table, for a change; fails while it is shared.
+    fn w(&mut self) -> Res<&mut DynTable> {
+        match &mut self.t {
+            Store::Own(t) => Ok(t),
+            Store::Shared(_) => Err(READ_ONLY.into()),
+        }
+    }
+    fn writable(&self) -> Res<()> {
+        if self.is_shared() { Err(READ_ONLY.into()) } else { Ok(()) }
+    }
+    pub fn is_shared(&self) -> bool {
+        matches!(self.t, Store::Shared(_))
+    }
+
+    // ---------- sharing ----------
+
+    /// Make the table read-only and return a reference other threads can read through, without copying it. Sharing an
+    /// already shared table returns the same reference.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    pub fn share(&mut self) -> Res<Arc<DynTable>> {
+        if let Store::Shared(a) = &self.t {
+            return Ok(a.clone());
+        }
+        if self.bulk_depth > 0 || self.csv.is_some() {
+            return Err("finish loading before sharing the table".into());
+        }
+        let Store::Own(mut t) = std::mem::replace(&mut self.t, Store::Own(DynTable::new(Hint::Balanced))) else {
+            unreachable!()
+        };
+        // pack the open rows now: readers on other threads need nothing changed after this point
+        t.compact();
+        let a = Arc::new(t);
+        self.t = Store::Shared(a.clone());
+        Ok(a)
+    }
+    /// Writable again. Takes the table back without copying when no other thread still holds it; otherwise this engine
+    /// gets a private copy and the readers keep theirs.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    pub fn unshare(&mut self) -> Res<()> {
+        if !self.is_shared() {
+            return Ok(());
+        }
+        let Store::Shared(a) = std::mem::replace(&mut self.t, Store::Own(DynTable::new(Hint::Balanced))) else {
+            unreachable!()
+        };
+        self.t = Store::Own(match Arc::try_unwrap(a) {
+            Ok(t) => t,
+            Err(a) => match copy_of(&a) {
+                Ok(t) => t,
+                Err(e) => {
+                    self.t = Store::Shared(a);
+                    return Err(e);
+                }
+            },
+        });
+        Ok(())
     }
 
     pub fn len(&self) -> u32 {
@@ -137,8 +229,8 @@ impl Engine {
     // ---------- loading ----------
 
     pub fn bulk<T>(&mut self, f: impl FnOnce(&mut DynTable) -> Res<T>) -> Res<T> {
-        self.begin_bulk();
-        let r = f(&mut self.t);
+        self.begin_bulk()?;
+        let r = self.w().and_then(f);
         self.end_bulk();
         r
     }
@@ -150,9 +242,9 @@ impl Engine {
         if self.bulk_depth > 0 || threads == 0 {
             return self.bulk(f);
         }
-        self.t.set_bulk_parallel(threads);
+        self.w()?.set_bulk_parallel(threads);
         self.bulk_depth = 1;
-        let r = f(&mut self.t);
+        let r = self.w().and_then(f);
         // ending bulk mode waits for the background threads
         self.end_bulk();
         r
@@ -164,23 +256,25 @@ impl Engine {
         let outer = self.bulk_depth > 0;
         self.csv_begin(options)?;
         if !outer && threads > 0 {
-            self.t.set_bulk_parallel(threads)
+            self.w()?.set_bulk_parallel(threads)
         }
         Ok(())
     }
-    pub fn begin_bulk(&mut self) {
+    pub fn begin_bulk(&mut self) -> Res<()> {
         if self.bulk_depth == 0 {
-            self.t.set_bulk(true)
+            self.w()?.set_bulk(true)
         }
-        self.bulk_depth += 1
+        self.bulk_depth += 1;
+        Ok(())
     }
     pub fn end_bulk(&mut self) {
         if self.bulk_depth == 0 {
             return;
         }
         self.bulk_depth -= 1;
-        if self.bulk_depth == 0 {
-            self.t.set_bulk(false)
+        // a table in a bulk load is never shared: share() refuses while one is open
+        if let (0, Store::Own(t)) = (self.bulk_depth, &mut self.t) {
+            t.set_bulk(false)
         }
     }
     pub fn push_jsonl(&mut self, text: &str) -> Res<u32> {
@@ -195,19 +289,20 @@ impl Engine {
         self.bulk(|t| load::push_array_lines(t, names, text)).map(|n| n as u32)
     }
     pub fn push_json(&mut self, text: &str) -> Res<()> {
-        load::push_line(&mut self.t, text)
+        load::push_line(self.w()?, text)
     }
     pub fn csv_begin(&mut self, options: &str) -> Res<()> {
         if self.csv.is_some() {
             return Err("a CSV stream is already open on this table".into());
         }
+        self.writable()?;
         self.csv = Some(CsvLoader::new(csv_options(options)?)?);
-        self.begin_bulk();
-        Ok(())
+        self.begin_bulk()
     }
     pub fn csv_feed(&mut self, chunk: &[u8]) -> Res<u32> {
         let loader = self.csv.as_mut().ok_or("no CSV stream is open")?;
-        if let Err(e) = loader.feed(&mut self.t, chunk) {
+        let Store::Own(t) = &mut self.t else { return Err(READ_ONLY.into()) };
+        if let Err(e) = loader.feed(t, chunk) {
             self.csv_abort();
             return Err(e);
         }
@@ -220,7 +315,7 @@ impl Engine {
     }
     pub fn csv_finish(&mut self) -> Res<u32> {
         let mut loader = self.csv.take().ok_or("no CSV stream is open")?;
-        let r = loader.finish(&mut self.t);
+        let r = self.w().and_then(|t| loader.finish(t));
         self.end_bulk();
         r.map(|n| n as u32)
     }
@@ -244,21 +339,22 @@ impl Engine {
             None => Cell::Missing,
             Some(s) => load::raw_cell(s)?,
         };
-        self.t.set_by_name(row as usize, name, cell);
+        self.w()?.set_by_name(row as usize, name, cell);
         Ok(())
     }
     /// Replace a whole row: keys not given become missing.
     pub fn set_row_json(&mut self, row: u32, text: &str) -> Res<()> {
         self.check(row)?;
         let cells = load::field_cells(text)?;
-        for c in 0..self.t.names().len() {
-            let name = self.t.names()[c].clone();
+        let t = self.w()?;
+        for c in 0..t.names().len() {
+            let name = t.names()[c].clone();
             if !cells.iter().any(|(k, _)| *k == name) {
-                self.t.set(row as usize, c, Cell::Missing)
+                t.set(row as usize, c, Cell::Missing)
             }
         }
         for (k, cell) in cells {
-            self.t.set_by_name(row as usize, &k, cell)
+            t.set_by_name(row as usize, &k, cell)
         }
         Ok(())
     }
@@ -266,46 +362,58 @@ impl Engine {
     pub fn update_json(&mut self, row: u32, set: &str, remove: &[String]) -> Res<()> {
         self.check(row)?;
         let cells = load::field_cells(set)?;
+        let t = self.w()?;
         for (k, c) in cells {
-            self.t.set_by_name(row as usize, &k, c)
+            t.set_by_name(row as usize, &k, c)
         }
         for k in remove {
-            if let Some(c) = self.t.col_index(k) {
-                self.t.set(row as usize, c, Cell::Missing)
+            if let Some(c) = t.col_index(k) {
+                t.set(row as usize, c, Cell::Missing)
             }
         }
         Ok(())
     }
     /// Drop every row from `len` on. Used to undo an append that failed part-way; rebuilds the table.
-    pub fn truncate(&mut self, len: u32) {
+    pub fn truncate(&mut self, len: u32) -> Res<()> {
         let len = (len as usize).min(self.t.len());
         if len == self.t.len() {
-            return;
+            return Ok(());
         }
+        self.writable()?;
         let keep: Vec<u32> = (0..len as u32).collect();
-        self.t = self.t.take(&keep);
+        let t = self.t.take(&keep);
+        self.replace(t);
+        Ok(())
+    }
+    /// Swap in a rebuilt table, keeping bulk mode on if a bulk load is open.
+    fn replace(&mut self, mut t: DynTable) {
         if self.bulk_depth > 0 {
-            self.t.set_bulk(true)
+            t.set_bulk(true)
         }
+        self.t = Store::Own(t)
     }
     /// Rebuild from these row ids, in this order. Every list operation that moves rows is one call to this.
     pub fn reorder(&mut self, ids: &[u32]) -> Res<()> {
         self.check_ids(ids)?;
-        self.t = self.t.take(ids);
-        if self.bulk_depth > 0 {
-            self.t.set_bulk(true)
-        }
+        self.writable()?;
+        let t = self.t.take(ids);
+        self.replace(t);
         Ok(())
     }
     pub fn take(&self, ids: &[u32]) -> Res<Engine> {
         self.check_ids(ids)?;
         Ok(Engine::from_table(self.t.take(ids)))
     }
-    pub fn clear(&mut self) {
-        self.t = DynTable::new(self.t.hint)
+    pub fn clear(&mut self) -> Res<()> {
+        self.writable()?;
+        self.t = Store::Own(DynTable::new(self.t.hint));
+        Ok(())
     }
     pub fn compact(&mut self) {
-        self.t.compact()
+        // a shared table was packed when it was shared
+        if let Store::Own(t) = &mut self.t {
+            t.compact()
+        }
     }
 
     // ---------- reading ----------

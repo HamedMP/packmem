@@ -35,8 +35,8 @@ impl WasmTable {
     }
 
     #[wasm_bindgen(js_name = beginBulk)]
-    pub fn begin_bulk(&mut self) {
-        self.e.begin_bulk()
+    pub fn begin_bulk(&mut self) -> Result<(), JsError> {
+        self.e.begin_bulk().map_err(err)
     }
     #[wasm_bindgen(js_name = endBulk)]
     pub fn end_bulk(&mut self) {
@@ -87,8 +87,8 @@ impl WasmTable {
     pub fn update_json(&mut self, row: u32, set: &str, remove: Vec<String>) -> Result<(), JsError> {
         self.e.update_json(row, set, &remove).map_err(err)
     }
-    pub fn truncate(&mut self, len: u32) {
-        self.e.truncate(len)
+    pub fn truncate(&mut self, len: u32) -> Result<(), JsError> {
+        self.e.truncate(len).map_err(err)
     }
     pub fn reorder(&mut self, ids: &[u32]) -> Result<(), JsError> {
         self.e.reorder(ids).map_err(err)
@@ -96,8 +96,8 @@ impl WasmTable {
     pub fn take(&self, ids: &[u32]) -> Result<WasmTable, JsError> {
         Ok(WasmTable { e: self.e.take(ids).map_err(err)? })
     }
-    pub fn clear(&mut self) {
-        self.e.clear()
+    pub fn clear(&mut self) -> Result<(), JsError> {
+        self.e.clear().map_err(err)
     }
     pub fn compact(&mut self) {
         self.e.compact()
