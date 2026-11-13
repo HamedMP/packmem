@@ -1,5 +1,6 @@
 //! String columns: dictionary (predicates run once per distinct value) and/or FSST
 //! (per-string random access, equality on compressed bytes).
+use crate::buf::Buf;
 use crate::ints::{Hint, Store};
 use fsst::{Compressor, CompressorParts, Decompressor};
 use std::collections::HashMap;
@@ -8,8 +9,8 @@ use std::mem::MaybeUninit;
 /// Concatenated strings + offsets, optionally FSST-compressed (each string independently decodable).
 /// Only the 255-entry symbol table is kept (about 2.3 KB); the encoder is rebuilt on demand.
 pub struct StrPool {
-    bytes: Vec<u8>,
-    offs: Vec<u32>,
+    bytes: Buf<u8>,
+    offs: Buf<u32>,
     fsst: Option<Box<CompressorParts>>,
     raw_bytes: usize,
     /// Encoder for needles, built lazily on the first equality query (not needed for decoding).
@@ -51,8 +52,8 @@ impl StrPool {
         }
         bytes.shrink_to_fit();
         StrPool {
-            bytes,
-            offs,
+            bytes: bytes.into(),
+            offs: offs.into(),
             fsst,
             raw_bytes: raw,
             enc: std::sync::OnceLock::new(),

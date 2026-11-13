@@ -4,6 +4,16 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## Unreleased
 
+### Added
+- `Table.save(path)` and `packmem.open(path)`: a saved table is memory-mapped and read in place, so opening takes
+  milliseconds whatever its size and costs the process almost no memory of its own.
+- Tables shared with `share()` are now read in place by the processes that receive them: workers share one copy
+  through the file instead of each holding their own.
+
+### Changed
+- The byte form written by `to_bytes`, pickling and `share()` has a new layout (arrays are aligned so they can be
+  read in place). Data written by 0.1.x cannot be read by this version, and the reverse.
+
 ## 0.1.2 - 2026-11-13
 
 ### Changed

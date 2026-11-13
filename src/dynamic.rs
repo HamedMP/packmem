@@ -4,6 +4,7 @@
 //! columns. Updates to sealed rows go to a small per-chunk patch map; a chunk with many
 //! patches is re-encoded. Each chunk picks its own type and encoding, so a column may
 //! change type over time without rewriting old data.
+use crate::buf::Buf;
 use crate::{Hint, PackedInts, PackedStrs};
 use std::collections::{BTreeMap, HashMap};
 
@@ -325,7 +326,7 @@ impl std::hash::Hasher for Fx {
     }
 }
 
-type Bits = Vec<u64>;
+type Bits = Buf<u64>;
 fn bit(b: &Option<Bits>, i: usize) -> bool {
     match b {
         Some(v) => v[i >> 6] >> (i & 63) & 1 == 1,
@@ -336,7 +337,7 @@ enum Data {
     Absent,
     Int { p: PackedInts, is_bool: bool },
     Dec { scale: u8, p: PackedInts },
-    F64(Vec<f64>),
+    F64(Buf<f64>),
     Str(PackedStrs),
     Mixed(PackedStrs),
 }
@@ -395,7 +396,7 @@ impl Chunk {
                     v[k >> 6] |= 1 << (k & 63)
                 }
             }
-            Some(v)
+            Some(v.into())
         };
         let mk = |data, fill, safe_sum| Chunk {
             data,
@@ -1391,7 +1392,7 @@ impl DynTable {
 }
 
 use crate::wire::{R, Res, W, bad};
-const MAGIC: &[u8; 4] = b"PKM1";
+const MAGIC: &[u8; 4] = b"PKM2";
 
 fn write_cell(w: &mut W, c: &Cell) {
     match c {
@@ -1599,8 +1600,17 @@ impl DynTable {
             }
         }
     }
+    /// Read a table by copying its packed columns out of `b`.
     pub fn from_bytes(b: &[u8]) -> Res<DynTable> {
-        let mut r = R::new(b);
+        Self::read(R::new(b))
+    }
+    /// Open a table whose packed columns stay in `owner`'s bytes (a memory-mapped file) and are read in place: nothing
+    /// is copied, and every process mapping the same file shares the same pages. The bytes must not change while the
+    /// table, or anything derived from it by reference, is alive.
+    pub fn from_backing(owner: std::sync::Arc<dyn crate::buf::Backing>) -> Res<DynTable> {
+        Self::read(R::borrowing(&owner))
+    }
+    fn read(mut r: R) -> Res<DynTable> {
         if r.take(4)? != MAGIC {
             return Err(
                 "not packed table data, or written by a different version of packmem".into(),

@@ -221,3 +221,105 @@ fn long_tail_does_not_keep_an_oversized_dictionary() {
         println!("{hint:?}: {} {bits:.2} bits", p.describe());
     }
 }
+
+/// A table saved to bytes and opened in place must answer exactly like the table it came from, and must stay usable
+/// from several threads at once (the Node binding shares one table between worker threads).
+#[test]
+fn opened_in_place_matches_the_original() {
+    use packmem::buf::Backing;
+    use packmem::{Cell, DynTable, Pred};
+    use std::sync::Arc;
+    fn assert_send_sync<T: Send + Sync>() {}
+    assert_send_sync::<DynTable>();
+
+    let mut t = DynTable::new(Hint::Balanced);
+    let n = 40_000usize;
+    for i in 0..n {
+        let mut row: Vec<(&str, Cell)> = vec![
+            ("id", Cell::Int(i as i64)),
+            ("g", Cell::Str(["x", "yy", "zzz"][i % 3].to_string())),
+            (
+                "v",
+                if i % 7 == 0 {
+                    Cell::Null
+                } else {
+                    Cell::Float(i as f64 / 4.0)
+                },
+            ),
+            (
+                "text",
+                Cell::Str(format!(
+                    "row number {i} with some repeated words words words"
+                )),
+            ),
+            ("flag", Cell::Bool(i % 5 == 0)),
+        ];
+        if i % 2 == 1 {
+            row.push(("opt", Cell::Json(format!("[{i},\"a\"]"))));
+        }
+        t.append(row);
+    }
+    t.set(3, 1, Cell::Str("patched".into()));
+    let bytes = t.to_bytes();
+    let copied = DynTable::from_bytes(&bytes).unwrap();
+    let owner: Arc<dyn Backing> = Arc::new(bytes.clone());
+    // a Vec<u8> is not guaranteed to be aligned for wider types; a mapped file is. Skip the in-place half if this
+    // allocation happens to be misaligned rather than fail spuriously.
+    let opened = if (owner.bytes().as_ptr() as usize) % 8 == 0 {
+        Some(DynTable::from_backing(owner.clone()).unwrap())
+    } else {
+        None
+    };
+    for other in [Some(copied), opened].into_iter().flatten() {
+        assert_eq!(other.len(), n);
+        assert_eq!(other.names(), t.names());
+        for r in (0..n).step_by(37).chain([3, n - 1]) {
+            assert_eq!(other.row(r), t.row(r), "row {r}");
+        }
+        for (c, p) in [
+            (1, Pred::Eq(Cell::Str("yy".into()))),
+            (
+                0,
+                Pred::Range {
+                    lo: 100.0,
+                    hi: 5000.0,
+                    lo_incl: true,
+                    hi_incl: false,
+                },
+            ),
+            (3, Pred::Contains("number 77".into())),
+        ] {
+            assert_eq!(other.select(c, &p), t.select(c, &p));
+        }
+        assert_eq!(other.sum(2, None), t.sum(2, None));
+        let (mut a, mut b) = (other.group_count(1, None), t.group_count(1, None));
+        a.sort_by_key(|x| format!("{x:?}"));
+        b.sort_by_key(|x| format!("{x:?}"));
+        assert_eq!(a, b);
+        // readers on several threads at once
+        std::thread::scope(|s| {
+            for k in 0..4 {
+                let other = &other;
+                let t = &t;
+                s.spawn(move || {
+                    for r in (k..n).step_by(101) {
+                        assert_eq!(other.row(r), t.row(r));
+                    }
+                });
+            }
+        });
+        // writing to a table opened in place leaves the bytes alone and still reads back
+        let mut w = other;
+        w.set(10, 0, Cell::Int(-1));
+        w.append([("id", Cell::Int(7))]);
+        assert_eq!(w.get(10, 0), Cell::Int(-1));
+        assert_eq!(w.get(n, 0), Cell::Int(7));
+        assert_eq!(w.len(), n + 1);
+    }
+    // damaged input is refused, not read out of bounds
+    for bad in [&bytes[..bytes.len() - 9], &bytes[..40], &[][..]] {
+        assert!(DynTable::from_bytes(bad).is_err());
+        let owner: Arc<dyn Backing> = Arc::new(bad.to_vec());
+        assert!(DynTable::from_backing(owner).is_err());
+    }
+}

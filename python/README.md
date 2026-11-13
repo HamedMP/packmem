@@ -112,15 +112,28 @@ rows = packmem.load_json("annotations.json").share()
 loader = DataLoader(MyDataset(rows), num_workers=4, multiprocessing_context="spawn")
 ```
 
-On a 2-million-row table with four spawned workers, each worker's memory went from 298 MB to 96 MB
-and the parent's from +132 MB to no increase. In a Qwen3-VL fine-tuning data loader on 665,298 real
+Workers read the file in place, so they share one copy of the data and hold almost none of their own.
+On a 2-million-row table with four spawned workers, each worker's memory went from 298 MB to 21 MB,
+which is the interpreter itself, and the parent's from +132 MB to no increase. In a Qwen3-VL fine-tuning data loader on 665,298 real
 records (4 spawn workers, annotations only), parent plus workers peaked at 4.5 GB with plain pickling
 and 2.7 GB with `share()`, and the first batch arrived in 1.2 s instead of 4.1 s. A shared table refuses changes (`copy()` gives a private,
 writable one; `unshare()` makes the original writable again and removes the file). The file is readable only by
 its owner and is removed when the table is unshared or garbage-collected, and `packmem.cleanup_stale()` clears files left by a
-crashed process. Each worker still holds its own copy of the packed data; they do not yet share one.
-The file is the size of the packed table and goes to `/dev/shm` on Linux (memory) and to the temp
+crashed process. The file is the size of the packed table and goes to `/dev/shm` on Linux (memory) and to the temp
 directory elsewhere (disk, on macOS and Windows); pass `share(dir=...)` to choose.
+
+## Saving and reopening
+
+```python
+rows.save("events.pkm")
+rows = packmem.open("events.pkm")      # milliseconds, whatever the size
+```
+
+An opened table is memory-mapped and read in place: a 2-million-row table opened in 5 ms and added under
+1 MB to the process. Pages are read from disk as they are touched and shared by every process that opens the
+same file. Opened tables are read-only (`copy()` gives a private, writable one), and pickling one sends the
+file's location, not the data. The file format belongs to the packmem version that wrote it; do not truncate or
+rewrite a file in place while it is open.
 
 ## What to expect
 

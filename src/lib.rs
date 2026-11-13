@@ -1,4 +1,5 @@
 //! packmem: adaptive, operation-aware in-memory encodings that are processed without decompression.
+pub mod buf;
 pub mod csv;
 pub mod dynamic;
 pub mod ints;

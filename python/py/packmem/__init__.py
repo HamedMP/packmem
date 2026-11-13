@@ -8,11 +8,12 @@ assignment, and adds filters and aggregates that run on the packed data:
 
     rows.where(status=404, ua__contains="curl").sum("bytes")
 """
+import builtins as _builtins      # this module defines its own open()
 import os as _os
 from collections.abc import MutableSequence as _MutableSequence
 from ._packmem import _Table, Selection, Row
 
-__all__ = ["Table", "View", "Row", "load_jsonl", "load_json", "from_records", "from_cursor", "from_queryset", "read_csv", "cleanup_stale"]
+__all__ = ["Table", "View", "Row", "load_jsonl", "load_json", "from_records", "from_cursor", "from_queryset", "read_csv", "open", "cleanup_stale"]
 try:
     from importlib.metadata import version as _version
     __version__ = _version("packmem")
@@ -32,9 +33,27 @@ def _attach(cls, path, size):
     try:
         t._t = _Table.attach(path, size)
     except FileNotFoundError:
-        raise FileNotFoundError(f"shared packmem table {path} is gone: the table that shared it was closed or its process ended") from None
-    t._share = None
+        raise FileNotFoundError(f"packed table file {path} is gone: it was deleted, or the table that shared it was closed or its process ended") from None
+    # this table reads the file in place; passing it on to another process sends the file's location again
+    h = _Share()
+    h.path, h.size, h.pid, h.release = path, size, None, _nothing
+    t._share = h
     return t
+
+
+def _nothing():
+    pass
+
+
+def open(path):
+    """Open a table saved with `Table.save(path)`, read-only and without loading it.
+
+    The file is memory-mapped and the packed columns are read in place: opening takes milliseconds whatever the
+    size, pages are read from disk as they are touched, and every process that opens the same file shares them.
+    Use `copy()` for a private table that can be changed. Do not truncate or rewrite the file while it is open.
+    """
+    path = _os.path.abspath(_os.fspath(path))
+    return _attach(Table, path, _os.path.getsize(path))
 
 
 class _Share:
@@ -257,6 +276,25 @@ class Table:
             self._t.set_frozen(True)
             self._share = h
         return self
+
+    def save(self, path):
+        """Write the packed table to `path`, to be reopened with `packmem.open(path)`.
+
+        The file is written beside `path` and moved into place, so a reader never sees a partial file. The format
+        belongs to this version of packmem.
+        """
+        import secrets
+        path = _os.path.abspath(_os.fspath(path))
+        tmp = f"{path}.{_os.getpid()}-{secrets.token_hex(4)}.tmp"
+        try:
+            self._t.write_file(tmp, False)
+            _os.replace(tmp, path)
+        except BaseException:
+            try:
+                _os.unlink(tmp)
+            except OSError:
+                pass
+            raise
 
     def unshare(self):
         """Remove the shared file and make this table writable again. Processes that already loaded it keep their copy."""
@@ -482,7 +520,7 @@ def load_json(src, hint="balanced", fields=None):
         # Python's json also accepts NaN and Infinity; retry with it when the input can be read again
         import json
         if path:
-            with open(src, encoding="utf-8") as f:
+            with _builtins.open(src, encoding="utf-8") as f:
                 data = json.load(f)
         elif start is not None:
             src.seek(start)
@@ -517,5 +555,5 @@ def read_csv(path, hint="balanced", infer=False, **csv_kwargs):
                 raise
     if infer:
         raise ValueError("infer=True needs a UTF-8 file and no csv dialect options other than delimiter")
-    with open(path, newline="", encoding=encoding) as f:
+    with _builtins.open(path, newline="", encoding=encoding) as f:
         return Table(csv.DictReader(f, **csv_kwargs), hint=hint)
