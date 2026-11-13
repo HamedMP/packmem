@@ -4,6 +4,10 @@ An array of records in a fraction of the memory. Records are stored as packed co
 index, iterate, append to and update, that can be filtered and aggregated without unpacking, and that are
 written to JSON straight from the columns, without building objects.
 
+```sh
+npm install packmem
+```
+
 ```js
 import { loadJsonl } from "packmem";
 
@@ -143,8 +147,12 @@ Needs Rust and Node 18 or later.
     npm test          # model tests against plain arrays, and a full round trip of data/flights.jsonl if present
 
 Status: alpha. CI builds and tests the addon on Linux (x86-64 and arm64), macOS and Windows with Node 20
-and 22, and against Postgres 17. Prebuilt binaries are not published yet, so installing needs Rust; there
-is no WebAssembly build (for Cloudflare Workers and browsers) and no CSV or TSV loader yet.
+and 22, and against Postgres 17.
+
+The npm package includes prebuilt addons for Linux x86-64 and arm64 (glibc 2.34 or later: Debian 12,
+Ubuntu 22.04, RHEL 9 and newer), macOS on Apple silicon, and Windows x64. It does not yet cover Alpine or
+other musl systems, Amazon Linux 2, or Intel Macs; there, build from source with `npm run build` (needs
+Rust). There is no WebAssembly build (for Cloudflare Workers and browsers) and no CSV or TSV loader yet.
 
 ## Prior work
 

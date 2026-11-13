@@ -2,6 +2,25 @@
   "name": "packmem",
   "version": "0.1.0",
   "description": "An array of records in a fraction of the memory: packed columns you can still index, iterate and append to, filtered and aggregated without unpacking, and written to JSON without building objects.",
+  "keywords": [
+    "memory",
+    "compression",
+    "columnar",
+    "json",
+    "records",
+    "napi",
+    "postgres"
+  ],
+  "homepage": "https://hamedmp.github.io/packmem/",
+  "bugs": {
+    "url": "https://github.com/HamedMP/packmem/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HamedMP/packmem.git",
+    "directory": "node"
+  },
+  "license": "Apache-2.0",
   "type": "module",
   "main": "./index.js",
   "types": "./index.d.ts",
@@ -18,9 +37,8 @@
     "LICENSE"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
-  "license": "Apache-2.0",
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node --test test/table.test.js test/review.test.js test/pg.test.js"
