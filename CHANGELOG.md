@@ -4,6 +4,10 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## Unreleased
 
+### Fixed
+- Subclasses of `Table` keep their type and attributes through pickling and `from_bytes`.
+- Tests no longer depend on the platform's default text encoding; CI runs on Windows.
+
 ## 0.1.0 - 2026-11-13
 
 First release. Alpha: the API and the `to_bytes` format may change between versions.

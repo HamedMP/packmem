@@ -16,8 +16,8 @@ __all__ = ["Table", "View", "Row", "load_jsonl", "load_json", "from_records", "f
 __version__ = "0.1.0"
 
 
-def _restore(data):
-    t = Table.__new__(Table)
+def _restore(cls, data):
+    t = cls.__new__(cls)
     t._t = _Table.from_bytes(data)
     return t
 
@@ -138,7 +138,18 @@ class Table:
 
     def __reduce__(self):
         # pickled as the packed columns themselves: unpickling copies them and re-encodes nothing
-        return _restore, (self._t.to_bytes(),)
+        # a subclass comes back as itself, with whatever it keeps in __dict__ or its own __slots__
+        state = dict(getattr(self, "__dict__", ()))
+        for klass in type(self).__mro__:
+            slots = klass.__dict__.get("__slots__", ())
+            for name in (slots,) if isinstance(slots, str) else slots:
+                if name not in ("_t", "__dict__", "__weakref__") and hasattr(self, name):
+                    state[name] = getattr(self, name)
+        return _restore, (type(self), self._t.to_bytes()), state or None
+
+    def __setstate__(self, state):
+        for name, value in state.items():
+            setattr(self, name, value)
 
     def to_bytes(self):
         """The packed table as bytes (`Table.from_bytes` reads it back). The format is tied to this version of packmem."""
@@ -146,7 +157,7 @@ class Table:
 
     @classmethod
     def from_bytes(cls, data):
-        return _restore(data)
+        return _restore(cls, data)
 
     def __delitem__(self, i):
         n = len(self._t)

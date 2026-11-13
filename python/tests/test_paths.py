@@ -209,6 +209,28 @@ def test_pickle_take_extend_and_surrogates():
     assert big[0] == want[0] and big[-1]["a"] == "plain" and big[19_999]["a"] == want[0]["a"]
 
 
+
+class Examples(packmem.Table):
+    __slots__ = ("stats",)
+
+
+class Loose(packmem.Table):
+    pass
+
+
+def test_subclasses_survive_pickling():
+    import pickle
+    e = Examples([{"a": 1}, {"a": 2}]); e.stats = {"n": 2}
+    back = pickle.loads(pickle.dumps(e))
+    assert type(back) is Examples and back.stats == {"n": 2} and list(back) == [{"a": 1}, {"a": 2}]
+    bare = pickle.loads(pickle.dumps(Examples([{"a": 1}])))          # slot never set: stays unset
+    assert type(bare) is Examples and not hasattr(bare, "stats")
+    l = Loose([{"b": 1}]); l.tag = "x"; l.n = 3
+    back = pickle.loads(pickle.dumps(l)); assert type(back) is Loose and (back.tag, back.n) == ("x", 3) and list(back) == [{"b": 1}]
+    assert type(Examples.from_bytes(e.to_bytes())) is Examples and type(packmem.Table.from_bytes(e.to_bytes())) is packmem.Table
+    assert type(pickle.loads(pickle.dumps(packmem.Table([{"a": 1}])))) is packmem.Table
+
+
 if __name__ == "__main__":
     for name, f in list(globals().items()):
         if name.startswith("test_"): f(); print("ok", name)
