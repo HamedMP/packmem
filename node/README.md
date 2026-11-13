@@ -62,20 +62,46 @@ and only one batch of bytes exists at a time.
 Parsing happens in Rust, straight into columns. `JSON.parse` must be skipped to get the memory benefit:
 once V8 has built the objects, the peak memory is already spent.
 
+## Postgres
+
+```js
+import pg from "pg";
+import Cursor from "pg-cursor";
+import { fromPg, fromPgResult } from "packmem";
+
+const client = new pg.Client(url);
+await client.connect();
+
+// streamed through a cursor in array mode: no object per row on either side
+const flights = await fromPg(client, "select * from flights where year = $1", [2013], { Cursor });
+
+// or from a result you already have
+const small = fromPgResult(await client.query({ text: "select * from airports", rowMode: "array" }));
+```
+
+`fromPg` needs `pg-cursor` (an optional peer dependency); pass its class as `Cursor`, or let packmem import
+it. Values arrive as node-postgres types them: `int8` and `numeric` as strings, timestamps as ISO strings,
+`jsonb` as nested values. Any table or iterable of arrays works the same way through
+`table.extendArrays(columnNames, rows)`.
+
+Loading 336,776 flights from Postgres 17 took 0.96 s against 0.46 s for a plain object-mode query: rows
+cross into Rust as JSON text, which costs a second parse. The memory saving is the same as from a file.
+
 ## What to expect
 
 Measured on 336,776 flight records (nycflights13, 104 MB as JSON lines), Apple M4 Pro:
 
-- Packed size 8.1 MB. A whole web server holding the data idles at 96 to 126 MB RSS against 528 to 552 MB
-  with an array of objects (see `../demos`).
+- Packed size 8.1 MB. A whole Express or Next.js server holding the data settles at 94 to 119 MB RSS
+  against 386 to 411 MB with an array of objects loaded from the file, and 101 to 128 MB against 199 to
+  222 MB loaded from Postgres. Peak memory while serving is 4 to 5 times lower (see `../demos`).
 - Filtered pages are about 2 times faster than plain JS loops, and a filtered group-by 2 to 4 times
   faster (0.68 ms against 2.8 ms in-process). A filter plus a sum is level with a JS loop: V8 scans
   same-shape objects quickly.
 - Iterating every row builds plain objects through `JSON.parse` in batches, so a loop over all rows costs
   about as much as parsing the JSON again.
 
-In Node the gain is memory, not speed. V8 already stores objects of the same shape compactly, so the ratio
-is smaller than Python's (about 5 times against 10 to 30 times).
+In Node the gain is mainly memory. V8 already stores objects of the same shape compactly, so the ratio
+is smaller than Python's: 2 to 4 times at rest and 4 to 5 times at peak, against 4.5 to 30 times in Python.
 
 ## Semantics to know
 

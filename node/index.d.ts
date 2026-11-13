@@ -45,6 +45,8 @@ export declare class Table<R extends Row = Row> extends Rows<R> {
   slice(start?: number, end?: number): R[];
   push(...rows: R[]): number;
   extend(records: Iterable<R>): this;
+  /** Rows as arrays of values in the order of `names` (a database driver's array mode). */
+  extendArrays(names: string[], rows: Iterable<unknown[]>): this;
   set(i: number, row: R): void;
   /** A value of `undefined` removes the key. */
   update(i: number, fields: Partial<Record<keyof R, Json | undefined>>): void;
@@ -76,3 +78,20 @@ export declare function loadJson<R extends Row = Row>(path: string | URL, opts?:
 /** An array of records or JSON lines, from text or bytes. */
 export declare function parse<R extends Row = Row>(input: string | Uint8Array, opts?: { hint?: Hint }): Table<R>;
 export declare function from<R extends Row = Row>(records: Iterable<R>, opts?: { hint?: Hint }): Table<R>;
+
+/** Minimal shape of a node-postgres client; `pg.Client`, `pg.PoolClient` fit. */
+export interface PgClientLike {
+  query(q: unknown): unknown;
+}
+/** A query's rows read through `pg-cursor` in batches, straight into a Table. */
+export declare function fromPg<R extends Row = Row>(
+  client: PgClientLike,
+  sql: string,
+  params?: unknown[],
+  opts?: { batch?: number; hint?: Hint; Cursor?: new (sql: string, params: unknown[], cfg: { rowMode: "array" }) => unknown },
+): Promise<Table<R>>;
+/** A node-postgres result already in memory (array or object row mode). */
+export declare function fromPgResult<R extends Row = Row>(
+  result: { fields: { name: string }[]; rows: unknown[] },
+  opts?: { hint?: Hint },
+): Table<R>;

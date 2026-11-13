@@ -177,3 +177,39 @@ pub fn value_cell(v: &Value) -> Cell {
         other => Cell::Json(other.to_string()),
     }
 }
+
+/// Rows as JSON arrays, one per line, in the order of `names` (a database driver's array row mode).
+pub fn push_array_lines(t: &mut DynTable, names: &[String], text: &str) -> Result<usize, String> {
+    let mut n = 0;
+    for (i, line) in text.lines().enumerate() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        let vals: Vec<&RawValue> = serde_json::from_str(line).map_err(|e| format!("row {}: {e}", i + 1))?;
+        if vals.len() != names.len() {
+            return Err(format!("row {}: {} values for {} columns", i + 1, vals.len(), names.len()));
+        }
+        let mut row = || -> Result<(), String> {
+            for (name, v) in names.iter().zip(&vals) {
+                let c = t.col_for(name);
+                let x = v.get();
+                let b = x.as_bytes();
+                if b[0] == b'"' && !b.contains(&b'\\') {
+                    t.put_str_at(c, &x[1..x.len() - 1])
+                } else {
+                    t.put_at(c, raw_cell(x)?)
+                }
+            }
+            Ok(())
+        };
+        match row() {
+            Ok(()) => t.end_row(),
+            Err(e) => {
+                t.abort_row();
+                return Err(format!("row {}: {e}", i + 1));
+            }
+        }
+        n += 1
+    }
+    Ok(n)
+}

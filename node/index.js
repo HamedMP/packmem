@@ -28,6 +28,10 @@ function toSpec(filters) {
   return spec;
 }
 
+function bigintSafe(_k, v) {
+  return typeof v === "bigint" ? (Number.isSafeInteger(Number(v)) ? Number(v) : v.toString()) : v;
+}
+
 function groups(text) {
   const out = {};
   for (const [k, n] of JSON.parse(text)) out[k] = (out[k] ?? 0) + n;
@@ -154,16 +158,45 @@ export class Table extends Rows {
   }
   /** Append records from any iterable of plain objects. */
   extend(records) {
-    let lines = [];
-    for (const r of records) {
-      lines.push(JSON.stringify(r));
-      if (lines.length === BATCH) {
-        this._t.pushJsonl(lines.join("\n"));
-        lines = [];
+    return this._bulk(() => {
+      let lines = [];
+      for (const r of records) {
+        lines.push(JSON.stringify(r));
+        if (lines.length === BATCH) {
+          this._t.pushJsonl(lines.join("\n"));
+          lines = [];
+        }
       }
+      if (lines.length) this._t.pushJsonl(lines.join("\n"));
+      return this;
+    });
+  }
+  /**
+   * Append rows given as arrays of values in the order of `names`, as database drivers return them in array mode.
+   * BigInt values become numbers when they fit exactly and strings otherwise; Dates become ISO strings.
+   */
+  extendArrays(names, rows) {
+    return this._bulk(() => {
+      let lines = [];
+      for (const r of rows) {
+        lines.push(JSON.stringify(r, bigintSafe));
+        if (lines.length === BATCH) {
+          this._t.pushArraysJsonl(names, lines.join("\n"));
+          lines = [];
+        }
+      }
+      if (lines.length) this._t.pushArraysJsonl(names, lines.join("\n"));
+      return this;
+    });
+  }
+  /** Run `f` as one bulk load: rows are packed once at the end instead of after every batch. */
+  _bulk(f) {
+    this._t.beginBulk();
+    try {
+      return f();
+    } finally {
+      this._t.endBulk();
     }
-    if (lines.length) this._t.pushJsonl(lines.join("\n"));
-    return this;
   }
   /** Replace row `i`. */
   set(i, row) {
@@ -285,6 +318,37 @@ export function parse(input, opts = {}) {
   while (i < buf.length && (buf[i] === 0x20 || buf[i] === 0x0a || buf[i] === 0x0d || buf[i] === 0x09)) i++;
   if (buf[i] === 0x5b) t._t.pushJsonArrayBuffer(buf);
   else t._t.pushJsonlBuffer(buf);
+  return t;
+}
+
+/**
+ * A query's result from node-postgres (`pg`), read in batches through a cursor so neither the driver nor packmem
+ * builds an object per row. Needs the `pg-cursor` package; pass its class as `Cursor` if it is not resolvable from here.
+ */
+export async function fromPg(client, sql, params = [], { batch = 10_000, hint, Cursor } = {}) {
+  Cursor ??= (await import("pg-cursor")).default;
+  const cursor = client.query(new Cursor(sql, params, { rowMode: "array" }));
+  const read = () => new Promise((resolve, reject) => cursor.read(batch, (err, rows, result) => (err ? reject(err) : resolve([rows, result]))));
+  const t = new Table(undefined, { hint });
+  t._t.beginBulk();
+  try {
+    for (;;) {
+      const [rows, result] = await read();
+      if (!rows.length) break;
+      t.extendArrays(result.fields.map((f) => f.name), rows);
+    }
+  } finally {
+    t._t.endBulk();
+    await new Promise((resolve) => cursor.close(() => resolve()));
+  }
+  return t;
+}
+
+/** A result already in memory: from `client.query({ text, rowMode: "array" })`, or object rows. */
+export function fromPgResult(result, opts) {
+  const t = new Table(undefined, opts);
+  if (result.rows.length && Array.isArray(result.rows[0])) t.extendArrays(result.fields.map((f) => f.name), result.rows);
+  else t.extend(result.rows);
   return t;
 }
 

@@ -85,6 +85,8 @@ pub struct NativeTable {
     t: DynTable,
     /// Reused output buffer for JSON. Results are copied into memory V8 owns, so the GC sees their size and native memory stays flat.
     scratch: RefCell<Vec<u8>>,
+    /// Nesting depth of bulk loads; rows are packed only when the outermost one ends.
+    bulk_depth: u32,
 }
 
 #[napi]
@@ -94,6 +96,7 @@ impl NativeTable {
         Ok(NativeTable {
             t: DynTable::new(hint_of(hint)?),
             scratch: RefCell::new(Vec::new()),
+            bulk_depth: 0,
         })
     }
 
@@ -108,10 +111,30 @@ impl NativeTable {
     }
 
     fn bulk<T>(&mut self, f: impl FnOnce(&mut DynTable) -> std::result::Result<T, String>) -> Result<T> {
-        self.t.set_bulk(true);
+        self.begin_bulk();
         let r = f(&mut self.t);
-        self.t.set_bulk(false);
+        self.end_bulk();
         r.map_err(err)
+    }
+
+    /// Start a load made of several calls: open chunks are not re-packed between them. Pair with `endBulk`.
+    #[napi]
+    pub fn begin_bulk(&mut self) {
+        if self.bulk_depth == 0 {
+            self.t.set_bulk(true)
+        }
+        self.bulk_depth += 1
+    }
+
+    #[napi]
+    pub fn end_bulk(&mut self) {
+        if self.bulk_depth == 0 {
+            return;
+        }
+        self.bulk_depth -= 1;
+        if self.bulk_depth == 0 {
+            self.t.set_bulk(false)
+        }
     }
 
     /// Load a JSON-lines file without holding it in memory.
@@ -158,6 +181,12 @@ impl NativeTable {
     #[napi]
     pub fn push_json_array_buffer(&mut self, buf: Buffer) -> Result<u32> {
         self.bulk(|t| load::push_array(t, &buf[..])).map(|n| n as u32)
+    }
+
+    /// Append rows given as JSON arrays (one per line) whose values follow `names`.
+    #[napi]
+    pub fn push_arrays_jsonl(&mut self, names: Vec<String>, text: String) -> Result<u32> {
+        self.bulk(|t| load::push_array_lines(t, &names, &text)).map(|n| n as u32)
     }
 
     /// Append one record given as JSON text.
