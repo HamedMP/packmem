@@ -7,6 +7,7 @@ use napi::bindgen_prelude::{Buffer, BufferSlice, Uint32Array};
 use napi::Env;
 use napi::{Error, Result};
 use napi_derive::napi;
+use packmem::csv::{ColType, CsvLoader, CsvOptions};
 use packmem::{Cell, DynTable, Hint, Num, Pred};
 use serde_json::Value;
 use std::cell::RefCell;
@@ -99,6 +100,45 @@ pub struct NativeTable {
     scratch: RefCell<Vec<u8>>,
     /// Nesting depth of bulk loads; rows are packed only when the outermost one ends.
     bulk_depth: u32,
+    /// An open CSV stream, between csvBegin and csvFinish.
+    csv: Option<CsvLoader>,
+}
+
+/// CSV options from JavaScript, as JSON: { delimiter, header, names, types, emptyIsNull }.
+fn csv_options(json: &str) -> Result<CsvOptions> {
+    let v: Value = serde_json::from_str(json).map_err(err)?;
+    let mut o = CsvOptions::default();
+    if let Some(d) = v.get("delimiter").and_then(Value::as_str) {
+        let b = d.as_bytes();
+        if b.len() != 1 {
+            return Err(err("delimiter must be one ASCII character"));
+        }
+        o.delimiter = b[0];
+    }
+    if let Some(h) = v.get("header").and_then(Value::as_bool) {
+        o.header = h;
+    }
+    if let Some(n) = v.get("names").and_then(Value::as_array) {
+        o.names = n.iter().filter_map(|x| x.as_str().map(str::to_owned)).collect();
+    }
+    if let Some(t) = v.get("types").and_then(Value::as_array) {
+        o.types = t
+            .iter()
+            .map(|x| match x.as_str() {
+                Some("text") => Ok(ColType::Text),
+                Some("int") => Ok(ColType::Int),
+                Some("float") => Ok(ColType::Float),
+                Some("bool") => Ok(ColType::Bool),
+                Some("json") => Ok(ColType::Json),
+                Some("infer") | None => Ok(ColType::Infer),
+                Some(other) => Err(err(format!("unknown column type '{other}'"))),
+            })
+            .collect::<Result<_>>()?;
+    }
+    if let Some(e) = v.get("emptyIsNull").and_then(Value::as_bool) {
+        o.empty_is_null = e;
+    }
+    Ok(o)
 }
 
 #[napi]
@@ -109,6 +149,7 @@ impl NativeTable {
             t: DynTable::new(hint_of(hint)?),
             scratch: RefCell::new(Vec::new()),
             bulk_depth: 0,
+            csv: None,
         })
     }
 
@@ -201,6 +242,64 @@ impl NativeTable {
         self.bulk(|t| load::push_array_lines(t, &names, &text)).map(|n| n as u32)
     }
 
+    /// Start reading CSV in chunks; rows are packed once, at csvFinish. On error the caller rolls back with truncate.
+    #[napi]
+    pub fn csv_begin(&mut self, options: String) -> Result<()> {
+        if self.csv.is_some() {
+            return Err(err("a CSV stream is already open on this table"));
+        }
+        self.csv = Some(CsvLoader::new(csv_options(&options)?).map_err(err)?);
+        self.begin_bulk();
+        Ok(())
+    }
+
+    #[napi]
+    pub fn csv_feed(&mut self, chunk: Buffer) -> Result<u32> {
+        let loader = self.csv.as_mut().ok_or_else(|| err("no CSV stream is open"))?;
+        if let Err(e) = loader.feed(&mut self.t, &chunk) {
+            self.csv = None;
+            self.end_bulk();
+            return Err(err(e));
+        }
+        Ok(loader.rows() as u32)
+    }
+
+    #[napi]
+    pub fn csv_finish(&mut self) -> Result<u32> {
+        let mut loader = self.csv.take().ok_or_else(|| err("no CSV stream is open"))?;
+        let r = loader.finish(&mut self.t);
+        self.end_bulk();
+        r.map(|n| n as u32).map_err(err)
+    }
+
+    /// Load a CSV or TSV file, read in 1 MB chunks.
+    #[napi]
+    pub fn load_csv_path(&mut self, path: String, options: String) -> Result<u32> {
+        use std::io::Read;
+        let mut f = File::open(&path).map_err(|e| err(format!("{path}: {e}")))?;
+        self.csv_begin(options)?;
+        let mut buf = vec![0u8; 1 << 20];
+        loop {
+            let n = match f.read(&mut buf) {
+                Ok(n) => n,
+                Err(e) => {
+                    self.csv = None;
+                    self.end_bulk();
+                    return Err(err(format!("{path}: {e}")));
+                }
+            };
+            if n == 0 {
+                break;
+            }
+            if let Err(e) = self.csv.as_mut().unwrap().feed(&mut self.t, &buf[..n]) {
+                self.csv = None;
+                self.end_bulk();
+                return Err(err(format!("{path}: {e}")));
+            }
+        }
+        self.csv_finish()
+    }
+
     /// Append one record given as JSON text.
     #[napi]
     pub fn push_json(&mut self, text: String) -> Result<()> {
@@ -275,7 +374,7 @@ impl NativeTable {
     #[napi]
     pub fn take(&self, ids: Uint32Array) -> Result<NativeTable> {
         self.check_ids(&ids)?;
-        Ok(NativeTable { t: self.t.take(&ids), scratch: RefCell::new(Vec::new()), bulk_depth: 0 })
+        Ok(NativeTable { t: self.t.take(&ids), scratch: RefCell::new(Vec::new()), bulk_depth: 0, csv: None })
     }
 
     #[napi]

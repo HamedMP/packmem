@@ -68,6 +68,12 @@ faster (`../demos/README.md`).
 | `text.split("\n").map(JSON.parse)` | `loadJsonl(path)` or `parse(textOrBuffer)` |
 | `JSON.parse(readFileSync(path))` for an array of records | `loadJson(path)` (streamed) or `parse(buffer)` |
 | any array or iterable of objects | `new Table(records)` or `from(records)` |
+| a CSV or TSV file | `loadCsv(path)`, `loadTsv(path)` or `parseCsv(textOrBuffer)` |
+
+CSV is parsed in Rust in chunks (RFC 4180 quoting, CRLF, line breaks inside quotes). Values are inferred (integers,
+then decimals, else text; codes with a leading zero such as `007` stay text) unless `types` names them per column
+(`"text"`, `"int"`, `"float"`, `"bool"`, `"json"`). An empty field is the empty string, as Python's csv module reads
+it, or null with `emptyIsNull: true`; in a typed numeric, boolean or JSON column it is always null.
 
 Parsing happens in Rust, straight into columns. `JSON.parse` must be skipped to get the memory benefit:
 once V8 has built the objects, the peak memory is already spent.
@@ -87,6 +93,13 @@ const flights = await fromPg(client, "select * from flights where year = $1", [2
 
 // or from a result you already have
 const small = fromPgResult(await client.query({ text: "select * from airports", rowMode: "array" }));
+
+// fastest: COPY ... TO STDOUT as CSV, parsed in Rust; needs pg-copy-streams, and the query takes no parameters
+import { to as copyTo } from "pg-copy-streams";
+const all = await fromPgCopy(client, "select * from flights", { copyTo });
+
+// a query built with Drizzle (.toSQL()) or Kysely (.compile()), or { sql, params }
+const recent = await fromQuery(client, db.select().from(orders).where(gt(orders.total, 100)));
 ```
 
 `fromPg` needs `pg-cursor` (an optional peer dependency); pass its class as `Cursor`, or let packmem import
@@ -94,8 +107,11 @@ it. Values arrive as node-postgres types them: `int8` and `numeric` as strings, 
 `jsonb` as nested values. Any table or iterable of arrays works the same way through
 `table.extendArrays(columnNames, rows)`.
 
-Loading is slower than a plain object-mode query, because rows cross into Rust as JSON text and are parsed
-a second time; see the last row of the timings below. The memory saving is about the same as from a file.
+`fromPg` is slower than a plain object-mode query, because rows cross into Rust as JSON text and are parsed a second
+time. `fromPgCopy` avoids that: no row objects are built in the driver or in JavaScript, and on the flight data it
+loaded as fast as plain node-postgres rows (see the timings below). It types values as node-postgres does (int8 and
+numeric as strings, json as nested values) except dates and timestamps, which stay as Postgres prints them, in the
+session's time zone, instead of becoming `Date`s.
 
 ## What to expect
 

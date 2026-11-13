@@ -3,43 +3,49 @@
     "cpu": "Apple M4 Pro",
     "node": "v22.22.3",
     "platform": "darwin-arm64",
-    "date": "2026-11-13T16:24:08.110Z",
-    "loadavg_before": 7.58,
-    "loadavg_after": 7.54,
+    "date": "2026-11-13T16:28:43.116Z",
+    "loadavg_before": 4.95,
+    "loadavg_after": 4.91,
     "reps": 9
   },
   "rows": [
     {
       "name": "All 336,776 rows as JSON bytes",
-      "plain_ms": 136.72,
-      "packmem_ms": 113.95,
+      "plain_ms": 126.69,
+      "packmem_ms": 111.15,
       "note": "Buffer.from(JSON.stringify(array)) against jsonChunks()"
     },
     {
       "name": "Group by dest where carrier = UA",
-      "plain_ms": 3.48,
-      "packmem_ms": 0.7
+      "plain_ms": 3.04,
+      "packmem_ms": 0.72
     },
     {
       "name": "Sum distance where origin = JFK",
-      "plain_ms": 3.35,
-      "packmem_ms": 1.31
+      "plain_ms": 3.15,
+      "packmem_ms": 1.19
     },
     {
       "name": "Loop over every row, reading one field (full objects)",
-      "plain_ms": 2.38,
-      "packmem_ms": 342.52
+      "plain_ms": 2.1,
+      "packmem_ms": 301.57
     },
     {
       "name": "Same loop with lazy rows",
-      "plain_ms": 2.24,
-      "packmem_ms": 23.43
+      "plain_ms": 1.86,
+      "packmem_ms": 21.53
     },
     {
       "name": "Load the flights table from Postgres",
-      "plain_ms": 466.12,
-      "packmem_ms": 990.4,
+      "plain_ms": 437.54,
+      "packmem_ms": 950.23,
       "note": "node-postgres object rows against fromPg"
+    },
+    {
+      "name": "Load the flights table from Postgres via COPY",
+      "plain_ms": 435.69,
+      "packmem_ms": 447.6,
+      "note": "node-postgres object rows against fromPgCopy"
     }
   ]
 }

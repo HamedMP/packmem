@@ -41,18 +41,23 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test test/table.test.js test/review.test.js test/listops.test.js test/pg.test.js"
+    "test": "node --test test/table.test.js test/review.test.js test/listops.test.js test/csv.test.js test/pg.test.js"
   },
   "peerDependencies": {
-    "pg-cursor": ">=2"
+    "pg-cursor": ">=2",
+    "pg-copy-streams": ">=6"
   },
   "peerDependenciesMeta": {
     "pg-cursor": {
+      "optional": true
+    },
+    "pg-copy-streams": {
       "optional": true
     }
   },
   "devDependencies": {
     "pg": "^8.23.1",
+    "pg-copy-streams": "^7.0.0",
     "pg-cursor": "^2.22.1"
   }
 }

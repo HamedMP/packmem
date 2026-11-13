@@ -93,6 +93,12 @@ if (url) {
     await time(async () => (await pm.fromPg(c, "select * from flights")).length),
     "node-postgres object rows against fromPg",
   );
+  add(
+    "Load the flights table from Postgres via COPY",
+    await time(async () => (await c.query("select * from flights")).rows.length),
+    await time(async () => (await pm.fromPgCopy(c, "select * from flights")).length),
+    "node-postgres object rows against fromPgCopy",
+  );
   await c.end();
 }
 

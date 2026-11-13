@@ -126,3 +126,32 @@ export type LazyRow<R extends Row = Row> = { [K in keyof R]: R[K] | undefined } 
   toJSON(): R;
   readonly index: number;
 };
+
+export type CsvType = "infer" | "text" | "int" | "float" | "bool" | "json";
+export interface CsvOptions {
+  /** One character; "," by default (`loadTsv` uses a tab). */
+  delimiter?: string;
+  /** Take column names from the first row (default true); otherwise give `names`. */
+  header?: boolean;
+  names?: string[];
+  /** Per column, by position; later columns are inferred. */
+  types?: CsvType[];
+  /** An unquoted empty field is null instead of the empty string. */
+  emptyIsNull?: boolean;
+  hint?: Hint;
+}
+export declare function loadCsv<R extends Row = Row>(path: string | URL, opts?: CsvOptions): Table<R>;
+export declare function loadTsv<R extends Row = Row>(path: string | URL, opts?: CsvOptions): Table<R>;
+export declare function parseCsv<R extends Row = Row>(input: string | Uint8Array, opts?: CsvOptions): Table<R>;
+/** A query's rows through Postgres COPY as CSV, parsed in the native code. The query takes no parameters. */
+export declare function fromPgCopy<R extends Row = Row>(
+  client: PgClientLike,
+  sql: string,
+  opts?: { hint?: Hint; copyTo?: (sql: string) => unknown },
+): Promise<Table<R>>;
+/** A Drizzle query (`.toSQL()`), a Kysely query (`.compile()`) or `{ sql, params }`, loaded with fromPg. */
+export declare function fromQuery<R extends Row = Row>(
+  client: PgClientLike,
+  query: { toSQL(): { sql: string; params: unknown[] } } | { compile(): { sql: string; parameters: readonly unknown[] } } | { sql: string; params?: unknown[] },
+  opts?: { batch?: number; hint?: Hint },
+): Promise<Table<R>>;

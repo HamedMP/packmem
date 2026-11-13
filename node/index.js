@@ -601,6 +601,79 @@ export async function fromPg(client, sql, params = [], { batch = 10_000, hint, C
   return t;
 }
 
+// ---------- CSV ----------
+
+function csvOptions(o = {}) {
+  return JSON.stringify({ delimiter: o.delimiter, header: o.header, names: o.names, types: o.types, emptyIsNull: o.emptyIsNull });
+}
+
+/**
+ * A CSV file straight into columns, read in chunks. Options: `delimiter` (default ","), `header` (default true; otherwise
+ * give `names`), `types` per column ("infer", "text", "int", "float", "bool", "json"), `emptyIsNull`.
+ */
+export function loadCsv(path, opts = {}) {
+  const t = new Table(undefined, opts);
+  t._t.loadCsvPath(path instanceof URL ? fileURLToPath(path) : String(path), csvOptions(opts));
+  return t;
+}
+
+export function loadTsv(path, opts = {}) {
+  return loadCsv(path, { delimiter: "\t", ...opts });
+}
+
+/** CSV from text or bytes. */
+export function parseCsv(input, opts = {}) {
+  const t = new Table(undefined, opts);
+  t._t.csvBegin(csvOptions(opts));
+  t._t.csvFeed(typeof input === "string" ? Buffer.from(input) : Buffer.from(input.buffer ?? input, input.byteOffset, input.byteLength));
+  t._t.csvFinish();
+  return t;
+}
+
+// node-postgres types its results by column type; COPY sends text, so the same mapping is applied in the native parser
+const PG_TYPES = { 16: "bool", 21: "int", 23: "int", 26: "int", 700: "float", 701: "float", 114: "json", 3802: "json" };
+
+/**
+ * A query's rows through Postgres COPY, parsed as CSV in the native code: no row objects in the driver or in JavaScript.
+ * Needs `pg-copy-streams` (pass its `to` as `copyTo` if it is not resolvable from here). The query cannot take
+ * parameters (COPY does not accept them). Values are typed as node-postgres types them (int8 and numeric as strings,
+ * json as nested values), except dates and timestamps, which stay as Postgres prints them instead of becoming Dates.
+ */
+export async function fromPgCopy(client, sql, { hint, copyTo } = {}) {
+  copyTo ??= (await import("pg-copy-streams")).to;
+  const probe = await client.query({ text: `SELECT * FROM (${sql}) AS packmem_q LIMIT 0`, rowMode: "array" });
+  const types = probe.fields.map((f) => PG_TYPES[f.dataTypeID] ?? "text");
+  const t = new Table(undefined, { hint });
+  t._t.csvBegin(csvOptions({ header: true, types, emptyIsNull: true }));
+  let open = true;
+  try {
+    const stream = client.query(copyTo(`COPY (${sql}) TO STDOUT WITH (FORMAT csv, HEADER true)`));
+    for await (const chunk of stream) t._t.csvFeed(chunk);
+    open = false;
+    t._t.csvFinish();
+  } catch (e) {
+    if (open) {
+      try {
+        t._t.csvFinish();
+      } catch {
+        // the stream already failed; its error is the one to report
+      }
+    }
+    throw e;
+  }
+  return t;
+}
+
+/**
+ * A query built with Drizzle (`.toSQL()`), Kysely (`.compile()`) or given as `{ sql, params }`, loaded with fromPg.
+ * `client` is the node-postgres client behind the query builder.
+ */
+export async function fromQuery(client, query, opts) {
+  const q = typeof query?.toSQL === "function" ? query.toSQL() : typeof query?.compile === "function" ? query.compile() : query;
+  if (!q || typeof q.sql !== "string") throw new TypeError("fromQuery needs a Drizzle or Kysely query, or { sql, params }");
+  return fromPg(client, q.sql, q.params ?? q.parameters ?? [], opts);
+}
+
 /** A result already in memory: from `client.query({ text, rowMode: "array" })`, or object rows. */
 export function fromPgResult(result, opts) {
   const t = new Table(undefined, opts);
