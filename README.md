@@ -45,7 +45,11 @@ smallest integer types, a rechunk, and its allocator told to return freed memory
 | Flights repeated 10 times, 3.4 million rows | 7,101 MB | 1,203 MB | 175 to 198 MB | 113 MB |
 
 So packmem holds 1.6 to 2.9 times less than tuned polars, and tuned polars needs the schema to be
-known and set by hand. In return polars loads 4 to 5 times faster from JSON lines and far faster
+known and set by hand. On Linux the gap is wider, because packmem's own resident size is lower there: 12 MB against
+47 to 71 MB on the flight data, 76 against 245 to 276 MB on the log, and 94 against 185 to 209 MB
+on the flights repeated 10 times (2.0 to 6.0 times; memory only, measured under CI load).
+
+In return polars loads 4 to 5 times faster from JSON lines and far faster
 from parquet, and its filters are 2 to 4 times faster at millions of rows. These runs were taken
 on a busy machine; the memory figures are stable, the timings are not final.
 

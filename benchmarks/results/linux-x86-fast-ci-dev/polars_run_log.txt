@@ -1,0 +1,30 @@
+[15:12:56] start demos-file | load average: 0.65, 0.49, 3.40 | ci: ci-runner-1=0.00% ci-runner-2=0.01% ci-runner-4=0.03% ci-runner-3=0.00% 
+[15:16:18] end demos-file ok | load average: 1.13, 0.80, 2.93 | ci: ci-runner-1=0.00% ci-runner-2=0.00% ci-runner-4=0.00% ci-runner-3=0.00% 
+[15:16:20] start demos-pg | load average: 1.13, 0.80, 2.93 | ci: ci-runner-1=0.00% ci-runner-2=0.01% ci-runner-4=0.00% ci-runner-3=0.00% 
+[15:19:46] end demos-pg ok | load average: 1.26, 0.95, 2.55 | ci: ci-runner-1=0.00% ci-runner-2=0.00% ci-runner-4=0.00% ci-runner-3=0.00% 
+[15:19:48] start node-micro | load average: 1.24, 0.95, 2.54 | ci: ci-runner-1=0.00% ci-runner-2=0.00% ci-runner-4=0.00% ci-runner-3=0.00% 
+[15:20:13] end node-micro ok | load average: 1.30, 0.99, 2.51 | ci: ci-runner-1=0.00% ci-runner-2=0.00% ci-runner-4=0.00% ci-runner-3=0.01% 
+[15:20:15] start run-all | load average: 1.30, 0.99, 2.51 | ci: ci-runner-1=0.00% ci-runner-2=0.00% ci-runner-4=0.00% ci-runner-3=0.00% 
+[15:23:23] end run-all ok | load average: 1.05, 1.04, 2.25 | ci: ci-runner-1=0.00% ci-runner-2=0.00% ci-runner-4=0.00% ci-runner-3=0.03% 
+[15:23:25] start crossover-flights | load average: 1.05, 1.04, 2.25 | ci: ci-runner-1=0.00% ci-runner-2=0.00% ci-runner-4=0.03% ci-runner-3=0.00% 
+[15:23:41] end crossover-flights ok | load average: 0.97, 1.02, 2.21 | ci: ci-runner-1=0.00% ci-runner-2=0.00% ci-runner-4=0.01% ci-runner-3=0.00% 
+[15:23:43] start crossover-nginx | load average: 0.97, 1.02, 2.21 | ci: ci-runner-1=0.00% ci-runner-2=0.12% ci-runner-4=0.01% ci-runner-3=0.00% 
+[15:23:47] end crossover-nginx ok | load average: 1.05, 1.04, 2.21 | ci: ci-runner-1=0.00% ci-runner-2=0.00% ci-runner-4=0.00% ci-runner-3=0.00% 
+[15:23:49] start polars-tuned | load average: 1.05, 1.04, 2.21 | ci: ci-runner-1=0.00% ci-runner-2=0.02% ci-runner-4=0.00% ci-runner-3=0.00% 
+[15:24:05] end polars-tuned FAILED (1) | load average: 1.12, 1.05, 2.20 | ci: ci-runner-1=0.00% ci-runner-2=0.01% ci-runner-4=0.00% ci-runner-3=0.00% 
+[15:24:07] start polars-decay0 | load average: 1.11, 1.05, 2.19 | ci: ci-runner-1=0.00% ci-runner-2=0.00% ci-runner-4=0.00% ci-runner-3=0.00% 
+[15:24:09] end polars-decay0 FAILED (1) | load average: 1.11, 1.05, 2.19 | ci: ci-runner-1=0.00% ci-runner-2=0.00% ci-runner-4=0.00% ci-runner-3=0.00% 
+[15:24:11] start rust-2m | load average: 1.02, 1.03, 2.18 | ci: ci-runner-1=0.00% ci-runner-2=0.00% ci-runner-4=0.01% ci-runner-3=0.00% 
+[15:24:57] end rust-2m ok | load average: 1.12, 1.06, 2.13 | ci: ci-runner-1=0.00% ci-runner-2=0.00% ci-runner-4=0.00% ci-runner-3=0.00% 
+[15:24:59] all done | load average: 1.12, 1.06, 2.13 | ci: ci-runner-1=0.00% ci-runner-2=0.00% ci-runner-4=0.00% ci-runner-3=0.00% 
+[15:25:25] start polars-tuned (retry, absolute work dir) | load average: 0.74, 0.97, 2.07 | ci: ci-runner-1=0.00% ci-runner-2=0.01% ci-runner-4=0.03% ci-runner-3=0.00% 
+[15:48:13] end polars-tuned ok | load average: 15.99, 16.08, 9.13 | ci: ci-runner-1=12.28% ci-runner-2=107.19% ci-runner-4=459.57% ci-runner-3=473.17% 
+[15:48:15] start polars-decay0 (retry, absolute work dir) | load average: 15.99, 16.08, 9.13 | ci: ci-runner-1=3.79% ci-runner-2=102.66% ci-runner-4=482.19% ci-runner-3=469.18% 
+[15:58:05] end polars-decay0 ok | load average: 15.39, 18.56, 14.45 | ci: ci-runner-4=0.00% ci-runner-3=0.00% ci-runner-2=519.52% ci-runner-1=625.34% 
+[15:58:07] polars retry done | load average: 16.16, 18.67, 14.50 | ci: ci-runner-4=0.00% ci-runner-3=0.00% ci-runner-2=463.77% ci-runner-1=490.78% 
+[16:05:02] CI idle for 2 minutes, re-running polars steps
+[16:05:02] start polars-tuned (retry, absolute work dir) | load average: 0.90, 7.12, 10.79 | ci: ci-runner-2=0.00% ci-runner-1=0.00% ci-runner-4=0.00% ci-runner-3=0.00% 
+[16:36:34] end polars-tuned ok | load average: 24.83, 26.85, 28.09 | ci: ci-runner-2=10.54% ci-runner-4=135.25% ci-runner-1=619.17% 
+[16:36:36] start polars-decay0 (retry, absolute work dir) | load average: 24.83, 26.85, 28.09 | ci: ci-runner-2=16.32% ci-runner-4=1.78% ci-runner-1=613.97% 
+[16:49:05] end polars-decay0 ok | load average: 39.26, 37.41, 33.37 | ci: ci-runner-4=640.22% ci-runner-1=662.89% ci-runner-3=570.06% ci-runner-2=595.55% 
+[16:49:08] polars retry done | load average: 40.76, 37.75, 33.51 | ci: ci-runner-4=663.98% ci-runner-1=524.26% ci-runner-3=433.70% ci-runner-2=623.31% 
