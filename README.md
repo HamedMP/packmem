@@ -146,6 +146,10 @@ rows.group_count("country", path__prefix="/api/")
 
 for r in rows.lazy():                            # decode only the fields you read
     total += r["bytes"]
+
+rows.save("events.pkm")                          # from 0.2.0: reopen in milliseconds, read in place
+rows = packmem.open("events.pkm")
+rows.share()                                     # worker processes read one shared copy
 ```
 
 See [python/README.md](python/README.md) for the full API and its semantics.

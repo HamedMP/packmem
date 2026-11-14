@@ -4,6 +4,11 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## Unreleased
 
+## 0.2.0 - 2026-11-14
+
+The byte form changes in this release: pickles, shared files and `to_bytes` output from 0.1.x cannot be read
+by 0.2.0, and the reverse.
+
 ### Added
 - Python: `Table.save(path)` and `packmem.open(path)`: a saved table is memory-mapped and read in place, so opening takes
   milliseconds whatever its size and costs the process almost no memory of its own.
