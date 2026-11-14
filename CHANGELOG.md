@@ -5,14 +5,22 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 ## Unreleased
 
 ### Added
-- `Table.save(path)` and `packmem.open(path)`: a saved table is memory-mapped and read in place, so opening takes
+- Python: `Table.save(path)` and `packmem.open(path)`: a saved table is memory-mapped and read in place, so opening takes
   milliseconds whatever its size and costs the process almost no memory of its own.
-- Tables shared with `share()` are now read in place by the processes that receive them: workers share one copy
-  through the file instead of each holding their own.
+- Python: tables shared with `share()` are read in place by the processes that receive them, and by the process
+  that shared them: the data exists once, in the file's pages, instead of once per worker.
+- Python: `Table.__getitems__` fetches a batch of records in one call (PyTorch's DataLoader uses it when present).
+- Node: `Table#share()`, `Table.fromShared(handle)` and `unshare()` let worker threads read one table without a
+  copy (threads, not processes).
+- Node: `PACKMEM_LOAD_THREADS=1` for the file loaders (native builds only).
 
 ### Changed
 - The byte form written by `to_bytes`, pickling and `share()` has a new layout (arrays are aligned so they can be
   read in place). Data written by 0.1.x cannot be read by this version, and the reverse.
+- Node: nested JSON values are kept as written, as in Python since 0.1.2; `toJson` and `jsonBuffer` bytes can
+  differ from earlier versions on escaped input while parsing to the same values.
+- Python: on Windows, `save` over a file that is open anywhere fails with an explanation; close the tables that
+  have it open first.
 
 ## 0.1.2 - 2026-11-14
 
