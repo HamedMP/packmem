@@ -29,6 +29,11 @@ building the dataset: annotations only, no model, no GPU. Upstreams: QwenLM/Qwen
 - **Status:** on Qwen the heap peak is lower and only VmHWM is higher. On LLaVA-NeXT the heap peak is about 5% higher.
   Settled memory is 9% lower in every gate run.
 
+- **Later: gate-4 on a456190 passes on memory.** The remaining peak was a full pass over the rows, not the load
+  (string values of nested records were being interned). With that fixed, peak anonymous memory sampled every 2 ms
+  is 567 → 532 MB on Qwen3-VL and 1,446 → 1,346 MB on LLaVA-NeXT. One-thread construction is still 4-8% slower.
+  See `README_gate4.md`, `gate4_a456190/` and `llava_construction_a456190/`.
+
 ## Default threads (load_json threaded), 38d7bf2
 
 | | 0.2.0 | candidate |

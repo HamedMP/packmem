@@ -1,0 +1,189 @@
+{
+ "cmd": [
+  "$WORK/llava-next/venv-cand/bin/python",
+  "-I",
+  "run_v2.py",
+  "$WORK/llava-next/repo",
+  "$WORK/llava-next/data/mix.yaml",
+  "--workers",
+  "0"
+ ],
+ "rc": 0,
+ "peak": {
+  "VmRSS": 1432.59375,
+  "RssAnon": 1346.3046875,
+  "RssFile": 94.16015625,
+  "RssShmem": 0
+ },
+ "VmHWM_last_seen": 1429.9921875,
+ "at_rss_peak": {
+  "status": {
+   "VmHWM": 992.02734375,
+   "VmRSS": 992.02734375,
+   "RssAnon": 905.73828125,
+   "RssFile": 86.2890625,
+   "RssShmem": 0.0
+  },
+  "files": [
+   [
+    "$WORK/llava-next/venv/lib/python3.12/site-packages/torch/lib/libtorch_cpu.so",
+    48.4
+   ],
+   [
+    "$WORK/llava-next/venv/lib/python3.12/site-packages/torch/lib/libtorch_python.so",
+    13.0
+   ],
+   [
+    "/usr/bin/python3.12",
+    6.6
+   ],
+   [
+    "/usr/lib/x86_64-linux-gnu/libcrypto.so.3",
+    4.3
+   ],
+   [
+    "$WORK/llava-next/venv/lib/python3.12/site-packages/numpy/_core/_multiarray_umath.cpython-312-x86_64-linux-gnu.so",
+    3.1
+   ],
+   [
+    "$WORK/llava-next/venv/lib/python3.12/site-packages/tokenizers/tokenizers.abi3.so",
+    2.9
+   ],
+   [
+    "/usr/lib/x86_64-linux-gnu/libc.so.6",
+    1.9
+   ],
+   [
+    "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+    1.6
+   ],
+   [
+    "$WORK/llava-next/venv-cand/lib/python3.12/site-packages/packmem/_packmem.abi3.so",
+    1.3
+   ],
+   [
+    "$WORK/llava-next/venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+    1.2
+   ],
+   [
+    "$WORK/llava-next/venv/lib/python3.12/site-packages/torch/lib/libc10.so",
+    1.0
+   ],
+   [
+    "$WORK/llava-next/venv/lib/python3.12/site-packages/safetensors/_safetensors_rust.abi3.so",
+    0.7
+   ]
+  ],
+  "non_file": [
+   [
+    "[heap]",
+    558.8
+   ],
+   [
+    "[anon]",
+    341.4
+   ],
+   [
+    "[stack]",
+    0.1
+   ],
+   [
+    "[vvar]",
+    0.0
+   ],
+   [
+    "[vdso]",
+    0.0
+   ],
+   [
+    "[vsyscall]",
+    0.0
+   ]
+  ]
+ },
+ "at_file_peak": {
+  "status": {
+   "VmHWM": 1429.9921875,
+   "VmRSS": 1004.3984375,
+   "RssAnon": 912.796875,
+   "RssFile": 91.6015625,
+   "RssShmem": 0.0
+  },
+  "files": [
+   [
+    "$WORK/llava-next/venv/lib/python3.12/site-packages/torch/lib/libtorch_cpu.so",
+    53.2
+   ],
+   [
+    "$WORK/llava-next/venv/lib/python3.12/site-packages/torch/lib/libtorch_python.so",
+    13.6
+   ],
+   [
+    "/usr/bin/python3.12",
+    6.6
+   ],
+   [
+    "/usr/lib/x86_64-linux-gnu/libcrypto.so.3",
+    4.3
+   ],
+   [
+    "$WORK/llava-next/venv/lib/python3.12/site-packages/numpy/_core/_multiarray_umath.cpython-312-x86_64-linux-gnu.so",
+    3.1
+   ],
+   [
+    "$WORK/llava-next/venv/lib/python3.12/site-packages/tokenizers/tokenizers.abi3.so",
+    2.9
+   ],
+   [
+    "/usr/lib/x86_64-linux-gnu/libc.so.6",
+    1.9
+   ],
+   [
+    "/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+    1.6
+   ],
+   [
+    "$WORK/llava-next/venv-cand/lib/python3.12/site-packages/packmem/_packmem.abi3.so",
+    1.3
+   ],
+   [
+    "$WORK/llava-next/venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+    1.2
+   ],
+   [
+    "$WORK/llava-next/venv/lib/python3.12/site-packages/torch/lib/libc10.so",
+    1.1
+   ],
+   [
+    "$WORK/llava-next/venv/lib/python3.12/site-packages/safetensors/_safetensors_rust.abi3.so",
+    0.7
+   ]
+  ],
+  "non_file": [
+   [
+    "[heap]",
+    541.7
+   ],
+   [
+    "[anon]",
+    364.2
+   ],
+   [
+    "[stack]",
+    0.1
+   ],
+   [
+    "[vvar]",
+    0.0
+   ],
+   [
+    "[vdso]",
+    0.0
+   ],
+   [
+    "[vsyscall]",
+    0.0
+   ]
+  ]
+ }
+}

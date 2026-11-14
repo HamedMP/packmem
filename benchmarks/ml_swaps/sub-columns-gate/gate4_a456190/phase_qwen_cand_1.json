@@ -1,0 +1,56 @@
+{
+ "python": "$WORK/venv-cand/bin/python",
+ "file": "llava_v1_5_mix665k.json",
+ "hint": "balanced",
+ "PACKMEM_THREADS": "1",
+ "PACKMEM_NOSUBCOL": null,
+ "rc": 0,
+ "VmHWM_end": 0,
+ "phases": {
+  "load_json": {
+   "secs": 6.483,
+   "start_RssAnon": 9.6,
+   "peak_RssAnon": 370.7,
+   "delta_peak": 361.1,
+   "end_RssAnon": 310.2,
+   "peak_RssFile": 8.8,
+   "n_samples": 3041
+  },
+  "set_column": {
+   "secs": 0.019,
+   "start_RssAnon": 306.2,
+   "peak_RssAnon": 306.2,
+   "delta_peak": 0.0,
+   "end_RssAnon": 306.2,
+   "peak_RssFile": 8.8,
+   "n_samples": 8
+  },
+  "lengths": {
+   "secs": 4.163,
+   "start_RssAnon": 306.2,
+   "peak_RssAnon": 338.7,
+   "delta_peak": 32.5,
+   "end_RssAnon": 338.7,
+   "peak_RssFile": 8.8,
+   "n_samples": 1952
+  },
+  "modality_lengths": {
+   "secs": 4.117,
+   "start_RssAnon": 338.7,
+   "peak_RssAnon": 347.7,
+   "delta_peak": 9.0,
+   "end_RssAnon": 347.7,
+   "peak_RssFile": 8.8,
+   "n_samples": 1934
+  },
+  "random_getitem_20k": {
+   "secs": 0.098,
+   "start_RssAnon": 347.7,
+   "peak_RssAnon": 347.7,
+   "delta_peak": 0.0,
+   "end_RssAnon": 347.7,
+   "peak_RssFile": 8.8,
+   "n_samples": 46
+  }
+ }
+}

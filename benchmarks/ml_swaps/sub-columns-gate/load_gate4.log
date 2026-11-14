@@ -1,0 +1,15 @@
+gate4 built a45619009789e3c9099b9e8826cb215ee28b928c 719622d8d50501ee69092e98a0a0cba04220776ae2c865d3f717eb244f84751e  $WORK/wheels/cand4/packmem-0.3.0.dev0-cp310-abi3-manylinux_2_34_x86_64.whl
+gate4 run 1 cand load 1.82 1.55 1.60 -> 1.97 1.65 1.63
+gate4 run 1 020 load 1.97 1.65 1.63 -> 2.04 1.76 1.67
+gate4 run 2 020 load 2.04 1.76 1.67 -> 1.91 1.79 1.69
+gate4 run 2 cand load 1.91 1.79 1.69 -> 1.93 1.83 1.72
+gate4 run 3 cand load 1.93 1.83 1.72 -> 2.02 1.87 1.74
+gate4 run 3 020 load 2.02 1.87 1.74 -> 2.07 1.93 1.78
+gate4 run 4 020 load 2.07 1.93 1.78 -> 2.00 1.95 1.80
+gate4 run 4 cand load 2.00 1.95 1.80 -> 1.69 1.89 1.80
+gate4 run 5 cand load 1.69 1.89 1.80 -> 1.52 1.77 1.76
+gate4 run 5 020 load 1.52 1.77 1.76 -> 1.18 1.60 1.70
+gate4 done 06:02:45
+S5_llava_t1 begin 2026-11-14 06:05:48 0.09 0.88 1.39
+S5_llava_t1 end 2026-11-14 06:14:34 1.13 1.00 1.21
+S5 done 06:14:34
