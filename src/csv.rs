@@ -286,6 +286,75 @@ impl CsvLoader {
         }
         Ok(self.rows)
     }
+
+    /// The column names: from the header row once it has been read, or as given.
+    pub fn names(&self) -> Option<&[String]> {
+        self.names.as_deref()
+    }
+
+    /// Number error messages from `line`, for a loader fed a piece of a file that starts on that line.
+    pub fn starting_at_line(mut self, line: usize) -> Self {
+        self.line = line;
+        self
+    }
+}
+
+/// Where to cut `data` into pieces of about `every` records, so each piece can go to its own `CsvLoader` (on its own
+/// thread) and the tables be joined in order. A cut falls only after a record's line break, never inside a quoted field,
+/// by the same quoting rules `feed` follows: a quote opens a quoted field only at the start of a field, so the quote in
+/// `5"10` is a character. Returns each piece's start as (byte offset, line number), beginning with (0, 1); the first
+/// piece holds the header row, if any. Give the later pieces `header: false` with the first loader's `names()`, and
+/// `starting_at_line` with their line number. Field types need nothing passed: `ColType::Infer` decides each value by
+/// itself, so pieces read the same values as one pass over the file.
+pub fn record_pieces(data: &[u8], delimiter: u8, every: usize) -> Vec<(usize, usize)> {
+    let every = every.max(1);
+    let mut cuts = vec![(0, 1)];
+    let (mut in_quotes, mut quote_seen, mut was_quoted, mut has_bytes) =
+        (false, false, false, false);
+    let (mut line, mut records) = (1, 0);
+    let mut i = 0;
+    while i < data.len() {
+        let b = data[i];
+        i += 1;
+        if in_quotes {
+            if b == b'"' {
+                in_quotes = false;
+                quote_seen = true;
+            } else {
+                line += (b == b'\n') as usize;
+                has_bytes = true;
+            }
+            continue;
+        }
+        match b {
+            b'"' if quote_seen => {
+                in_quotes = true;
+                quote_seen = false;
+                has_bytes = true;
+            }
+            b'"' if !has_bytes && !was_quoted => {
+                in_quotes = true;
+                was_quoted = true;
+            }
+            _ if b == delimiter => (quote_seen, was_quoted, has_bytes) = (false, false, false),
+            b'\n' | b'\r' => {
+                (quote_seen, was_quoted, has_bytes) = (false, false, false);
+                line += 1;
+                if b == b'\r' && data.get(i) == Some(&b'\n') {
+                    i += 1; // CRLF ends one record
+                }
+                records += 1;
+                if records % every == 0 && i < data.len() {
+                    cuts.push((i, line));
+                }
+            }
+            _ => {
+                quote_seen = false;
+                has_bytes = true;
+            }
+        }
+    }
+    cuts
 }
 
 #[cfg(test)]
@@ -357,6 +426,64 @@ mod tests {
         let t = load("x,y\n,\n1.5,a\n", typed, 4).unwrap();
         assert_eq!(t.get(0, 0), Cell::Null);
         assert_eq!(t.get(0, 1), Cell::Str(String::new()));
+    }
+
+    /// Load `text` in pieces cut by `record_pieces`, each with its own loader, and join the tables in order.
+    fn load_pieces(text: &str, opts: CsvOptions, every: usize) -> Result<DynTable, String> {
+        let data = text.as_bytes();
+        let cuts = record_pieces(data, opts.delimiter, every);
+        let mut out: Option<DynTable> = None;
+        let mut names: Option<Vec<String>> = None;
+        for (k, &(start, line)) in cuts.iter().enumerate() {
+            let end = cuts.get(k + 1).map_or(data.len(), |c| c.0);
+            let o = match &names {
+                None => opts.clone(),
+                Some(n) => CsvOptions {
+                    header: false,
+                    names: n.clone(),
+                    ..opts.clone()
+                },
+            };
+            let mut l = CsvLoader::new(o)?.starting_at_line(line);
+            let mut t = DynTable::new(Hint::Balanced);
+            l.feed(&mut t, &data[start..end])?;
+            l.finish(&mut t)?;
+            names = names.or_else(|| l.names().map(|n| n.to_vec()));
+            match &mut out {
+                None => out = Some(t),
+                Some(o) => o.append_table(t),
+            }
+        }
+        Ok(out.unwrap())
+    }
+
+    fn rows(t: &DynTable) -> Vec<Vec<Cell>> {
+        (0..t.len()).map(|r| t.row(r)).collect()
+    }
+
+    #[test]
+    fn pieces_read_what_one_pass_reads() {
+        let text = "id,name,h,note\r\n1,\"Smith, J\",5\"10,\"said \"\"hi\"\"\nthen\r\nleft\"\r\n\n2,Lee,,x\r3,\"\",007,\"a\nb\"\n4,\"q\"\"\",1e3,\"\"\n5,z,-2,last";
+        let whole = rows(&load(text, CsvOptions::default(), 4096).unwrap());
+        assert_eq!(whole.len(), 5);
+        for every in [1, 2, 3, 100] {
+            let t = load_pieces(text, CsvOptions::default(), every).unwrap();
+            assert_eq!(rows(&t), whole, "every {every}");
+        }
+        let cuts = record_pieces(text.as_bytes(), b',', 1);
+        // the quoted line breaks in rows 1 and 3 are not cuts, the blank line and the bare CR are
+        assert_eq!(
+            cuts.iter().map(|c| c.1).collect::<Vec<_>>(),
+            vec![1, 2, 5, 6, 7, 9, 10]
+        );
+    }
+
+    #[test]
+    fn pieces_number_errors_by_their_line_in_the_file() {
+        let Err(e) = load_pieces("a,b\n1,2\n3,4\n5\n6,7\n", CsvOptions::default(), 2) else {
+            panic!("a short row loaded")
+        };
+        assert!(e.contains("line 4"), "{e}");
     }
 
     #[test]
