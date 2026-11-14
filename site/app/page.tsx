@@ -76,7 +76,7 @@ const COMPARE: { feature: string; cells: [Verdict, string?][] }[] = [
   },
   {
     feature: "Worker processes share one copy",
-    cells: [["no", "each worker unpickles its own"], ["part", "via memory-mapped IPC files"], ["no"], ["yes", "memory-mapped files"]],
+    cells: [["yes", "open() maps one saved file; Node worker threads share one table"], ["part", "via memory-mapped IPC files"], ["no"], ["yes", "memory-mapped files"]],
   },
   {
     feature: "Parquet and Arrow IPC",
@@ -232,7 +232,7 @@ export default function Page() {
           </Button>
           <Button variant="secondary" size="lg" className="gap-2 bg-secondary/70 font-mono text-xs backdrop-blur" nativeButton={false} render={<a href={d.REPO} />}>
             <HugeiconsIcon icon={GithubIcon} strokeWidth={2} data-icon="inline-start" />
-            v0.1.2
+            v0.2.0
           </Button>
           <ThemeToggle />
         </nav>
@@ -688,7 +688,7 @@ export default function Page() {
               </Table>
             </div>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Checked against packmem 0.1.2 and the polars, pandas and pyarrow documentation, November 2026. Memory notes are the
+              Checked against packmem 0.2.0 and the polars, pandas and pyarrow documentation, November 2026. Memory notes are the
               flights measurements above; Arrow&apos;s is pandas with its Arrow backend, the closest we measured.
             </p>
             <div className="grid gap-x-10 gap-y-6 sm:grid-cols-2">
@@ -761,7 +761,7 @@ export default function Page() {
               </TabsContent>
             </Tabs>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              <Badge variant="secondary" className="mr-2 align-[1px]">0.1.2 alpha</Badge>
+              <Badge variant="secondary" className="mr-2 align-[1px]">0.2.0 alpha</Badge>
               On <a className="underline underline-offset-4" href="https://pypi.org/project/packmem/">PyPI</a> and{" "}
               <a className="underline underline-offset-4" href="https://www.npmjs.com/package/packmem">npm</a>, with prebuilt builds for Linux (glibc
               and musl), macOS and Windows. <span className="whitespace-nowrap">Apache-2.0.</span>

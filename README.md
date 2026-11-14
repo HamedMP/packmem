@@ -21,7 +21,7 @@ Charts and the project story: https://hamedmp.github.io/packmem/
 
 packmem stores each field of a record collection as a column, picks a lightweight encoding for
 it from a sample of the data, and runs filters and aggregates on the encoded form. It is a Rust
-library with Python and Node packages on top. Status: **alpha** (0.1.2).
+library with Python and Node packages on top. Status: **alpha** (0.2.0).
 
 ## Results
 

@@ -10,5 +10,5 @@ Drafts for the person launching packmem to post from their own accounts. Nothing
 
 If a benchmark is re-run, check the numbers here against `SOURCES.md` before posting.
 
-The drafts describe 0.1.2. Check that `npm view packmem version` and `pip index versions packmem` show it before
+The drafts describe 0.2.0; the share() and Hugging Face paragraphs still quote 0.1.x measurements until they are re-run on 0.2.0. Check that `npm view packmem version` and `pip index versions packmem` show it before
 posting.

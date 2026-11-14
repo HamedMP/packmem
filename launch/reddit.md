@@ -24,7 +24,7 @@
     node used 15.7 GB. New in 0.1.2: `rows.share()` hands workers a file instead of a pickle; in Qwen3-VL's loader on a
     Mac that took parent plus 4 spawn workers from 4.5 GB to 2.7 GB and the first batch from 4.1 s to 1.2 s.
 
-    Alpha (0.1.2). pip install packmem — benchmarks, scripts and every results file: https://github.com/HamedMP/packmem
+    Alpha (0.2.0). pip install packmem — benchmarks, scripts and every results file: https://github.com/HamedMP/packmem
 
 ## r/node
 
@@ -44,4 +44,4 @@
     Honest part: V8 already stores same-shape objects compactly, so the gain in Node is memory more than speed, and a
     loop over every row is slower than over a plain array. Details and every number's source in the repo.
 
-    Alpha (0.1.2). npm install packmem — https://github.com/HamedMP/packmem
+    Alpha (0.2.0). npm install packmem — https://github.com/HamedMP/packmem

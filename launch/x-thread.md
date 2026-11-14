@@ -13,5 +13,5 @@ holding the data, 731 MB → 72 MB at rest, identical responses.
 4/ Where it loses: a plain loop over every row is 4.9x slower, random row access 6.7x slower, and polars tuned for
 memory comes within 1.6–2.9x. It's not a dataframe.
 
-5/ Alpha (0.1.2). Python, Node and a WebAssembly build for Cloudflare Workers, Rust core, Apache-2.0.
+5/ Alpha (0.2.0). Python, Node and a WebAssembly build for Cloudflare Workers, Rust core, Apache-2.0.
 pip install packmem / npm install packmem — every number on the site is rebuilt from the results files in the repo.
