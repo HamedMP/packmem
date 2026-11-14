@@ -72,3 +72,22 @@ sys.stdout.buffer.write(t.to_bytes())`;
 sys.stdout.buffer.write(packmem.Table.from_bytes(sys.stdin.buffer.read()).to_json())`;
   assert.deepEqual(JSON.parse(execFileSync(python, ["-c", roundTrip], { input: t.toBytes(), maxBuffer: 1 << 28 })), JSON.parse(json(t)));
 });
+
+test("the header carries a format version, and 0.2.0 bytes still read", () => {
+  // The same rows as python/tests/test_paths.py, written there by the PyPI 0.2.0 wheel.
+  const want = Array.from({ length: 16_500 }, (_, i) => {
+    const r = { id: i, name: `user${i % 7}`, score: i % 3 ? (i % 50) * 0.5 : null, tags: ["a", "b"].slice(0, i % 3) };
+    r.meta = { k: i % 4 };
+    r.ok = i % 2 === 0;
+    if (i === 5) r.extra = "x";
+    return r;
+  });
+  const old = readFileSync(new URL("../../python/tests/fixtures/table_0.2.0.pkm", import.meta.url));
+  assert.equal(old.subarray(0, 4).toString(), "PKM2");
+  assert.deepEqual([...Table.fromBytes(old)], want);
+  const now = new Table(want).toBytes();
+  assert.equal(new TextDecoder().decode(now.subarray(0, 4)), "PKMT");
+  const newer = Uint8Array.from(now);
+  newer[4]++;
+  assert.throws(() => Table.fromBytes(newer), /newer packmem/);
+});
