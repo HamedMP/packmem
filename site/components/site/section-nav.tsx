@@ -32,6 +32,8 @@ export function SectionNav({ sections }: { sections: NavSection[] }) {
   const go = (id: string) => {
     const smooth = !window.matchMedia(REDUCED).matches
     document.getElementById(id)?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" })
+    // put the section in the address bar, so it can be copied and the back button returns
+    if (location.hash !== `#${id}`) history.pushState(null, "", `#${id}`)
     setActive(id)
   }
 
