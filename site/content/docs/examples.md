@@ -39,6 +39,22 @@ cd demos/nextjs && npm install && npm run build && npm start   # port 3002
 Shows: `serverExternalPackages`, `respond` in a route handler, serving the `.wasm` file, and a virtualized list
 that holds objects only for the rows on screen. The [Next.js guide](/docs/nextjs/) walks through it.
 
+## Log viewer
+
+`demos/log-viewer`: a Next.js app that sends 1,000,000 generated log records to the browser and scrolls through
+them, with `respond` on the server and `useTable` and `useRows` in the page. A switch loads the same rows as JSON
+with `res.json()`, so the two can be compared on one page: time until usable, the browser's JS heap, and bytes over
+the network. The records come from a seeded generator, so nothing is downloaded.
+
+```sh
+cd node && npm ci && npm run build && npm run build:wasm   # the package from this repository
+cd ../demos/log-viewer && npm install && npm run build && npm start   # http://localhost:3000, in Chrome
+```
+
+Shows: the whole browser path with the two hooks, and where packed bytes pay off and where they do not. Its
+[README](https://github.com/HamedMP/packmem/blob/main/demos/log-viewer/README.md) has one run's figures and notes
+on deploying to Vercel.
+
 ## FastAPI
 
 `demos/fastapi`: the same routes in Python, including the byte export.

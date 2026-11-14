@@ -1,8 +1,8 @@
 # Next.js
 
 A Next.js app holds a table in its server process, answers queries from it in route handlers, and sends a client
-page the packed bytes to open in the browser. Everything here is taken from `demos/nextjs` in the repository, which
-runs on Next.js 16 with React 19.
+page the packed bytes to open in the browser. This is how `demos/nextjs` and `demos/log-viewer` in the repository
+are built, on Next.js 16 with React 19.
 
 ```sh
 npm install packmem
@@ -72,61 +72,27 @@ export function GET(request: Request) {
 }
 ```
 
-## 4. Serve the WebAssembly file
+`respond` gzips the bytes inside the payload for clients that ask for it (from 0.3.2), because Next.js compresses
+JSON responses but not `application/vnd.packmem`.
 
-The browser needs `packmem_bg.wasm`. Either copy it into `public/` when installing:
+## 4. A client component
 
-```json
-{
-  "scripts": {
-    "postinstall": "cp node_modules/packmem/wasm-dist/packmem_bg.wasm public/packmem.wasm"
-  }
-}
-```
-
-or serve it from a route handler, as the demo does:
-
-```ts
-// app/packmem.wasm/route.ts
-import { readFile } from "node:fs/promises"
-import path from "node:path"
-
-export async function GET() {
-  const wasm = await readFile(path.join(process.cwd(), "node_modules/packmem/wasm-dist/packmem_bg.wasm"))
-  return new Response(new Uint8Array(wasm), {
-    headers: { "content-type": "application/wasm", "cache-control": "public, max-age=3600" },
-  })
-}
-```
-
-## 5. A client component
+`useTable` fetches the export and opens it with `packmem/wasm`; `useRows` builds objects for the rows on screen.
+Next.js serves the `.wasm` file for you.
 
 ```tsx
 // app/browse/browser.tsx
 "use client"
 
-import { useEffect, useState } from "react"
-import { fetchTable } from "packmem/http"
-import { useRows } from "packmem/react"
-import { init, type PackmemWasm } from "packmem/wasm"
-import type { Table } from "packmem"
-
-let pm: Promise<PackmemWasm> | undefined
+import { useState } from "react"
+import { useRows, useTable } from "packmem/react"
 
 export function Browser({ carrier }: { carrier: string }) {
-  const [table, setTable] = useState<Table | null>(null)
+  const { table, error } = useTable(`/api/flights/export?carrier=${carrier}`)
   const [offset, setOffset] = useState(0)
   const rows = useRows(table, { offset, limit: 20 })
 
-  useEffect(() => {
-    let live = true
-    pm ??= init("/packmem.wasm")
-    pm.then((api) => fetchTable(api, `/api/flights/export?carrier=${carrier}`)).then((t) => live && setTable(t))
-    return () => {
-      live = false
-    }
-  }, [carrier])
-
+  if (error) return <p>{error.message}</p>
   if (!table) return <p>Loading…</p>
   return (
     <>
@@ -142,20 +108,73 @@ export function Browser({ carrier }: { carrier: string }) {
 }
 ```
 
-Render it from a server component page: `<Browser carrier="UA" />`. The demo's `/browse` page does the same with a
-virtualized scroll list and carrier buttons.
+Render it from a server component page: `<Browser carrier="UA" />`. See [packmem/react](/docs/react/) for a
+virtualized list.
+
+### Without useTable (0.3.0 and 0.3.1)
+
+`useTable` is new in 0.3.2. With an earlier version, or to control loading yourself, serve the `.wasm` file and call
+`init` and `fetchTable`. Copy the file into `public/` when installing:
+
+```json
+{
+  "scripts": {
+    "postinstall": "cp node_modules/packmem/wasm-dist/packmem_bg.wasm public/packmem.wasm"
+  }
+}
+```
+
+or serve it from a route handler, as `demos/nextjs` does:
+
+```ts
+// app/packmem.wasm/route.ts
+import { readFile } from "node:fs/promises"
+import path from "node:path"
+
+export async function GET() {
+  const wasm = await readFile(path.join(process.cwd(), "node_modules/packmem/wasm-dist/packmem_bg.wasm"))
+  return new Response(new Uint8Array(wasm), {
+    headers: { "content-type": "application/wasm", "cache-control": "public, max-age=3600" },
+  })
+}
+```
+
+then, in the client component:
+
+```tsx
+import { useEffect, useState } from "react"
+import { fetchTable } from "packmem/http"
+import { init, type PackmemWasm } from "packmem/wasm"
+import type { Table } from "packmem"
+
+let pm: Promise<PackmemWasm> | undefined
+
+function useFlights(carrier: string) {
+  const [table, setTable] = useState<Table | null>(null)
+  useEffect(() => {
+    let live = true
+    pm ??= init("/packmem.wasm")
+    pm.then((api) => fetchTable(api, `/api/flights/export?carrier=${carrier}`)).then((t) => live && setTable(t))
+    return () => {
+      live = false
+    }
+  }, [carrier])
+  return table
+}
+```
 
 ## Versions
 
 The server and the browser read and write packed bytes with the packmem installed in the app, so one
 `package.json` keeps them on the same version. If the browser code is cached or served separately (a CDN, another
-app), deploy it no later than the server: a reader refuses bytes from a newer format. From 0.3.1, `fetchTable`
-then falls back to JSON instead of failing. See [Byte format](/docs/format/).
+app), deploy it no later than the server: a reader refuses bytes from a newer format. From 0.3.1, `fetchTable` (and
+so `useTable`) then falls back to JSON instead of failing. See [Byte format](/docs/format/).
 
 ## Deploying
 
 The route handlers need the Node.js runtime (the default), not the Edge runtime, because they use the native addon.
 On Vercel the Linux x86-64 addon in the npm package is the one that loads; this setup has not been tested on Vercel
-yet. Memory is the main gain on the server: the demo's Next.js server holding the flights data settles at a
-fraction of the memory of an array of objects (figures in
+yet. Vercel Functions limit a response that is not streamed to 4.5 MB: JSON and gzipped bytes are streamed, plain
+bytes are sent as one buffer. Memory is the main gain on the server: the demo's Next.js server holding the flights
+data settles at a fraction of the memory of an array of objects (figures in
 [demos/README.md](https://github.com/HamedMP/packmem/blob/main/demos/README.md)).

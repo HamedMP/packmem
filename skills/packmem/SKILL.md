@@ -70,14 +70,21 @@ import { respond, send } from "packmem/http";
 export const GET = (request) => respond(request, table.where({ carrier: "UA" })); // Next.js, Workers
 app.get("/api/rows", (req, res) => send(req, res, table));                       // Express
 
-// browser
+// React (0.3.2+): fetches bytes or JSON and opens them with packmem/wasm, loaded once per page
+import { useTable, useRows } from "packmem/react";
+const { table, error, loading, ms } = useTable("/api/rows");
+const visible = useRows(table, { offset, limit: 20 });   // objects only for the rows on screen
+
+// without React
 import { init } from "packmem/wasm";
 import { fetchTable } from "packmem/http";
-import { useRows } from "packmem/react";
 const pm = await init("/packmem.wasm");      // serve node_modules/packmem/wasm-dist/packmem_bg.wasm here
-const table = await fetchTable(pm, "/api/rows");
-const visible = useRows(table, { offset, limit: 20 });   // objects only for the rows on screen
+const t = await fetchTable(pm, "/api/rows");
 ```
+
+`respond` and `send` gzip bytes over 1 KB inside the payload for clients that ask (`fetchTable` and `useTable` do);
+when a proxy in front compresses already, turn it off with `respond(req, rows, {}, { gzip: false })` or
+`send(req, res, rows, 200, { gzip: false })`. `send` returns a Promise.
 
 ## Rules
 

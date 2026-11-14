@@ -38,7 +38,7 @@ native addon: browsers, Cloudflare Workers, Deno without FFI. See [Browsers and 
 | `packmem/wasm` | The same API on WebAssembly (no file paths or Node streams) |
 | `packmem/wasm/packmem.wasm` | The WebAssembly binary, for bundlers and Workers |
 | `packmem/http` | Send and fetch tables over HTTP; no Node imports |
-| `packmem/react` | `useRows` for React components |
+| `packmem/react` | `useTable` and `useRows` for React components |
 
 ## Rust
 

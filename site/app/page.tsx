@@ -104,15 +104,16 @@ const NAV: NavSection[] = [
   { id: "method", title: "How these numbers were made", summary: "Machines, medians, load averages and the results files." },
 ]
 
-// The 0.3 releases, from CHANGELOG.md's 0.3.0 and 0.3.1 sections. Benchmark figures elsewhere keep the versions they were measured on.
+// The 0.3 releases, from CHANGELOG.md's 0.3.0, 0.3.1 and 0.3.2 sections. Benchmark figures elsewhere keep the versions they were measured on.
 const NEW_IN_0_3: { title: string; body: string; href: string }[] = [
   { title: "Browsers get packed bytes", body: "toBytes and fromBytes in Node and WebAssembly; packmem/http sends bytes to clients that ask and JSON to the rest.", href: "/docs/http/" },
-  { title: "A React hook", body: "useRows from packmem/react builds objects only for the rows on screen, and works inside Next.js.", href: "/docs/react/" },
+  { title: "React hooks", body: "useTable fetches a table into the browser and useRows builds objects only for the rows on screen (useTable from 0.3.2). Both work inside Next.js.", href: "/docs/react/" },
   { title: "Lists of records as columns", body: "Conversation turns and other nested records are stored as sub-columns, with pandas-style list and str operations in Python.", href: "/docs/python/#lists-of-records-inside-a-record" },
   { title: "Several threads", body: "Filters, group counts and large file loads use several threads; PACKMEM_THREADS=1 turns it off.", href: "/docs/python/#threads" },
   { title: "Arrow, Parquet and compact text", body: "to_arrow, from_arrow, read_parquet and to_parquet in Python; hint=\"compact\" compresses long text with Zstandard.", href: "/docs/python/#arrow-and-parquet" },
   { title: "Smaller byte headers", body: "Format 4 writes header integers as varints, so small tables take fewer bytes.", href: "/docs/format/" },
   { title: "0.3.1: leaner record columns", body: "Columns of records that are never absent drop their per-row offsets (byte format 5), and fetchTable falls back to JSON when a server's bytes are newer than the client.", href: "/docs/format/#versions" },
+  { title: "0.3.2: gzip and a log viewer", body: "packmem/http gzips bytes inside the payload for clients that ask, since hosts like Next.js only compress JSON. demos/log-viewer sends a million log lines to the browser.", href: "/docs/examples/#log-viewer" },
 ]
 
 function WhatsNew() {

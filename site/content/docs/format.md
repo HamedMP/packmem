@@ -13,7 +13,7 @@ The bytes start with `PKMT` and a format version.
 | --- | --- | --- |
 | 0.2.0 | `PKM2` (format 2) | format 2 |
 | 0.3.0 | format 4 | formats 2, 3 and 4 |
-| 0.3.1 | format 5 | formats 2 to 5 |
+| 0.3.1 and 0.3.2 | format 5 | formats 2 to 5 |
 
 Format 3 was only written by development builds between 0.2.0 and 0.3.0. Format 5 stores no per-row offsets for
 columns of records that are never absent, which 0.3.0 did. A reader refuses bytes from a newer format with an error

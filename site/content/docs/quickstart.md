@@ -81,8 +81,17 @@ table.length;
 table.slice(0, 20);                         // objects for 20 rows only
 ```
 
-Use the same packmem version in the server and the browser. More in [packmem/http](/docs/http/) and the
-[Next.js guide](/docs/nextjs/).
+In React, `useTable` does the loading and fetching, and `useRows` builds objects for a window of rows:
+
+```tsx
+import { useRows, useTable } from "packmem/react"
+
+const { table } = useTable("/api/flights")              // the .wasm file is served by Next.js, Vite or webpack
+const rows = useRows(table, { offset: 0, limit: 20 })
+```
+
+Use the same packmem version in the server and the browser. More in [packmem/http](/docs/http/),
+[packmem/react](/docs/react/) and the [Next.js guide](/docs/nextjs/).
 
 ## Rust
 
