@@ -17,12 +17,11 @@
 
     Costs: a plain `for r in rows` loop is 4.9x slower than over the list (use `rows.lazy()` or a query), random row
     access 6.7x slower, and below a few hundred rows there is no saving. polars tuned for memory comes within 1.6 to
-    2.9x and loads faster; packmem is for code that wants a list, not a dataframe. It replaces the list, not Arrow
-    either: if your training loader already uses memory-mapped Hugging Face `datasets` with worker processes, stay
-    there. Workers share one mapped copy, so a node with 4 workers peaked at 1.8 GB against packmem's 2.8 GB, and it
-    reloads from cache in 0.02 s against 8.5 s (Linux, timings indicative, packmem 0.1.1). Against a plain list that
-    node used 15.7 GB. New in 0.1.2: `rows.share()` hands workers a file instead of a pickle; in Qwen3-VL's loader on a
-    Mac that took parent plus 4 spawn workers from 4.5 GB to 2.7 GB and the first batch from 4.1 s to 1.2 s.
+    2.9x and loads faster; packmem is for code that wants a list, not a dataframe. New in 0.2.0: `save()` once and
+    `packmem.open()` in every run memory-maps the packed table, so DataLoader workers share it. In a fine-tuning loader
+    over 157,712 LLaVA records with 4 spawn workers, that held 3 MB above an empty loader, against 228 MB for Hugging
+    Face `datasets` (memory-mapped Arrow) and 4.0 GB for a list (Apple M4 Pro, medians of 3, annotations only).
+    `datasets` is still faster for batched access, and its Parquet is smaller at rest.
 
     Alpha (0.2.0). pip install packmem — benchmarks, scripts and every results file: https://github.com/HamedMP/packmem
 

@@ -13,6 +13,7 @@
 | Workers: 200,000 rows in 0.69 MB | `demos/workers` under `wrangler dev` (not a recorded results file; say "in a local wrangler run") |
 | Hugging Face datasets vs packmem vs list: node peak 1.8 / 2.8 / 15.7 GB, 2.2 KB vs 308 MB pickles, reload 0.02 vs 8.5 s, row to dict 6 vs 22 µs | `benchmarks/ml_swaps/hf-datasets/out/` (`dl_*_forkserver_*.json`, `full_*.json`); see `RESULT.md` "How to quote these numbers": memory figures hold, timings are indicative (shared Linux server) |
 | share() in Qwen3-VL's loader: parent + 4 spawn workers 4.5 → 2.7 GB, first batch 4.1 → 1.2 s | `benchmarks/ml_swaps/qwen3-vl/share/harness/v3/out/A_spawn20k/` (`main_peak_plus_worker_peaks_mib` × 1.048576, `iter_to_first_batch_s`, medians of 3), see `share/RESULT.md` |
+| Fine-tuning loader demo, 0.2.0: above an empty loader, 4 spawn workers: open() 3 MB, datasets 228 MB, list 4.0 GB; fork 3 vs 9 MB; first batch 0.6 / 0.9 / 4.6 s; JSON parse 1.6 vs 0.4 s | `demos/finetune-loader/results/*.json` (published 0.1.2 and 0.2.0, medians; table from `demos/finetune-loader/table.py`) |
 
 Labels to keep wherever a number is quoted: Mac runs were on a machine in normal use; Linux tuned-polars figures are
 memory only, measured under CI load; the Linux Postgres server rows are an upper bound (measured before V8 returned

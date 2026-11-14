@@ -84,6 +84,17 @@ allocator told to return freed memory) polars comes within 1.6 to 2.9 times on t
 hand. polars also loads 6 times faster, its filters are 2 to 4 times faster at millions of rows, and pandas was about
 3 times faster on a numeric range filter over the flights (0.13 ms against 0.43 ms).
 
+## Against memory-mapped Arrow
+
+Fine-tuning loaders give every worker process the dataset. Hugging Face `datasets` avoids copies by memory-mapping
+Arrow. packmem 0.2.0 does the same with its own format: save the packed table once, `packmem.open()` it in every run,
+and the parent and all workers read the same mapped file, with no schema to declare. In a fine-tuning loader over
+157,712 LLaVA records with 4 spawn workers, the loader held 3 MB above an empty one with packmem, 228 MB with
+`datasets` and 4.0 GB with a list; the first batch arrived in 0.6 s against 0.9 s and 4.6 s. With fork, 3 MB against
+9 MB. (Published packmem 0.2.0 and datasets 5.2.0, Apple M4 Pro, medians of 3; annotations only, no model.) On 0.1.1,
+before `open()` existed, `datasets` won this comparison on Linux, 1.8 GB against 2.8 GB across 4 forkserver workers;
+that run is being repeated on 0.2.0.
+
 ## Where it loses
 
 - **Plain loops over every row are slower.** Each record is rebuilt as a dict on demand: 4.9x slower than the list
@@ -97,16 +108,9 @@ hand. polars also loads 6 times faster, its filters are 2 to 4 times faster at m
 - **A one-line swap can cost time:** sqlite-utils inserting a 104 MB JSON array took 5.46 s against 4.85 s.
 - **Small tables gain nothing.** At 100 rows packmem used more memory than the list; from 300 rows on it used less.
 - **Unchanged programs gain nothing.** You have to swap the container.
-- **It replaces the Python list, not Arrow.** Hugging Face `datasets` keeps records as memory-mapped Arrow, so
-  worker processes share one copy and each receives a 2.2 KB reference. On 665,298 LLaVA annotations with 4
-  forkserver workers, the node peaked at 1.8 GB with `datasets` against 2.8 GB with packmem, whose table every worker
-  unpickles (308 MB). `datasets` also reloads from its cache in 0.02 s where packmem parses the JSON again (8.5 s), and
-  its batched access is about twice as fast. packmem turns a random row into a dict faster (6 µs against 22 µs) and
-  needs no schema, and against the list the same node peaked at 15.7 GB. If you already use memory-mapped datasets
-  with worker processes, stay there. (Linux server shared with CI: memory figures hold, timings are indicative;
-  packmem 0.1.1.) Since 0.1.2, `rows.share()` writes the table to a file once and workers load it from there instead
-  of receiving a pickle: in Qwen3-VL's fine-tuning loader on a Mac, parent and 4 spawn workers peaked at 2.7 GB instead
-  of 4.5 GB and the first batch arrived in 1.2 s instead of 4.1 s. Each worker still holds its own copy.
+- **Hugging Face `datasets` is faster in batch.** Slices and batched iteration over its Arrow columns were about twice as
+  fast as packmem's on 665,298 LLaVA annotations, and its compressed Parquet source is smaller at rest. Parsing JSON
+  into packmem the first time is also slower than `json.load` (1.6 s against 0.4 s on 157,712 records).
 
 ## On Linux
 
