@@ -18,6 +18,9 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
   installed. They copy through Python values; absent keys become nulls in Arrow.
 
 ### Changed
+- Filters, group counts over a whole column, and sums of decimal columns run on several threads once a table has
+  16 chunks (about 260,000 rows). Answers are the same as with one thread. `PACKMEM_THREADS` sets the number of
+  threads (default: the cores, at most 8; 1 turns it off). The WebAssembly build stays single-threaded.
 - `to_json()` writes nested values stored as sub-columns in a canonical form (as `json.dumps` would), not as
   they were written in the source. Values are unchanged.
 - Files written by this version that contain sub-columns cannot be read by 0.2.0. Files from 0.2.0 still open.

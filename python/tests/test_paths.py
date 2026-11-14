@@ -507,6 +507,23 @@ def test_subclasses_survive_pickling():
 
 
 
+def test_queries_split_across_threads_match_python():
+    import collections, math, random
+    rnd = random.Random(11)
+    rows = [{"id": i, "status": rnd.choice((200, 200, 404, 500)), "lat": rnd.random() * 100 if i % 13 else None,
+             "agent": rnd.choice(("curl/8.1", "Mozilla/5.0", "python-requests/2", "Go-http-client")), "path": "/v%d/%d" % (i % 3, rnd.randrange(5000))}
+            for i in range(40 * 16384 + 777)]
+    rows[5]["lat"] = "n/a"; rows[300000].pop("agent"); rows[-1]["status"] = None
+    t = packmem.Table(rows)
+    assert list(t.where(status=404, agent__contains="curl").indices()) == [i for i, r in enumerate(rows) if r["status"] == 404 and "curl" in r.get("agent", "")]
+    assert t.count(path__prefix="/v1/49") == sum(r["path"].startswith("/v1/49") for r in rows)
+    assert t.sum("id") == sum(r["id"] for r in rows) and t.sum("status") == sum(r["status"] or 0 for r in rows)
+    assert math.isclose(t.sum("lat"), sum(r["lat"] for r in rows if isinstance(r["lat"], float)), rel_tol=1e-9)
+    assert t.group_count("agent") == dict(collections.Counter(r["agent"] for r in rows if "agent" in r))
+    assert t.group_count("path") == dict(collections.Counter(r["path"] for r in rows))
+    assert t.group_count("status") == dict(collections.Counter(r["status"] for r in rows))
+
+
 def test_arrow_and_parquet():
     try:
         import pyarrow as pa, pyarrow.parquet as pq

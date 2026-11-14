@@ -1276,6 +1276,43 @@ impl Column {
     }
 }
 
+/// Whole-column queries on at least this many chunks are split across threads.
+const PAR_MIN_CHUNKS: usize = 16;
+/// Threads for whole-column queries: `PACKMEM_THREADS` if set (1 turns threading off), else the cores, at most 8.
+fn query_threads() -> usize {
+    static N: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+    *N.get_or_init(|| {
+        if cfg!(target_family = "wasm") {
+            return 1;
+        }
+        std::env::var("PACKMEM_THREADS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or_else(|| std::thread::available_parallelism().map_or(1, |n| n.get().min(8)))
+            .max(1)
+    })
+}
+/// Run `f(index of the first chunk, chunks)` over contiguous runs of chunks, on threads when there are enough of them.
+/// Results come back in chunk order.
+fn par_runs<R: Send>(chunks: &[Chunk], f: impl Fn(usize, &[Chunk]) -> R + Sync) -> Vec<R> {
+    let n = query_threads().min(chunks.len() / (PAR_MIN_CHUNKS / 2));
+    if chunks.len() < PAR_MIN_CHUNKS || n < 2 {
+        return vec![f(0, chunks)];
+    }
+    let per = chunks.len().div_ceil(n);
+    std::thread::scope(|sc| {
+        let f = &f;
+        let hs: Vec<_> = chunks
+            .chunks(per)
+            .enumerate()
+            .map(|(i, part)| sc.spawn(move || f(i * per, part)))
+            .collect();
+        hs.into_iter()
+            .map(|h| h.join().expect("query thread panicked"))
+            .collect()
+    })
+}
+
 pub struct DynTable {
     names: Vec<String>,
     index: HashMap<String, usize>,
@@ -1614,9 +1651,20 @@ impl DynTable {
     /// Row ids matching a predicate on one column; evaluated on encoded chunks where possible.
     pub fn select(&self, col: usize, pred: &Pred) -> Vec<u32> {
         let c = &self.cols[col];
-        let mut out = vec![];
-        for (k, ch) in c.sealed().enumerate() {
-            ch.select(pred, (k * CHUNK) as u32, &mut out)
+        let mut parts = par_runs(&c.chunks, |k0, part| {
+            let mut out = vec![];
+            for (k, ch) in part.iter().enumerate() {
+                ch.select(pred, ((k0 + k) * CHUNK) as u32, &mut out)
+            }
+            out
+        });
+        let mut out = if parts.len() == 1 {
+            parts.pop().unwrap()
+        } else {
+            parts.concat()
+        };
+        if let Some(ch) = &c.partial {
+            ch.select(pred, (c.chunks.len() * CHUNK) as u32, &mut out)
         }
         let base = (c.chunks.len() * CHUNK + self.plen) as u32;
         for (i, cell) in c.tail.cells().enumerate() {
@@ -1681,19 +1729,37 @@ impl DynTable {
             }
             return s;
         }
-        for ch in c.sealed() {
+        // each packed chunk's total is worked out on its own, then the totals are added in chunk order, so the
+        // answer does not depend on how many threads ran
+        let fast = |ch: &Chunk| -> Result<Option<Num>, ()> {
             let hole_adj = ch.fill.wrapping_mul(ch.holes as i64);
             match (&ch.data, ch.clean() && ch.safe_sum) {
-                (Data::Absent, true) => {}
-                (Data::Int { p, .. }, true) => s = s.plus(Num::Int((p.sum() - hole_adj) as i128)),
-                (Data::Dec { scale, p }, true) => {
-                    s = s.plus(Num::Float(
-                        (p.sum() - hole_adj) as f64 / POW10[*scale as usize],
-                    ))
-                }
-                (Data::F64(v), true) => s = s.plus(Num::Float(v.iter().sum())),
-                (Data::Str(_), true) => {}
-                _ => {
+                (Data::Absent | Data::Str(_), true) => Ok(None),
+                (Data::Int { p, .. }, true) => Ok(Some(Num::Int((p.sum() - hole_adj) as i128))),
+                (Data::Dec { scale, p }, true) => Ok(Some(Num::Float(
+                    (p.sum() - hole_adj) as f64 / POW10[*scale as usize],
+                ))),
+                (Data::F64(v), true) => Ok(Some(Num::Float(v.iter().sum()))),
+                _ => Err(()),
+            }
+        };
+        // whole-number chunks keep enough about themselves to be summed almost for free, so threads only cost there
+        let cheap = |ch: &Chunk| matches!(ch.data, Data::Int { .. } | Data::Absent);
+        let totals = if c.chunks.iter().all(cheap) {
+            vec![c.chunks.iter().map(fast).collect::<Vec<_>>()]
+        } else {
+            par_runs(&c.chunks, |_, part| part.iter().map(fast).collect())
+        };
+        for (ch, t) in c
+            .chunks
+            .iter()
+            .zip(totals.into_iter().flatten())
+            .chain(c.partial.iter().map(|ch| (ch, fast(ch))))
+        {
+            match t {
+                Ok(None) => {}
+                Ok(Some(t)) => s = s.plus(t),
+                Err(()) => {
                     for i in 0..ch.len as usize {
                         s = s.add(&ch.get(i))
                     }
@@ -1756,21 +1822,40 @@ impl DynTable {
                 }
             }
         } else {
-            for ch in c.sealed() {
-                match (&ch.data, ch.clean() && ch.holes == 0) {
-                    (Data::Str(p), true) => p.for_each_group(|k, n| match strs.get_mut(k) {
-                        Some(v) => *v += n,
-                        None => {
-                            strs.insert(k.into(), n);
-                        }
-                    }),
-                    _ => {
-                        for i in 0..ch.len as usize {
-                            *m.entry(to_text(&ch.get(i))).or_default() += 1
+            type Strs = HashMap<Box<[u8]>, usize, std::hash::BuildHasherDefault<Fx>>;
+            let count = |part: &[Chunk], m: &mut HashMap<String, usize>, strs: &mut Strs| {
+                for ch in part {
+                    match (&ch.data, ch.clean() && ch.holes == 0) {
+                        (Data::Str(p), true) => p.for_each_group(|k, n| match strs.get_mut(k) {
+                            Some(v) => *v += n,
+                            None => {
+                                strs.insert(k.into(), n);
+                            }
+                        }),
+                        _ => {
+                            for i in 0..ch.len as usize {
+                                *m.entry(to_text(&ch.get(i))).or_default() += 1
+                            }
                         }
                     }
                 }
+            };
+            let mut parts = par_runs(&c.chunks, |_, part| {
+                let (mut m, mut strs) = (HashMap::new(), Strs::default());
+                count(part, &mut m, &mut strs);
+                (m, strs)
+            })
+            .into_iter();
+            (m, strs) = parts.next().unwrap();
+            for (pm, ps) in parts {
+                for (k, n) in pm {
+                    *m.entry(k).or_default() += n
+                }
+                for (k, n) in ps {
+                    *strs.entry(k).or_default() += n
+                }
             }
+            count(c.partial.as_slice(), &mut m, &mut strs);
             for cell in c.tail.cells() {
                 *m.entry(to_text(&cell)).or_default() += 1
             }
