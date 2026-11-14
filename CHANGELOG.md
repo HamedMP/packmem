@@ -4,6 +4,11 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## Unreleased
 
+Checked against 0.2.0 on Linux with the Qwen3-VL and LLaVA-NeXT dataset builds
+(`benchmarks/ml_swaps/sub-columns-gate/`): peak memory during the build is 6 to 7% lower and memory afterwards
+about 9% lower. On one thread (`PACKMEM_THREADS=1`) the build takes 5 to 10% longer than 0.2.0; with the default
+threads it is 1.4 to 4 times faster.
+
 ### Added
 - Columns whose values are lists of records (the turns of a conversation), or single records, are stored as
   sub-columns: one offset per row and one packed column per field, the layout Arrow uses for a list of structs.
