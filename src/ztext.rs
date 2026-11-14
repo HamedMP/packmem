@@ -12,9 +12,11 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use zstd::zstd_safe::{CCtx, CDict, DCtx, DDict};
 
 /// Raw bytes a block aims for, and the most values it may hold.
-const BLOCK_BYTES: usize = 2048;
+const BLOCK_BYTES: usize = 1024;
 const BLOCK_VALUES: usize = 64;
-const DICT_BYTES: usize = 64 * 1024;
+/// How many blocks each thread keeps decoded. A row is read a field at a time, so several columns of compressed
+/// text take turns; with one slot each read would decode its block again.
+const CACHED_BLOCKS: usize = 8;
 const MAX_BLOCK_RAW: usize = 1 << 28;
 
 static NEXT_ID: AtomicU64 = AtomicU64::new(1);
@@ -23,8 +25,7 @@ pub struct ZBlocks {
     /// Identifies this pool in the per-thread cache of the last decoded block.
     id: u64,
     n: usize,
-    dict: Arc<Vec<u8>>,
-    ddict: DDict<'static>,
+    dict: Arc<Dict>,
     data: Buf<u8>,
     /// Where each block's compressed bytes start in `data`; one extra entry for the end.
     offs: Buf<u32>,
@@ -34,15 +35,30 @@ pub struct ZBlocks {
     raw_lens: Buf<u32>,
 }
 
+/// A trained dictionary, shared by every chunk compressed with it.
+struct Dict {
+    bytes: Vec<u8>,
+    ddict: DDict<'static>,
+}
+impl Dict {
+    fn new(bytes: Vec<u8>) -> Option<Arc<Dict>> {
+        let ddict = DDict::try_create(&bytes)?;
+        Some(Arc::new(Dict { bytes, ddict }))
+    }
+}
+
+/// A decoded block: (pool id, block, raw bytes, end offset of each value within them).
+type Decoded = (u64, u32, Vec<u8>, Vec<u32>);
+
 struct Trained {
-    dict: Arc<Vec<u8>>,
+    dict: Arc<Dict>,
     /// The compression ratio the dictionary reached on the sample it was trained for.
     ratio: f64,
 }
 thread_local! {
     static DCTX: RefCell<DCtx<'static>> = RefCell::new(DCtx::create());
-    /// The last decoded block: (pool id, block, raw bytes, end offset of each value within them).
-    static LAST: RefCell<(u64, u32, Vec<u8>, Vec<u32>)> = const { RefCell::new((0, 0, Vec::new(), Vec::new())) };
+    /// The blocks decoded most recently, and which slot is refilled next.
+    static LAST: RefCell<(Vec<Decoded>, usize)> = const { RefCell::new((Vec::new(), 0)) };
     /// The dictionary trained for the previous chunk of text sealed on this thread. Consecutive chunks of one column
     /// usually hold the same kind of text, and training costs far more than checking that the old one still fits.
     static PREV: RefCell<Option<Trained>> = const { RefCell::new(None) };
@@ -50,6 +66,24 @@ thread_local! {
 /// Forget the dictionary kept between chunks; called when a bulk load ends.
 pub fn release() {
     PREV.with(|p| *p.borrow_mut() = None)
+}
+
+/// Bytes of dictionary to train: `PACKMEM_ZSTD_DICT_KB`, 256 KB unless set. One dictionary serves every chunk it
+/// still fits, so its size is paid once per column, not once per chunk.
+fn dict_bytes() -> usize {
+    std::env::var("PACKMEM_ZSTD_DICT_KB")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .map_or(256, |kb| kb.clamp(4, 4096))
+        * 1024
+}
+/// Raw bytes a block aims for: `PACKMEM_ZSTD_BLOCK`, else `BLOCK_BYTES`. Larger blocks pack a little tighter and
+/// make reading one value slower, since its whole block is decoded.
+fn block_bytes() -> usize {
+    std::env::var("PACKMEM_ZSTD_BLOCK")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .map_or(BLOCK_BYTES, |b| b.clamp(64, 1 << 20))
 }
 
 fn level() -> i32 {
@@ -81,10 +115,11 @@ fn raw_block(items: &[&str], out: &mut Vec<u8>) {
 /// Split the values into blocks: (first value, one past the last).
 fn blocks(items: &[&str]) -> Vec<(usize, usize)> {
     let mut out = Vec::new();
+    let block_bytes = block_bytes();
     let (mut a, mut bytes) = (0, 0);
     for (i, s) in items.iter().enumerate() {
         bytes += s.len();
-        if bytes >= BLOCK_BYTES || i + 1 - a == BLOCK_VALUES {
+        if bytes >= block_bytes || i + 1 - a == BLOCK_VALUES {
             out.push((a, i + 1));
             a = i + 1;
             bytes = 0
@@ -136,7 +171,7 @@ impl ZBlocks {
         let reused = PREV.with(|p| p.borrow().as_ref().map(|t| (t.dict.clone(), t.ratio)));
         let mut dict = None;
         if let Some((d, was)) = reused {
-            if ratio_of(&d).is_some_and(|now| now >= was * 0.92) {
+            if ratio_of(&d.bytes).is_some_and(|now| now >= was * 0.92) {
                 dict = Some(d)
             }
         }
@@ -156,8 +191,8 @@ impl ZBlocks {
                         total <= 8 << 20
                     })
                     .collect();
-                let d = Arc::new(zstd::dict::from_samples(&samples, DICT_BYTES).ok()?);
-                let ratio = ratio_of(&d)?;
+                let d = Dict::new(zstd::dict::from_samples(&samples, dict_bytes()).ok()?)?;
+                let ratio = ratio_of(&d.bytes)?;
                 PREV.with(|p| {
                     *p.borrow_mut() = Some(Trained {
                         dict: d.clone(),
@@ -167,8 +202,7 @@ impl ZBlocks {
                 d
             }
         };
-        let cdict = CDict::try_create(&dict, level)?;
-        let ddict = DDict::try_create(&dict)?;
+        let cdict = CDict::try_create(&dict.bytes, level)?;
         let mut data = Vec::new();
         let (mut offs, mut first, mut raw_lens) = (
             vec![0u32],
@@ -191,7 +225,6 @@ impl ZBlocks {
             id: NEXT_ID.fetch_add(1, Ordering::Relaxed),
             n: items.len(),
             dict,
-            ddict,
             data: data.into(),
             offs: offs.into(),
             first: first.into(),
@@ -202,7 +235,8 @@ impl ZBlocks {
         self.n
     }
     pub fn bytes(&self) -> usize {
-        self.dict.len()
+        // the dictionary is counted once over the chunks that share it
+        self.dict.bytes.len() / Arc::strong_count(&self.dict).max(1)
             + self.data.len()
             + (self.offs.len() + self.first.len() + self.raw_lens.len()) * 4
     }
@@ -212,15 +246,26 @@ impl ZBlocks {
         let b = self.first.partition_point(|&f| f as usize <= i) - 1;
         LAST.with(|last| {
             let mut last = last.borrow_mut();
-            let (id, block, raw, ends) = &mut *last;
-            if *id != self.id || *block != b as u32 {
+            let (slots, next) = &mut *last;
+            let hit = slots.iter().position(|d| d.0 == self.id && d.1 == b as u32);
+            let k = hit.unwrap_or_else(|| {
+                if slots.len() < CACHED_BLOCKS {
+                    slots.push((0, 0, Vec::new(), Vec::new()));
+                    slots.len() - 1
+                } else {
+                    *next = (*next + 1) % CACHED_BLOCKS;
+                    *next
+                }
+            });
+            let (id, block, raw, ends) = &mut slots[k];
+            if hit.is_none() {
                 *id = 0; // not valid while it is being refilled
                 let src = &self.data[self.offs[b] as usize..self.offs[b + 1] as usize];
                 raw.clear();
                 raw.reserve(self.raw_lens[b] as usize);
                 let ok = DCTX.with(|d| {
                     d.borrow_mut()
-                        .decompress_using_ddict(raw, src, &self.ddict)
+                        .decompress_using_ddict(raw, src, &self.dict.ddict)
                         .is_ok()
                 });
                 ends.clear();
@@ -258,7 +303,19 @@ impl ZBlocks {
     }
     pub fn write(&self, w: &mut W) {
         w.u64(self.n as u64);
-        w.v_u8(&self.dict);
+        // a dictionary shared by many chunks is written once; the others say which one they use
+        let key = Arc::as_ptr(&self.dict) as usize;
+        match w.dicts.iter().position(|&k| k == key) {
+            Some(i) => {
+                w.u8(1);
+                w.u64(i as u64)
+            }
+            None => {
+                w.dicts.push(key);
+                w.u8(0);
+                w.v_u8(&self.dict.bytes)
+            }
+        }
         w.v_u8(&self.data);
         w.v_u32(&self.offs);
         w.v_u32(&self.first);
@@ -266,7 +323,23 @@ impl ZBlocks {
     }
     pub fn read(r: &mut R) -> Res<ZBlocks> {
         let n = r.get_u64()? as usize;
-        let dict = Arc::new(r.get_v_u8()?.to_vec());
+        let dict = match r.get_u8()? {
+            0 => {
+                let Some(d) = Dict::new(r.get_v_u8()?.to_vec()) else {
+                    return bad("text dictionary");
+                };
+                r.dicts.push(d.clone());
+                d
+            }
+            1 => {
+                let i = r.get_u64()? as usize;
+                match r.dicts.get(i).cloned().map(Arc::downcast::<Dict>) {
+                    Some(Ok(d)) => d,
+                    _ => return bad("text dictionary reference"),
+                }
+            }
+            _ => return bad("text dictionary kind"),
+        };
         let (data, offs, first, raw_lens) = (
             r.get_v_u8()?,
             r.get_v_u32()?,
@@ -288,14 +361,10 @@ impl ZBlocks {
         {
             return bad("text blocks");
         }
-        let Some(ddict) = DDict::try_create(&dict) else {
-            return bad("text dictionary");
-        };
         Ok(ZBlocks {
             id: NEXT_ID.fetch_add(1, Ordering::Relaxed),
             n,
             dict,
-            ddict,
             data,
             offs,
             first,

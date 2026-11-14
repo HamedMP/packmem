@@ -12,8 +12,10 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
   `.list.len()`, and for lists of records `.list.field(name).str.len().list.sum()` and
   `.str.split().list.len().list.sum()` (word counts as `str.split()` gives them).
 
-- Python: `hint="compact"` compresses long text with Zstandard in small blocks with a trained dictionary. Native
-  builds only; a table saved this way cannot be opened by the WebAssembly build.
+- Python: `hint="compact"` compresses long text with Zstandard in blocks of about 1 KB with a trained dictionary
+  of 256 KB, shared by the chunks of a column and written once. `PACKMEM_ZSTD_DICT_KB`, `PACKMEM_ZSTD_BLOCK`
+  and `PACKMEM_ZSTD_LEVEL` tune it. Native builds only; a table saved this way cannot be opened by the
+  WebAssembly build.
 - Python: `Table(records, default=...)`, `extend(rows, default=...)` and `append(row, default=...)` convert values
   JSON has no form for (dates, decimals, UUIDs), at any depth, as `json.dumps(default=...)` does.
 - Python: `Table.to_arrow()`, `Table.to_parquet()`, `packmem.from_arrow()` and `packmem.read_parquet()`, using

@@ -15,6 +15,8 @@ pub struct W<'a> {
     sink: Option<&'a mut dyn FnMut(&[u8]) -> std::io::Result<()>>,
     err: Option<std::io::Error>,
     n: usize,
+    /// Identities of the text dictionaries written so far; a repeat is written as its position here.
+    pub dicts: Vec<usize>,
 }
 
 impl<'a> W<'a> {
@@ -24,6 +26,7 @@ impl<'a> W<'a> {
             sink: None,
             err: None,
             n: 0,
+            dicts: Vec::new(),
         }
     }
     pub fn into(out: &'a mut [u8]) -> Self {
@@ -32,6 +35,7 @@ impl<'a> W<'a> {
             sink: None,
             err: None,
             n: 0,
+            dicts: Vec::new(),
         }
     }
     pub fn to_sink(sink: &'a mut dyn FnMut(&[u8]) -> std::io::Result<()>) -> Self {
@@ -40,6 +44,7 @@ impl<'a> W<'a> {
             sink: Some(sink),
             err: None,
             n: 0,
+            dicts: Vec::new(),
         }
     }
     pub fn finish(self) -> std::io::Result<usize> {
@@ -77,6 +82,8 @@ pub struct R<'a> {
     p: usize,
     /// The shared block `b` belongs to, when vectors may be borrowed from it rather than copied.
     owner: Option<&'a Arc<dyn Backing>>,
+    /// The text dictionaries read so far, for the repeats that refer back to them.
+    pub dicts: Vec<Arc<dyn std::any::Any + Send + Sync>>,
 }
 
 macro_rules! num {
@@ -157,6 +164,7 @@ impl<'a> R<'a> {
             b,
             p: 0,
             owner: None,
+            dicts: Vec::new(),
         }
     }
     /// Reads vectors in place from `owner`'s bytes, which they then keep alive.
@@ -165,6 +173,7 @@ impl<'a> R<'a> {
             b: owner.bytes(),
             p: 0,
             owner: Some(owner),
+            dicts: Vec::new(),
         }
     }
     /// Skip the padding the writer put before a vector of `n`-byte elements.
