@@ -1,0 +1,5 @@
+kernel: 6.8.0-139-generic
+cpu: AMD Ryzen 9 7950X3D 16-Core Processor x 32
+mem: 124 GB
+rustc 1.100.0 (0ef1bc386 2026-11-09)
+v24.22.0

@@ -1,0 +1,10 @@
+[package]
+name = "probe"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+packmem = { path = "../build/core", default-features = false }
+serde = "1"
+serde_json = { version = "1", features = ["preserve_order", "arbitrary_precision", "raw_value"] }
