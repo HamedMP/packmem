@@ -200,10 +200,56 @@ const rows = await fetchTable(pm, "/api/rows");
 A reader refuses bytes written by a newer packmem, so give the browser the same packmem version as the server, or a
 newer one. If the server is ahead, `fetchTable` asks again for JSON.
 
-`useRows(rows, { offset, limit })` from `packmem/react` returns plain objects for just that window, and the same
-array on each render until the window or the table changes, for virtualized lists. It does not import React, so it
-also works where Next.js loads packmem outside its bundle (`serverExternalPackages`). `../demos/nextjs` has a page
-that uses both (`/browse`).
+## React and Next.js
+
+`packmem/react` has two hooks:
+
+- `useTable(url, options?)` fetches a table with `fetchTable` and opens it with `packmem/wasm`, which it loads once per
+  page. It returns `{ table, error, loading, ms }`. When `url` changes it fetches again and keeps the previous table
+  until the new one is ready, and it drops a response for a URL that is no longer current. `null` fetches nothing.
+- `useRows(rows, { offset, limit })` returns plain objects for just that window of a table or view, and the same array
+  on each render until the window or the table changes. Objects are only built for the rows on screen, so it fits a
+  virtualized list.
+
+The `.wasm` file is found by `new URL(..., import.meta.url)`, which Next.js, Vite and webpack serve for you. Elsewhere,
+pass its URL as `useTable(url, { wasm: "/packmem.wasm" })`. A single `npm install packmem` gives the server and the
+browser the same version; if the server runs a newer one, `fetchTable` falls back to JSON.
+
+In Next.js, keep packmem out of the server bundle (it loads a native addon):
+
+```ts
+// next.config.ts
+export default { serverExternalPackages: ["packmem"] };
+```
+
+```ts
+// app/api/rows/route.ts: a table loaded once per server process
+import { loadJsonl } from "packmem";
+import { respond } from "packmem/http";
+
+const table = loadJsonl("data/rows.jsonl");
+export const GET = (req: Request) => respond(req, table.where({ level: "error" }));
+```
+
+```tsx
+// app/rows.tsx
+"use client";
+import { useState } from "react";
+import { useRows, useTable } from "packmem/react";
+
+export function Rows() {
+  const { table, error, loading, ms } = useTable("/api/rows");
+  const [offset, setOffset] = useState(0);
+  const rows = useRows(table, { offset, limit: 50 }); // the 50 rows on screen, as objects
+  if (error) return <p>{String(error)}</p>;
+  // render `rows`, and set `offset` from the list's scroll position
+}
+```
+
+On the server, during rendering, `useTable` returns the loading state and fetches nothing: there Next.js loads
+packmem outside its bundle, where it cannot reach Next's copy of React, and a fetch in an effect would not run on the
+server anyway. `useRows` calls no React hooks, so it works in both places. `../demos/log-viewer` is a complete app
+built this way, and `../demos/nextjs` has a smaller page (`/browse`).
 
 ## What to expect
 

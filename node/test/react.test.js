@@ -1,4 +1,5 @@
-// useRows builds objects for the window it is given, and sees changes made through the table.
+// useRows builds objects for the window it is given, and sees changes made through the table; useTable stays out of
+// the way during server rendering. useTable in a browser: react-browser.test.js.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
@@ -42,4 +43,24 @@ test("useRows keeps the same array until the window or the table changes", { ski
   const c = useRows(t, { offset: 6, limit: 3 });
   assert.notEqual(c, b, "a change made through the table is seen");
   assert.deepEqual(c.map((r) => r.id), [6, -7, 8]);
+});
+
+test("useTable renders its loading state on the server without fetching", { skip }, async () => {
+  const { useTable } = await import("../react.js");
+  const realFetch = globalThis.fetch;
+  const fetched = [];
+  globalThis.fetch = (u) => (fetched.push(u), realFetch(u));
+  try {
+    const seen = [];
+    const Page = () => {
+      const s = useTable("http://127.0.0.1:9/never");
+      seen.push(s);
+      return React.createElement("p", null, s.loading ? "loading" : "done");
+    };
+    assert.match(renderToString(React.createElement(Page)), /loading/);
+    assert.deepEqual(seen[0], { table: null, error: null, loading: true, ms: 0 });
+    assert.deepEqual(fetched, []);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });

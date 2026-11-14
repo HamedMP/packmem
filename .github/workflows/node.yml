@@ -97,4 +97,4 @@ jobs:
         run: |
           npm ci
           npx playwright-core install --with-deps chromium
-          node --test test/browser.test.js test/react.test.js test/http.test.js
+          node --test test/browser.test.js test/react-browser.test.js test/react.test.js test/http.test.js
