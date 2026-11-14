@@ -469,6 +469,20 @@ export function createApi(NativeTable, { bytes = (u) => u } = {}) {
     copy() {
       return this.take(Uint32Array.from({ length: this.length }, (_, i) => i));
     }
+    /**
+     * The table in packmem's byte form, to send or store: Python's `Table.from_bytes`, `Table.fromBytes` here and the
+     * WebAssembly build read it back without re-encoding. The form is tied to the packmem version that wrote it.
+     */
+    toBytes() {
+      this._version++; // packing the open rows moves them, so views recompute
+      return this._t.toBytes();
+    }
+    /** A table from `toBytes()` output (from Node, the WebAssembly build or Python): the packed columns are copied. */
+    static fromBytes(input) {
+      const out = new Table();
+      out._t = NativeTable.fromBytes(toBytes(input));
+      return out;
+    }
 
     /**
      * Share this table with worker threads without copying it: it becomes read-only, and the returned handle can be sent

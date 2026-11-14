@@ -2,9 +2,9 @@ name: node
 on:
   push:
     branches: [main]
-    paths: ["node/**", "src/**", "Cargo.toml", ".github/workflows/node.yml"]
+    paths: ["node/**", "src/**", "python/src/**", "Cargo.toml", ".github/workflows/node.yml"]
   pull_request:
-    paths: ["node/**", "src/**", "Cargo.toml", ".github/workflows/node.yml"]
+    paths: ["node/**", "src/**", "python/src/**", "Cargo.toml", ".github/workflows/node.yml"]
 
 permissions:
   contents: read
@@ -79,6 +79,13 @@ jobs:
           cargo install wasm-bindgen-cli --version "$(grep -oE 'wasm-bindgen = "=[0-9.]+"' wasm/Cargo.toml | grep -oE '[0-9.]+[0-9]')" --locked
           npm run build
           node scripts/build-wasm.mjs
-      - name: WebAssembly gives the same results as the addon
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: { python-version: "3.13" }
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
+        with: { working-directory: python, args: --release -o dist, manylinux: auto }
+      - run: pip install --no-index --find-links python/dist packmem
+      - name: WebAssembly gives the same results as the addon, and every binding reads the others' bytes
         working-directory: node
-        run: node --test test/wasm.test.js
+        env:
+          PACKMEM_PYTHON: python
+        run: node --test test/wasm.test.js test/bytes.test.js test/load.test.js

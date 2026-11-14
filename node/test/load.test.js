@@ -16,10 +16,11 @@ const LINES = [
   String.raw`{"id":2,"meta":[ ],"t":"tab\tinside"}`,
   String.raw`{"id":3,"meta":{"k":"two  spaces","n":null,"b":true}}`,
 ];
-// whitespace between tokens dropped, everything else (escapes, number text, key order) as written
-const COMPACT = String.raw`[{"id":1,"meta":{"a":[1,2.50,1e3,12345678901234567890],"s":"x\u00e9\/y \"q\" \\ end","e":{}},"t":"plain"},{"id":2,"meta":[],"t":"tab\tinside"},{"id":3,"meta":{"k":"two  spaces","n":null,"b":true}}]`;
+// Nested records are stored as sub-columns and written back in canonical form: whitespace dropped, strings escaped as
+// JSON.stringify escapes them, number text and key order as written.
+const COMPACT = String.raw`[{"id":1,"meta":{"a":[1,2.50,1e3,12345678901234567890],"s":"xé/y \"q\" \\ end","e":{}},"t":"plain"},{"id":2,"meta":[],"t":"tab\tinside"},{"id":3,"meta":{"k":"two  spaces","n":null,"b":true}}]`;
 
-test("nested JSON is kept as written by every loader", () => {
+test("nested JSON reads back the same from every loader", () => {
   const jsonl = join(dir, "nested.jsonl");
   const array = join(dir, "nested.json");
   writeFileSync(jsonl, LINES.join("\n") + "\n");

@@ -168,6 +168,21 @@ return new Response(events.where({ status: 404 }).jsonWebStream());
 Elsewhere, `const pm = await init(bytesOrResponseOrUrl)`. A Worker has 128 MB of memory: in `../demos/workers`,
 200,000 generated log rows take 0.69 MB packed, and filtered aggregates answer in a few milliseconds under `wrangler dev`.
 
+## Sending a table as bytes
+
+`table.toBytes()` returns the packed columns as one `Uint8Array`, and `Table.fromBytes(bytes)` reads them back by
+copying, not re-encoding. The form is the same in every binding, so a Python server can send `to_bytes()` output to
+a browser running `packmem/wasm`:
+
+```js
+const pm = await init(wasmUrl);
+const rows = pm.Table.fromBytes(await (await fetch("/api/rows.pkm")).arrayBuffer());
+rows.slice(0, 50); // objects only for the rows on screen
+```
+
+The byte form is tied to the packmem version that wrote it: send it between matching versions, and keep JSON for
+clients that do not ask for it. Tables saved with Python's `hint="compact"` cannot be read by the WebAssembly build.
+
 ## What to expect
 
 Measured on 336,776 flight records (nycflights13, 104 MB as JSON lines), Apple M4 Pro. Every figure here

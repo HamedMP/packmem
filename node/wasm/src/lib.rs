@@ -102,6 +102,14 @@ impl WasmTable {
     pub fn compact(&mut self) {
         self.e.compact()
     }
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&mut self) -> Result<Vec<u8>, JsError> {
+        self.e.to_bytes().map_err(err)
+    }
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(buf: &[u8]) -> Result<WasmTable, JsError> {
+        Ok(WasmTable { e: Engine::from_bytes(buf).map_err(err)? })
+    }
 
     #[wasm_bindgen(js_name = jsonRange)]
     pub fn json_range(&mut self, a: u32, b: u32) -> Result<String, JsError> {

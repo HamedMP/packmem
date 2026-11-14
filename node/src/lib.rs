@@ -191,6 +191,14 @@ impl NativeTable {
         self.e.reorder(&ids).map_err(err)
     }
     #[napi]
+    pub fn to_bytes(&mut self) -> Result<Buffer> {
+        Ok(self.e.to_bytes().map_err(err)?.into())
+    }
+    #[napi(factory)]
+    pub fn from_bytes(buf: &[u8]) -> Result<NativeTable> {
+        Ok(NativeTable::of(Engine::from_bytes(buf).map_err(err)?))
+    }
+    #[napi]
     pub fn take(&self, ids: Uint32Array) -> Result<NativeTable> {
         Ok(NativeTable::of(self.e.take(&ids).map_err(err)?))
     }

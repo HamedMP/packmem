@@ -156,6 +156,25 @@ impl Engine {
     fn from_table(t: DynTable) -> Self {
         Engine { t: Store::Own(t), scratch: Vec::new(), bulk_depth: 0, csv: None }
     }
+    /// The table's byte form. Packs open rows first; a shared table is already packed and stays as it is.
+    pub fn to_bytes(&mut self) -> Res<Vec<u8>> {
+        match &mut self.t {
+            Store::Own(t) => Ok(t.to_bytes()),
+            Store::Shared(t) => {
+                let mut buf = Vec::new();
+                t.write_to(&mut |b| {
+                    buf.extend_from_slice(b);
+                    Ok(())
+                })
+                .map_err(|e| e.to_string())?;
+                Ok(buf)
+            }
+        }
+    }
+    /// An engine over a table read from its byte form: the packed columns are copied, not re-encoded.
+    pub fn from_bytes(b: &[u8]) -> Res<Engine> {
+        Ok(Self::from_table(DynTable::from_bytes(b).map_err(|e| e.to_string())?))
+    }
     /// A read-only engine over a table another thread shared.
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     pub fn from_shared(t: Arc<DynTable>) -> Self {

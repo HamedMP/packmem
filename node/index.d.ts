@@ -70,6 +70,10 @@ export declare class Table<R extends Row = Row> extends Rows<R> {
   /** A new table holding these rows, in this order. */
   take(ids: Iterable<number> | Uint32Array): Table<R>;
   copy(): Table<R>;
+  /** The table in packmem's byte form (the form Python's `to_bytes` writes), to send or store. Tied to the version. */
+  toBytes(): Uint8Array;
+  /** A table from `toBytes()` output, from any packmem binding of the same version. */
+  static fromBytes<R extends Row = Row>(input: Uint8Array | ArrayBuffer | ArrayBufferView): Table<R>;
   /** Share with worker threads without copying: the table becomes read-only. Send the handle to a worker. */
   share(): SharedTable;
   /** Writable again; workers already reading keep the table they had. */
