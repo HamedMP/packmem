@@ -637,6 +637,26 @@ def test_large_csv_loads_on_threads_like_dictreader():
         except ValueError: pass
 
 
+def test_list_field_reads_one_sub_column():
+    import random
+    rnd = random.Random(4)
+    def row(i):
+        k = i % 5
+        if k == 0: return {"id": i}
+        if i % 97 == 0: return {"id": i, "messages": None}
+        return {"id": i, "messages": [{"role": rnd.choice(("user", "assistant", "tool")), "content": "c%d" % j, **({"tool_calls": [{"name": "f", "arguments": {"x": j}}]} if j % 3 == 2 else {}), **({"n": j} if j % 2 else {})} for j in range(k - 1)]}
+    rows = [row(i) for i in range(2 * 16384 + 500)]
+    rows[40] = {"id": 40, "messages": "not a list"}; rows[20000] = {"id": 20000, "messages": [1, {"role": "user"}]}
+    t = packmem.Table(rows)
+    def want(f):
+        return [[e.get(f) if isinstance(e, dict) else None for e in v] if isinstance(v, list) else None for v in (r.get("messages") for r in rows)]
+    for f in ("role", "content", "tool_calls", "n", "absent"):
+        assert t.col("messages").list.field(f).to_list() == want(f), f
+    assert t.col("nothing").list.field("role").to_list() == [None] * len(rows)
+    t[3] = {"id": 3, "messages": [{"role": "system"}]}; rows[3] = t[3]
+    assert t.col("messages").list.field("role").to_list() == want("role")
+
+
 def test_default_converts_values_json_has_no_form_for():
     import datetime, decimal, json, uuid
     u = uuid.UUID(int=7)

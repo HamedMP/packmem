@@ -11,6 +11,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - Python: `Table.col(name)` with pandas-style operations computed on the packed data: `notna()`, `isna()`,
   `.list.len()`, and for lists of records `.list.field(name).str.len().list.sum()` and
   `.str.split().list.len().list.sum()` (word counts as `str.split()` gives them).
+  `.list.field(name).to_list()` reads only that field's sub-column.
 
 - Python: `hint="compact"` compresses long text with Zstandard in blocks of about 1 KB with a trained dictionary
   of 256 KB, shared by the chunks of a column and written once. `PACKMEM_ZSTD_DICT_KB`, `PACKMEM_ZSTD_BLOCK`

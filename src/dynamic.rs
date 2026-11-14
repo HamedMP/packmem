@@ -155,6 +155,23 @@ fn json_list_str_sum(c: &Cell, field: &str, measure: StrMeasure) -> Option<i64> 
     Some(sum)
 }
 
+/// One field of each record in a list held as JSON text; `None` when the value is not a list.
+fn json_list_field(c: &Cell, field: &str) -> Option<Vec<Cell>> {
+    let Cell::Json(t) = c else { return None };
+    let items: Vec<&serde_json::value::RawValue> = serde_json::from_str(t).ok()?;
+    Some(
+        items
+            .iter()
+            .map(|item| {
+                serde_json::from_str::<HashMap<&str, &serde_json::value::RawValue>>(item.get())
+                    .ok()
+                    .and_then(|m| m.get(field).map(|v| from_text(v.get().as_bytes())))
+                    .unwrap_or(Cell::Missing)
+            })
+            .collect(),
+    )
+}
+
 #[derive(Clone, Debug)]
 pub enum Pred {
     Eq(Cell),
@@ -2264,6 +2281,31 @@ impl DynTable {
                 .cells()
                 .map(|cell| json_list_str_sum(&cell, field, measure)),
         );
+        out
+    }
+    /// For every row holding a list: the value of `field` in each of its records, `Missing` where a record lacks it
+    /// or the element is not a record. `None` for rows whose value is not a list. Read from the field's sub-column
+    /// alone, where there is one.
+    pub fn list_field(&self, col: usize, field: &str) -> Vec<Option<Vec<Cell>>> {
+        let c = &self.cols[col];
+        let mut out = Vec::with_capacity(self.len);
+        for ch in c.sealed() {
+            match (&ch.data, ch.clean()) {
+                (Data::List(l), true) if !l.is_record => {
+                    let sub = l.names.iter().position(|n| n == field).map(|f| &l.cols[f]);
+                    for i in 0..ch.len as usize {
+                        out.push((!ch.hole(i)).then(|| {
+                            let (a, b) = l.range(i);
+                            (a..b)
+                                .map(|e| sub.map_or(Cell::Missing, |s| s.get(e)))
+                                .collect()
+                        }))
+                    }
+                }
+                _ => out.extend((0..ch.len as usize).map(|i| json_list_field(&ch.get(i), field))),
+            }
+        }
+        out.extend(c.tail.cells().map(|cell| json_list_field(&cell, field)));
         out
     }
     /// Rows currently held uncompressed.

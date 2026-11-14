@@ -546,9 +546,7 @@ class _FieldOf:
         self._t, self._name, self._field = t, name, field
 
     def to_list(self):
-        f = self._field
-        return Values([e.get(f) if isinstance(e, dict) else None for e in v] if isinstance(v, list) else None
-                      for v in self._t.column(self._name))
+        return Values(self._t.list_field(self._name, self._field))
 
     @property
     def str(self):

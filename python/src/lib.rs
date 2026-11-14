@@ -1726,6 +1726,34 @@ impl PyTable {
             None => vec![None; self.t.len()],
         })
     }
+    /// Per row: the value of `field` in each record of its list value, or None when it is not a list.
+    fn list_field<'py>(
+        &self,
+        py: Python<'py>,
+        name: &str,
+        field: &str,
+    ) -> PyResult<Bound<'py, PyList>> {
+        let out = PyList::empty(py);
+        let Some(c) = self.t.col_index(name) else {
+            for _ in 0..self.t.len() {
+                out.append(py.None())?
+            }
+            return Ok(out);
+        };
+        for row in self.t.list_field(c, field) {
+            match row {
+                None => out.append(py.None())?,
+                Some(cells) => {
+                    let l = PyList::empty(py);
+                    for cell in cells {
+                        l.append(from_cell(py, cell)?)?
+                    }
+                    out.append(l)?
+                }
+            }
+        }
+        Ok(out)
+    }
     /// The rows at the given positions, in that order, as dicts: one call for a whole batch.
     fn rows_at<'py>(&self, py: Python<'py>, ids: Vec<usize>) -> PyResult<Bound<'py, PyList>> {
         let n = self.t.len();
