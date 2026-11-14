@@ -1,0 +1,7 @@
+[2026-11-14T02:45:43Z] seeding 100000 documents into paperless
+546 MB|100000|579805732
+[2026-11-14T02:47:00Z] migrating paperless_20k
+[2026-11-14T02:47:08Z] seeding 20000 documents into paperless_20k
+132 MB|20000|118192366
+seed-100k.json {'documents': 100000, 'content_chars_mean': 5798.1, 'content_chars_median': 1956, 'content_chars_p99': 61125, 'content_chars_max': 200000, 'content_kinds': {'ascii': 25218, 'latin1': 33265, 'ucs2': 41517}, 'data_sha256': 'ddf0f605d6528cdc456ee3eb6d918e46947eb5f63727e9cd24890de81707670f', 'seconds': 75.2}
+seed-20k.json {'documents': 20000, 'content_chars_mean': 5909.6, 'content_chars_median': 2004, 'content_chars_p99': 62178, 'content_chars_max': 200000, 'content_kinds': {'ascii': 4995, 'latin1': 6651, 'ucs2': 8354}, 'data_sha256': 'dec7cbea908aa193f2edba1270b511c45243ad8b2d45d8d6d2d73409c302ed9e', 'seconds': 16.1}

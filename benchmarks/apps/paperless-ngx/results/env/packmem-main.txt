@@ -1,0 +1,5 @@
+packmem main: commit b48a51992985c8d2a441c191550b18265f27963a
+wheel: packmem-0.3.0.dev0-cp310-abi3-manylinux_2_34_x86_64.whl sha256=61ce0b639a14bfe26139e8ec38b05711146b82cee9381eddb5d05367e41d4ac8
+rustc: rustc 1.100.0 (0ef1bc386 2026-11-09)
+maturin: maturin 1.9.6
+container imports packmem 0.3.0.dev0 /opt/packmem/main/packmem/__init__.py

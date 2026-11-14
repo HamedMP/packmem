@@ -1,0 +1,3 @@
+672M	/usr/src/paperless/export/ref-100k-split0
+888M	/usr/src/paperless/export/ref-100k-split1
+137M	/usr/src/paperless/export/ref-20k-split0

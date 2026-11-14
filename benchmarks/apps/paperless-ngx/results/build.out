@@ -1,0 +1,156 @@
+packmem-b48a519.tar.gz: OK
+[2026-11-14T02:45:17Z] installing a Rust toolchain into $WORK/rust
+
+  stable-x86_64-unknown-linux-gnu installed - rustc 1.100.0 (0ef1bc386 2026-11-09)
+
+
+Rust is installed now. Great!
+
+To get started you need Cargo's bin directory 
+($WORK/rust/cargo/bin) in your PATH
+environment variable. This has not been done automatically.
+
+To configure your current shell, you need to source
+the corresponding env file under $WORK/rust/cargo.
+
+Consider running the right command for your shell (note the leading DOT):
+. "$WORK/rust/cargo/env" # For 
+sh/ash/dash/pdksh/bash/zsh
+cargo:rerun-if-env-changed=CC_x86_64-unknown-linux-gnu
+CC_x86_64-unknown-linux-gnu = None
+cargo:rerun-if-env-changed=CC_x86_64_unknown_linux_gnu
+CC_x86_64_unknown_linux_gnu = None
+cargo:rerun-if-env-changed=HOST_CC
+HOST_CC = None
+cargo:rerun-if-env-changed=CC
+CC = None
+cargo:rerun-if-env-changed=CC_ENABLE_DEBUG_OUTPUT
+cargo:rerun-if-env-changed=CPATH
+cargo:rerun-if-env-changed=C_INCLUDE_PATH
+cargo:rerun-if-env-changed=CPLUS_INCLUDE_PATH
+cargo:rerun-if-env-changed=OBJC_INCLUDE_PATH
+cargo:rerun-if-env-changed=OBJCPLUS_INCLUDE_PATH
+cargo:rerun-if-env-changed=COMPILER_PATH
+cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH
+cargo:rerun-if-env-changed=GCC_EXEC_PREFIX
+cargo:rerun-if-env-changed=CRATE_CC_NO_DEFAULTS
+CRATE_CC_NO_DEFAULTS = None
+cargo:rerun-if-env-changed=CFLAGS
+CFLAGS = None
+cargo:rerun-if-env-changed=HOST_CFLAGS
+HOST_CFLAGS = None
+cargo:rerun-if-env-changed=CFLAGS_x86_64_unknown_linux_gnu
+CFLAGS_x86_64_unknown_linux_gnu = None
+cargo:rerun-if-env-changed=CFLAGS_x86_64-unknown-linux-gnu
+CFLAGS_x86_64-unknown-linux-gnu = None
+rustc 1.100.0 (0ef1bc386 2026-11-09)
+[2026-11-14T02:45:24Z] fetching maturin 1.9.6
+maturin 1.9.6
+[2026-11-14T02:45:24Z] building packmem b48a519 (release)
+    Updating crates.io index
+ Downloading crates ...
+  Downloaded getrandom v0.4.3
+  Downloaded memoffset v0.9.1
+  Downloaded equivalent v1.0.3
+  Downloaded itoa v1.0.19
+  Downloaded heck v0.5.0
+  Downloaded foldhash v0.2.0
+  Downloaded pyo3-macros v0.23.5
+  Downloaded unindent v0.2.4
+  Downloaded rustc-hash v2.1.3
+  Downloaded autocfg v1.5.1
+  Downloaded cfg-if v1.0.5
+  Downloaded pkg-config v0.3.34
+  Downloaded indoc v2.0.8
+  Downloaded jobserver v0.1.35
+  Downloaded find-msvc-tools v0.1.15
+  Downloaded quote v1.0.47
+  Downloaded once_cell v1.21.4
+  Downloaded rustversion v1.0.23
+  Downloaded memmap2 v0.9.12
+  Downloaded memchr v2.8.3
+  Downloaded shlex v2.0.1
+  Downloaded zmij v1.0.23
+  Downloaded pyo3-build-config v0.23.5
+  Downloaded unicode-ident v1.0.27
+  Downloaded target-lexicon v0.12.16
+  Downloaded fsst-rs v0.7.0
+  Downloaded r-efi v6.0.0
+  Downloaded serde_derive v1.0.229
+  Downloaded zstd v0.14.4
+  Downloaded zstd-safe v8.3.0
+  Downloaded proc-macro2 v1.0.107
+  Downloaded pyo3-ffi v0.23.5
+  Downloaded pyo3-macros-backend v0.23.5
+  Downloaded serde v1.0.229
+  Downloaded serde_core v1.0.229
+  Downloaded indexmap v2.14.2
+  Downloaded cc v1.11.2
+  Downloaded hashbrown v0.17.1
+  Downloaded serde_json v1.0.154
+  Downloaded portable-atomic v1.15.0
+  Downloaded syn v2.0.119
+  Downloaded syn v3.0.10
+  Downloaded zstd-sys v2.1.3+zstd.1.5.7
+  Downloaded libc v0.2.191
+  Downloaded pyo3 v0.23.5
+🍹 Building a mixed python/rust project
+🔗 Found pyo3 bindings with abi3 support
+🐍 Not using a specific python interpreter
+📡 Using build options features from pyproject.toml
+   Compiling libc v0.2.191
+   Compiling target-lexicon v0.12.16
+   Compiling once_cell v1.21.4
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.15
+   Compiling pkg-config v0.3.34
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling serde_core v1.0.229
+   Compiling zmij v1.0.23
+   Compiling autocfg v1.5.1
+   Compiling zstd-safe v8.3.0
+   Compiling serde v1.0.229
+   Compiling serde_json v1.0.154
+   Compiling memoffset v0.9.1
+   Compiling heck v0.5.0
+   Compiling hashbrown v0.17.1
+   Compiling equivalent v1.0.3
+   Compiling pyo3-build-config v0.23.5
+   Compiling memchr v2.8.3
+   Compiling itoa v1.0.19
+   Compiling syn v2.0.119
+   Compiling rustc-hash v2.1.3
+   Compiling foldhash v0.2.0
+   Compiling indexmap v2.14.2
+   Compiling fsst-rs v0.7.0
+   Compiling jobserver v0.1.35
+   Compiling unindent v0.2.4
+   Compiling indoc v2.0.8
+   Compiling cc v1.11.2
+   Compiling cfg-if v1.0.5
+   Compiling memmap2 v0.9.12
+   Compiling pyo3-ffi v0.23.5
+   Compiling pyo3-macros-backend v0.23.5
+   Compiling pyo3 v0.23.5
+   Compiling zstd-sys v2.1.3+zstd.1.5.7
+   Compiling pyo3-macros v0.23.5
+   Compiling zstd v0.14.4
+   Compiling packmem v0.2.0 ($WORK/src/packmem-b48a519)
+   Compiling packmem-py v0.2.0 ($WORK/src/packmem-b48a519/python)
+    Finished `release` profile [optimized] target(s) in 15.64s
+📦 Built wheel for abi3 Python ≥ 3.10 to $WORK/wheels/packmem-0.3.0.dev0-cp310-abi3-manylinux_2_34_x86_64.whl
+packmem main: commit b48a51992985c8d2a441c191550b18265f27963a
+wheel: packmem-0.3.0.dev0-cp310-abi3-manylinux_2_34_x86_64.whl sha256=61ce0b639a14bfe26139e8ec38b05711146b82cee9381eddb5d05367e41d4ac8
+rustc: rustc 1.100.0 (0ef1bc386 2026-11-09)
+maturin: maturin 1.9.6
+[2026-11-14T02:45:41Z] smoke test of arms C and D in the container
+PACKMEM_PROBE stage=held mode=off packmem=- rows=203 nbytes=- rss_kb=47780 hwm_kb=47780
+off: 6692781 bytes sha256=0835002404e940e3
+PACKMEM_PROBE stage=held mode=c packmem=0.3.0.dev0 rows=203 nbytes=1131266 rss_kb=86596 hwm_kb=102380
+c: 6692781 bytes sha256=0835002404e940e3 byte-identical=True parsed-equal=True
+PACKMEM_PROBE stage=held mode=d packmem=0.3.0.dev0 rows=203 nbytes=51476 rss_kb=121228 hwm_kb=132188
+d: 6692781 bytes sha256=0835002404e940e3 byte-identical=True parsed-equal=True
+c: extend without default= rejects datetimes, as expected
+container imports packmem 0.3.0.dev0 /opt/packmem/main/packmem/__init__.py

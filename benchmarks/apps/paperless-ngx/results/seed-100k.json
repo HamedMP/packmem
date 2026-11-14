@@ -1,0 +1,43 @@
+{
+  "seed": 20261114,
+  "dbname": "paperless",
+  "dry_run": false,
+  "seconds": 75.2,
+  "lognormal": {
+    "mu": 7.6009,
+    "sigma": 1.4823,
+    "cap": 200000
+  },
+  "corpus_chars": {
+    "de": 1472660,
+    "en": 2929230
+  },
+  "corpus_sha256": {
+    "pg2229.txt": "fed2a58edd6910ee96d27ada614d34bcc41f03750d86541c41246bb74c564ff7",
+    "pg22367.txt": "359d3f5983c812393f4bd7ee49a350ffffc7d476015e58d6b84b6c848dd2b0e9",
+    "pg5323.txt": "fc2cc841038004b845426452f808e6537045604d66d2878c7007a8909e9240df",
+    "pg69327.txt": "0254e2e361fca684887374ed3e4e4c32f03ac5b7022f54e9a128d1bff6b35b80",
+    "pg2407.txt": "3642f9c98c1bbca55adf25296f4f623bda69c6d47cff46ed5f423053816a19c4",
+    "pg1342.txt": "3f6bb9d6f78e0293b56acd4714dd68cb7d6d1d293402031ce9d5a216bcaf9d75",
+    "pg2701.txt": "b5e88b71a1cda068e9ab1d94344c9d932338ba6da1a66def97a1aecd9cfcc87d",
+    "pg84.txt": "2b97b7f8aad508649481d8dd4f6b54f9b965ddb3ba634e9151c815f537b49e42",
+    "pg1661.txt": "922e2a12ccb43a4c9544c260b2166c6ad2097aeb5957faeee113f173bb857cd0"
+  },
+  "documents": 100000,
+  "content_chars_total": 579805732,
+  "content_chars_mean": 5798.1,
+  "content_chars_median": 1956,
+  "content_chars_p90": 13266,
+  "content_chars_p99": 61125,
+  "content_chars_max": 200000,
+  "content_empty": 1018,
+  "content_utf8_bytes_total": 588196241,
+  "content_cpython_sizeof_total": 868161668,
+  "content_kinds": {
+    "ascii": 25218,
+    "latin1": 33265,
+    "ucs2": 41517
+  },
+  "tag_links": 185768,
+  "data_sha256": "ddf0f605d6528cdc456ee3eb6d918e46947eb5f63727e9cd24890de81707670f"
+}

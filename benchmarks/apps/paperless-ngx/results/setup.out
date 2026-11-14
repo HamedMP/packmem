@@ -1,0 +1,39 @@
+[2026-11-14T02:44:47Z] pulling images
+ webserver Pulling 
+ broker Pulling 
+ db Pulling 
+ broker Pulled 
+ webserver Pulled 
+ db Pulled 
+[2026-11-14T02:44:49Z] pulled: 
+[2026-11-14T02:44:49Z] checking the image's exporter matches v3.4.2
+python: 3.14.9 cpython-314-x86_64-linux-gnu -
+glibc: ldd (Debian GLIBC 2.41-12+deb13u4) 2.41
+os: Debian GNU/Linux 13 (trixie)
+paperless: 3.4.2
+django: 5.2.18
+psycopg: 3.3.4
+exporter (pristine) sha256: 4fff582ed9f2d5f55ec9cc75a4adb01571483e761d2940b21eccb923e01acf9e
+exporter (patched) sha256: dc53d9d3ace936b9c85d2bd85dbb42448c77ac17115374ae973f83a26b4ca304
+[2026-11-14T02:44:52Z] fetching packmem 0.2.0 from PyPI
+$WORK/wheels/packmem-0.2.0-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl: OK
+[2026-11-14T02:44:52Z] starting Paperless
+ Container packmem-paperless-db-1  Running
+ Container packmem-paperless-broker-1  Running
+ Container packmem-paperless-webserver-1  Recreate
+ Container packmem-paperless-webserver-1  Recreated
+ Container packmem-paperless-webserver-1  Starting
+ Container packmem-paperless-webserver-1  Started
+[2026-11-14T02:45:13Z] Paperless is up
+[2026-11-14T02:45:13Z] installing GNU time in the webserver container
+time (GNU Time) UNKNOWN
+[2026-11-14T02:45:16Z] smoke test of arm B in the container
+PACKMEM_PROBE stage=held mode=off packmem=- rows=203 nbytes=- rss_kb=47716 hwm_kb=47716
+off: 6692781 bytes sha256=0835002404e940e3
+PACKMEM_PROBE stage=held mode=b packmem=0.2.0 rows=203 nbytes=2928975 rss_kb=89072 hwm_kb=101428
+b: 6692781 bytes sha256=0835002404e940e3 byte-identical=True parsed-equal=True
+NAME                            IMAGE                                                                                                               COMMAND                  SERVICE     CREATED          STATUS                             PORTS
+packmem-paperless-broker-1      docker.io/valkey/valkey:9-alpine                                                                                    "tini -- docker-entr…"   broker      16 minutes ago   Up 16 minutes                      6379/tcp
+packmem-paperless-db-1          docker.io/library/postgres:18                                                                                       "docker-entrypoint.s…"   db          16 minutes ago   Up 16 minutes                      5432/tcp
+packmem-paperless-webserver-1   ghcr.io/paperless-ngx/paperless-ngx:3.4.2@sha256:d704e84f88300eb6ab001ab15720a2330ff99169cf9f94d6b8fcc44b63a84c84   "/init"                  webserver   25 seconds ago   Up 24 seconds (health: starting)   8000/tcp
+[2026-11-14T02:45:17Z] setup done; next: bash $WORK/harness/build_main_wheel.sh

@@ -1,0 +1,26 @@
+PACKMEM_PROBE stage=start mode=off packmem=- rows=0 nbytes=- rss_kb=144752 hwm_kb=144752
+PACKMEM_PROBE stage=held mode=off packmem=- rows=20000 nbytes=- rss_kb=354928 hwm_kb=354928
+PACKMEM_PROBE stage=done mode=off packmem=- rows=20000 nbytes=- rss_kb=375728 hwm_kb=375728
+	Command being timed: "python3 manage.py document_exporter /usr/src/paperless/export/s20k-A --data-only --no-progress-bar"
+	User time (seconds): 33.82
+	System time (seconds): 2.31
+	Percent of CPU this job got: 85%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:42.48
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 373372
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 93878
+	Voluntary context switches: 147661
+	Involuntary context switches: 996
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 279880
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

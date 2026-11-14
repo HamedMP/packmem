@@ -1,0 +1,8 @@
+python: 3.14.9 cpython-314-x86_64-linux-gnu -
+glibc: ldd (Debian GLIBC 2.41-12+deb13u4) 2.41
+os: Debian GNU/Linux 13 (trixie)
+paperless: 3.4.2
+django: 5.2.18
+psycopg: 3.3.4
+exporter (pristine) sha256: 4fff582ed9f2d5f55ec9cc75a4adb01571483e761d2940b21eccb923e01acf9e
+exporter (patched) sha256: dc53d9d3ace936b9c85d2bd85dbb42448c77ac17115374ae973f83a26b4ca304

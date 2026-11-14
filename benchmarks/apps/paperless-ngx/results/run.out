@@ -1,0 +1,61 @@
+[2026-11-14T02:47:26Z] run warmup-100k: mode=off scale=100k split=0 load=9.56 12.35 17.09
+[2026-11-14T02:51:10Z] done warmup-100k: exit=0 wall=223.94s maxrss=1217688kB manifest=reference load=8.93 10.57 15.38
+[2026-11-14T02:51:10Z] run r1-A-100k: mode=off scale=100k split=0 load=8.61 10.47 15.32
+[2026-11-14T02:54:59Z] done r1-A-100k: exit=0 wall=227.97s maxrss=1216976kB manifest=identical load=9.50 9.60 13.88
+[2026-11-14T02:54:59Z] run r1-B-100k: mode=b scale=100k split=0 load=9.50 9.60 13.88
+[2026-11-14T02:59:53Z] done r1-B-100k: exit=0 wall=293.02s maxrss=832484kB manifest=identical load=6.71 7.57 11.82
+[2026-11-14T02:59:53Z] run r1-C-100k: mode=c scale=100k split=0 load=6.71 7.57 11.82
+[2026-11-14T03:04:59Z] done r1-C-100k: exit=0 wall=304.53s maxrss=781432kB manifest=identical load=5.58 6.30 10.06
+[2026-11-14T03:04:59Z] run r1-D-100k: mode=d scale=100k split=0 load=5.58 6.30 10.06
+[2026-11-14T03:11:36Z] done r1-D-100k: exit=0 wall=397.05s maxrss=688792kB manifest=identical load=4.82 5.21 8.24
+[2026-11-14T03:11:37Z] run r2-B-100k: mode=b scale=100k split=0 load=4.82 5.21 8.24
+[2026-11-14T03:16:13Z] done r2-B-100k: exit=0 wall=275.24s maxrss=834184kB manifest=identical load=4.11 4.53 7.17
+[2026-11-14T03:16:13Z] run r2-C-100k: mode=c scale=100k split=0 load=4.11 4.53 7.17
+[2026-11-14T03:21:08Z] done r2-C-100k: exit=0 wall=294.34s maxrss=784576kB manifest=identical load=8.89 6.10 6.98
+[2026-11-14T03:21:08Z] run r2-D-100k: mode=d scale=100k split=0 load=8.89 6.10 6.98
+[2026-11-14T03:27:34Z] done r2-D-100k: exit=0 wall=384.87s maxrss=685628kB manifest=identical load=2.93 3.78 5.58
+[2026-11-14T03:27:34Z] run r2-A-100k: mode=off scale=100k split=0 load=2.93 3.78 5.58
+[2026-11-14T03:30:56Z] done r2-A-100k: exit=0 wall=201.61s maxrss=1220604kB manifest=identical load=3.34 3.47 5.08
+[2026-11-14T03:30:56Z] run r3-C-100k: mode=c scale=100k split=0 load=3.34 3.47 5.08
+[2026-11-14T03:35:42Z] done r3-C-100k: exit=0 wall=284.73s maxrss=782912kB manifest=identical load=2.11 3.07 4.52
+[2026-11-14T03:35:42Z] run r3-D-100k: mode=d scale=100k split=0 load=2.11 3.07 4.52
+[2026-11-14T03:41:52Z] done r3-D-100k: exit=0 wall=369.13s maxrss=691424kB manifest=identical load=3.75 2.44 3.65
+[2026-11-14T03:41:52Z] run r3-A-100k: mode=off scale=100k split=0 load=3.75 2.44 3.65
+[2026-11-14T03:45:09Z] done r3-A-100k: exit=0 wall=196.69s maxrss=1219924kB manifest=identical load=1.77 2.08 3.27
+[2026-11-14T03:45:09Z] run r3-B-100k: mode=b scale=100k split=0 load=1.77 2.08 3.27
+[2026-11-14T03:49:43Z] done r3-B-100k: exit=0 wall=272.91s maxrss=871168kB manifest=identical load=1.97 2.08 2.96
+[2026-11-14T03:49:43Z] run r4-D-100k: mode=d scale=100k split=0 load=1.97 2.08 2.96
+[2026-11-14T03:55:59Z] done r4-D-100k: exit=0 wall=375.10s maxrss=686276kB manifest=identical load=1.68 1.91 2.59
+[2026-11-14T03:55:59Z] run r4-A-100k: mode=off scale=100k split=0 load=1.68 1.91 2.59
+[2026-11-14T03:59:17Z] done r4-A-100k: exit=0 wall=196.83s maxrss=1220532kB manifest=identical load=1.72 1.83 2.42
+[2026-11-14T03:59:17Z] run r4-B-100k: mode=b scale=100k split=0 load=1.72 1.83 2.42
+[2026-11-14T04:03:45Z] done r4-B-100k: exit=0 wall=267.24s maxrss=872384kB manifest=identical load=1.54 1.67 2.20
+[2026-11-14T04:03:45Z] run r4-C-100k: mode=c scale=100k split=0 load=1.54 1.67 2.20
+[2026-11-14T04:08:32Z] done r4-C-100k: exit=0 wall=286.60s maxrss=785460kB manifest=identical load=1.89 1.84 2.12
+[2026-11-14T04:08:32Z] run r5-A-100k: mode=off scale=100k split=0 load=1.89 1.84 2.12
+[2026-11-14T04:11:52Z] done r5-A-100k: exit=0 wall=199.54s maxrss=1219628kB manifest=identical load=1.75 1.84 2.06
+[2026-11-14T04:11:53Z] run r5-B-100k: mode=b scale=100k split=0 load=1.75 1.84 2.06
+[2026-11-14T04:16:21Z] done r5-B-100k: exit=0 wall=267.83s maxrss=844752kB manifest=identical load=1.97 1.91 2.02
+[2026-11-14T04:16:21Z] run r5-C-100k: mode=c scale=100k split=0 load=1.97 1.91 2.02
+[2026-11-14T04:21:08Z] done r5-C-100k: exit=0 wall=286.30s maxrss=784580kB manifest=identical load=1.91 1.91 1.99
+[2026-11-14T04:21:08Z] run r5-D-100k: mode=d scale=100k split=0 load=1.91 1.91 1.99
+[2026-11-14T04:27:25Z] done r5-D-100k: exit=0 wall=375.48s maxrss=692032kB manifest=identical load=1.48 1.83 1.95
+[2026-11-14T04:27:25Z] run split-A-100k: mode=off scale=100k split=1 load=1.48 1.83 1.95
+[2026-11-14T04:32:46Z] done split-A-100k: exit=0 wall=318.84s maxrss=1221044kB manifest=reference load=1.42 1.52 1.77
+[2026-11-14T04:32:46Z] run split-B-100k: mode=b scale=100k split=1 load=1.42 1.52 1.77
+[2026-11-14T04:39:22Z] done split-B-100k: exit=0 wall=392.17s maxrss=833992kB manifest=identical load=1.36 1.60 1.72
+[2026-11-14T04:39:22Z] run split-C-100k: mode=c scale=100k split=1 load=1.33 1.58 1.72
+[2026-11-14T04:46:09Z] done split-C-100k: exit=0 wall=402.69s maxrss=779804kB manifest=identical load=1.16 1.31 1.54
+[2026-11-14T04:46:09Z] run split-D-100k: mode=d scale=100k split=1 load=1.14 1.31 1.53
+[2026-11-14T04:54:40Z] done split-D-100k: exit=0 wall=506.63s maxrss=720968kB manifest=identical load=1.88 1.83 1.72
+[2026-11-14T04:54:40Z] run warmup-20k: mode=off scale=20k split=0 load=1.89 1.83 1.72
+[2026-11-14T04:55:23Z] done warmup-20k: exit=0 wall=42.07s maxrss=372836kB manifest=reference load=1.94 1.85 1.74
+[2026-11-14T04:55:23Z] run s20k-A: mode=off scale=20k split=0 load=1.94 1.85 1.74
+[2026-11-14T04:56:06Z] done s20k-A: exit=0 wall=42.48s maxrss=373372kB manifest=identical load=2.02 1.89 1.75
+[2026-11-14T04:56:06Z] run s20k-B: mode=b scale=20k split=0 load=2.02 1.89 1.75
+[2026-11-14T04:57:01Z] done s20k-B: exit=0 wall=54.66s maxrss=529784kB manifest=identical load=2.07 1.92 1.77
+[2026-11-14T04:57:01Z] run s20k-C: mode=c scale=20k split=0 load=2.07 1.92 1.77
+[2026-11-14T04:57:59Z] done s20k-C: exit=0 wall=57.63s maxrss=520820kB manifest=identical load=2.08 1.96 1.80
+[2026-11-14T04:57:59Z] run s20k-D: mode=d scale=20k split=0 load=2.08 1.96 1.80
+[2026-11-14T04:59:13Z] done s20k-D: exit=0 wall=74.24s maxrss=511792kB manifest=identical load=2.15 1.99 1.82
+[2026-11-14T04:59:14Z] all runs done: 30 lines in $WORK/results/runs.tsv
