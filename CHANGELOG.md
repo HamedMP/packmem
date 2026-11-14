@@ -2,7 +2,7 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased
+## 0.3.0 - 2026-11-14
 
 Checked against 0.2.0 on Linux with the Qwen3-VL and LLaVA-NeXT dataset builds
 (`benchmarks/ml_swaps/sub-columns-gate/`): peak memory during the build is 6 to 7% lower and memory afterwards
@@ -62,9 +62,15 @@ to 4 times faster.
   footprint for good.
 - `to_json()` writes nested values stored as sub-columns in a canonical form (as `json.dumps` would), not as
   they were written in the source. Values are unchanged.
-- The byte form (`to_bytes`, `save`, `share`, pickles) now starts with a format version. Files from 0.2.0 still
-  open. 0.2.0 cannot read files written by this version and says so. From this version on, a file written by a
-  newer packmem is refused with "written by a newer packmem" instead of a parse error.
+- The byte form (`to_bytes`, `save`, `share`, pickles) now starts with a format version, 4 in this release. Files
+  from 0.2.0 still open. 0.2.0 cannot read files written by this version and says so. From this version on, a file
+  written by a newer packmem is refused with "written by a newer packmem" instead of a parse error.
+- Byte form: single integers in the headers (counts, lengths, chunk metadata) are now LEB128 varints, signed ones
+  zigzagged, which makes small tables smaller; large tables barely change. Vectors and floats stay at full width
+  and padded, so mapped files still read in place.
+- Measured, not changed: after Brotli, packmem bytes are still larger than JSON for tables of a few dozen rows
+  and for text-heavy data. Keep JSON for small responses; `packmem/http` falls back to it for clients that do not
+  ask for bytes.
 - Node: nested values stored as sub-columns come back in canonical form from `toJson` and `jsonBuffer`, as in
   Python. They stay the same values. Escapes in strings are rewritten as `JSON.stringify` writes them; number text
   and key order are kept as written. This replaces the 0.2.0 Node note about keeping nested JSON as written.

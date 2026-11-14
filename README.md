@@ -184,7 +184,7 @@ rows = packmem.open("events.pkm")
 rows.share()                                     # worker processes read one shared copy
 ```
 
-With pyarrow installed, tables convert both ways (unreleased, on `main`):
+With pyarrow installed, tables convert both ways (since 0.3.0):
 
 ```python
 rows = packmem.read_parquet("events.parquet", columns=["status", "bytes"])
