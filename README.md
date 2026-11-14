@@ -83,21 +83,31 @@ and only their summaries remain.
 
 ### Against Hugging Face datasets
 
-packmem replaces Python lists, not Arrow. On the same 665,298 records on Linux, compared with a
-memory-mapped `datasets.Dataset` (packmem 0.1.1, before `Table.share()`):
+Memory-mapped `datasets` was ahead of packmem on worker memory until 0.2.0. With `save()` and
+`open()`, a packmem table is memory-mapped too, and the two are level there. Measured on the
+published packages with a 4-worker PyTorch data loader over 157,712 LLaVA records on an Apple
+M4 Pro ([demos/finetune-loader](demos/finetune-loader)); memory is what the loader adds above
+an empty one, and on macOS that figure leaves out clean memory-mapped pages for both libraries:
 
-- **Where `datasets` wins:** workers share one memory-mapped copy and receive a 2 KB reference
-  rather than the data (node peak 1.8 GB against 2.8 GB under forkserver, first batch in 1.1 s
-  against 4.8 s); reloading from its cache takes 0.02 s against 8.5 s to parse the JSON again;
-  batched access is about twice as fast; a compressed parquet file is smaller at rest.
-- **Where packmem wins:** a random row as a dict takes 6 µs against 22 µs, which is the path a
-  map-style data loader uses; it holds about 2.5 times less than an in-memory Arrow dataset;
-  and it took the file as it was, where `datasets` needed a hand-written schema.
-- **Against the list** it was 5.6 to 5.7 times less node memory.
+| | spawn | fork | First batch, spawn |
+| --- | --- | --- | --- |
+| List of dicts | 4.0 GB | 960 MB | 4.6 s |
+| `datasets`, memory-mapped Arrow | 228 MB | 9 MB | 0.9 s |
+| packmem `share()` | 139 MB | 141 MB | 0.6 s |
+| packmem `open()` of a saved table | 3 MB | 3 MB | 0.6 s |
 
-If you already use memory-mapped `datasets` with worker processes, stay there. Memory figures are
-solid; the timings were taken on a shared server and are indicative. Details:
-[benchmarks/ml_swaps/hf-datasets](benchmarks/ml_swaps/hf-datasets).
+- **Where packmem is ahead:** the file is about 2.5 times smaller than the Arrow cache, a random
+  row as a dict takes 6 µs against 22 µs (the path a map-style loader uses), and it takes the
+  JSON file as it is, where `datasets` needed a hand-written schema.
+- **Where `datasets` is ahead:** batched and columnar access is about twice as fast, a
+  compressed parquet file is smaller at rest, and under fork its mapped cache costs less than
+  `share()`, which on macOS leaves the sharing process's freed copy counted against it.
+- **Against the list** both are an order of magnitude smaller.
+
+The size and per-row figures are from a Linux run on 665,298 records with packmem 0.1.1
+([benchmarks/ml_swaps/hf-datasets](benchmarks/ml_swaps/hf-datasets)); a Linux run on 0.2.0 is
+pending. If you already use memory-mapped `datasets` and are happy with it, there is no
+memory reason to switch; the reasons would be per-row speed and file size.
 
 ### Where it loses
 
