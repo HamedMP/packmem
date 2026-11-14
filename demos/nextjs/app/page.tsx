@@ -128,7 +128,8 @@ export default async function Page({ searchParams }: { searchParams: Search }) {
             [`/api/flights?${qs ? qs + "&" : ""}min_delay=60&limit=20`, "filtered page of rows"],
             [`/api/stats/by-dest${qs ? "?" + qs : ""}`, "group by destination"],
             [`/api/stats/summary${qs ? "?" + qs : ""}`, "count, sum and a nested filter"],
-            [`/api/flights/export${qs ? "?" + qs : ""}`, "every matching row, streamed as one JSON array"],
+            [`/api/flights/export${qs ? "?" + qs : ""}`, "every matching row: one streamed JSON array, or packmem bytes for Accept: application/vnd.packmem"],
+            ["/browse", "the export opened in the browser with packmem/wasm and packmem/react"],
           ].map(([u, d]) => (
             <li key={u}><a href={u}><code>{u}</code></a><span>{d}</span></li>
           ))}

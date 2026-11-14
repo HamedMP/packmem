@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import Response, StreamingResponse
 
 MODE = os.environ.get("MODE", "packmem")
@@ -96,6 +96,9 @@ class Baseline:
                 late += 1
         return {"flights": flights, "total_distance": dist, "delayed_over_60": late}
 
+    def export_bytes(self, q):
+        return None
+
     def export(self, q):
         # json.dumps on the list, as a developer who knows to skip FastAPI's jsonable_encoder would write it
         yield dumps([r for r in self.rows if self._match(**q)(r)]).encode()
@@ -140,6 +143,10 @@ class Packed:
         v = self._view(**q)
         return {"flights": len(v), "total_distance": v.sum("distance"), "delayed_over_60": len(v.where(dep_delay__gt=60))}
 
+    def export_bytes(self, q):
+        # the same bytes the Node servers send: a browser opens them with packmem/wasm
+        return self.t.take(self._view(**q).indices()).to_bytes()
+
     def export(self, q):
         v = self._view(**q)
         if hasattr(v, "iter_json"):  # JSON written from the packed columns, when the installed packmem has it
@@ -161,6 +168,7 @@ LOAD_MS = round((time.perf_counter() - t0) * 1000)
 gc.collect()  # same steady-state point as the Node demos, which collect after loading
 
 app = FastAPI(title="packmem flights")
+PACKMEM_TYPE = "application/vnd.packmem"
 
 
 def q(carrier, origin, dest, min_delay):
@@ -193,5 +201,9 @@ def summary(carrier: str | None = None, origin: str | None = None, dest: str | N
 
 
 @app.get("/api/flights/export")
-def export(carrier: str | None = None, origin: str | None = None, dest: str | None = None, min_delay: float | None = None):
-    return StreamingResponse(store.export(q(carrier, origin, dest, min_delay)), media_type="application/json")
+def export(request: Request, carrier: str | None = None, origin: str | None = None, dest: str | None = None, min_delay: float | None = None):
+    query = q(carrier, origin, dest, min_delay)
+    vary = {"vary": "accept"}
+    if PACKMEM_TYPE in request.headers.get("accept", "") and (b := store.export_bytes(query)) is not None:
+        return Response(b, media_type=PACKMEM_TYPE, headers=vary)
+    return StreamingResponse(store.export(query), media_type="application/json", headers=vary)

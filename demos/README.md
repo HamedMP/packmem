@@ -15,6 +15,7 @@ All three expose the same routes:
 | `GET /api/stats/by-dest?carrier=UA` | group by destination, count |
 | `GET /api/stats/summary?origin=JFK` | count, total distance, departures over 60 minutes late |
 | `GET /api/flights/export?carrier=UA` | every matching row as one JSON array, streamed |
+| `GET /api/flights/export` with `Accept: application/vnd.packmem` | the same rows as packmem bytes, for `fetchTable` from `packmem/http` (packmem mode) |
 
 ## Run
 

@@ -2,6 +2,7 @@ import express, { type NextFunction, type Request, type Response } from "express
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
+import { PACKMEM_TYPE, wantsPackmem } from "packmem/http";
 import { BadRequest, createStore, memory, parsePage, parseQuery, sourceFromEnv, type Mode } from "./store.ts";
 
 const mode = (process.env.MODE ?? "packmem") as Mode;
@@ -32,9 +33,16 @@ app.get("/api/stats/summary", (req, res) => {
   res.json(store.summary(query(req)));
 });
 
-// The whole result set as one JSON array. Baseline: res.json on an array of objects.
-// packmem: bytes are written from the packed columns in batches and streamed, so no objects or full-size string exist.
+// The whole result set. A client that sends `Accept: application/vnd.packmem` gets the packed table bytes, which it
+// opens without parsing; everyone else gets one JSON array. Baseline: res.json on an array of objects. packmem: the
+// JSON is written from the packed columns in batches and streamed, so no objects or full-size string exist.
 app.get("/api/flights/export", async (req, res) => {
+  res.vary("accept");
+  const bytes = wantsPackmem(req) ? store.exportBytes(query(req)) : null;
+  if (bytes) {
+    res.type(PACKMEM_TYPE).send(Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength));
+    return;
+  }
   res.type("application/json");
   await pipeline(Readable.from(store.exportChunks(query(req))), res);
 });

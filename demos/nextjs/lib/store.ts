@@ -32,6 +32,8 @@ export interface Store {
   summary(q: Query): Summary;
   /** The matching rows as one JSON array, in pieces. */
   exportChunks(q: Query): Iterable<string | Uint8Array>;
+  /** The matching rows in packmem's byte form, for clients that ask for it; null in baseline mode. */
+  exportBytes(q: Query): Uint8Array | null;
 }
 
 /** A malformed number is a client error in both modes, so the two never disagree on it. */
@@ -113,6 +115,9 @@ async function baseline(src: Source): Promise<Store> {
     *exportChunks(q) {
       yield JSON.stringify(rows.filter(match(q)));
     },
+    exportBytes() {
+      return null;
+    },
   };
 }
 
@@ -145,6 +150,9 @@ async function packed(src: Source): Promise<Store> {
     },
     exportChunks(q) {
       return t.where(filters(q)).jsonChunks();
+    },
+    exportBytes(q) {
+      return t.take(t.where(filters(q)).ids).toBytes();
     },
   };
 }
