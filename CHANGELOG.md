@@ -32,6 +32,18 @@ to 4 times faster.
 - Node and WebAssembly: `Table#toBytes()` and `Table.fromBytes(bytes)`. They use the byte form Python's `to_bytes`
   writes, so a table packed by a Python or Node server can be sent to a browser running `packmem/wasm` and read
   without re-encoding. `toBytes` also works on a table shared with worker threads.
+- Node: `packmem/http` sends tables to browsers. `respond(request, rows)` (web `Response`) and
+  `send(req, res, rows)` (Node and Express) return packmem bytes when the client sends
+  `Accept: application/vnd.packmem`, and a streamed JSON array otherwise, with `Vary: Accept`.
+  `fetchTable(pm, url)` asks for bytes and falls back to JSON; it works as an SWR or TanStack Query fetcher. Also
+  exports `wantsPackmem` and `PACKMEM_TYPE`. It has no Node imports, so it runs in Node, Next.js route handlers,
+  Workers and browsers.
+- Node: `packmem/react` adds `useRows(rows, { offset, limit })`. It returns plain objects for the visible window
+  only, and the same array until the window or the table changes. It imports nothing from React, so it also works
+  when Next.js loads packmem outside its bundle (`serverExternalPackages`).
+- Demos: `/api/flights/export` in the Express, Next.js and FastAPI demos answers
+  `Accept: application/vnd.packmem` with the packed rows. The Next.js demo has a `/browse` page that opens them
+  with `packmem/wasm` and scrolls them with `useRows`.
 
 ### Changed
 - Nested values are split into sub-columns as rows arrive, not when a chunk is packed, so a load no longer holds
