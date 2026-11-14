@@ -18,12 +18,13 @@
     Costs: a plain `for r in rows` loop is 4.9x slower than over the list (use `rows.lazy()` or a query), random row
     access 6.7x slower, and below a few hundred rows there is no saving. polars tuned for memory comes within 1.6 to
     2.9x and loads faster; packmem is for code that wants a list, not a dataframe. New in 0.2.0: `save()` once and
-    `packmem.open()` in every run memory-maps the packed table, so DataLoader workers share it. In a fine-tuning loader
-    over 157,712 LLaVA records with 4 spawn workers, that held 3 MB above an empty loader, against 228 MB for Hugging
-    Face `datasets` (memory-mapped Arrow) and 4.0 GB for a list (Apple M4 Pro, medians of 3, annotations only).
-    To be fair to `datasets`: most of its 228 MB is each spawned worker importing the library, not data. Both keep the
-    records in one mapped file; packmem's is half the size. `datasets` is still faster for batched access, and its
-    Parquet is smaller at rest.
+    `packmem.open()` in every run memory-maps the packed table, so DataLoader workers share it (PyTorch #13246). On
+    Linux with 4 forkserver workers over the 665,298-record LLaVA mix, the whole machine held 1,144 MB, against
+    1,810 MB for Hugging Face `datasets` (memory-mapped Arrow) and 15,961 MB for a list; first batch 1.0 s, 1.8 s and
+    63.5 s (medians of 3, annotations only, timings indicative). To be fair to `datasets`: most of its extra is each
+    worker importing the library (55 MB), not data. Both keep the records in one mapped file; packmem's is 2.5x
+    smaller. `datasets` is still faster for batched access, and its Parquet is smaller at rest.
+    Write-up: https://hamedmp.github.io/packmem/blog/dataloader-workers-copy-your-dataset/
 
     Alpha (0.2.0). pip install packmem — benchmarks, scripts and every results file: https://github.com/HamedMP/packmem
 

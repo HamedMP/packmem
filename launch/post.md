@@ -86,15 +86,16 @@ hand. polars also loads 6 times faster, its filters are 2 to 4 times faster at m
 
 ## Against memory-mapped Arrow
 
-Fine-tuning loaders give every worker process the dataset. Hugging Face `datasets` avoids copies by memory-mapping
-Arrow. packmem 0.2.0 now does the same with its own format: save the packed table once, `packmem.open()` it in every run,
-and the parent and all workers read the same mapped file, with no schema to declare. In a fine-tuning loader over
-157,712 LLaVA records with 4 spawn workers, the loader held 3 MB above an empty one with packmem, 228 MB with
-`datasets` and 4.0 GB with a list; the first batch arrived in 0.6 s against 0.9 s and 4.6 s. With fork, 3 MB against
-9 MB. Most of `datasets`' 228 MB is each spawned worker importing the library (55 MB a process, against 1 MB for
-packmem), not data: both keep the records in a mapped file, and packmem's is half the size (94 MB against 184 MB). (Published packmem 0.2.0 and datasets 5.2.0, Apple M4 Pro, medians of 3; annotations only, no model.) On 0.1.1,
-before `open()` existed, `datasets` won this comparison on Linux, 1.8 GB against 2.8 GB across 4 forkserver workers;
-that run is being repeated on 0.2.0.
+Fine-tuning loaders give every worker process the dataset (PyTorch issue #13246, open since 2018). Hugging Face
+`datasets` avoids copies by memory-mapping Arrow. packmem 0.2.0 now does the same with its own format: save the packed
+table once, `packmem.open()` it in every run, and the parent and all workers read the same mapped file, with no schema
+to declare. On Linux, with a PyTorch DataLoader of 4 forkserver workers over the 665,298-record LLaVA annotation mix,
+the whole machine held 15,961 MB with a list, 1,810 MB with `datasets` and 1,144 MB with packmem; the first batch
+arrived in 63.5 s, 1.8 s and 1.0 s. With fork workers: 3,604 MB, 994 MB and 549 MB. Most of `datasets`' extra memory
+is each worker importing the library (55.5 MB a process, against 0.2 MB for packmem), not data: both keep the records
+in a mapped file, and packmem's is 2.5 times smaller (309 MB against 785 MB). (Published packmem 0.2.0 and datasets
+5.2.0, medians of 3 runs, memory within about 1 MB across runs; the server was shared, so timings are indicative;
+annotations only, no model or GPU. Write-up: https://hamedmp.github.io/packmem/blog/dataloader-workers-copy-your-dataset/)
 
 ## Where it loses
 

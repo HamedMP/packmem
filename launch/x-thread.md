@@ -10,8 +10,12 @@ headers and references, not your data. packmem never creates them: each field be
 3/ Filters run on the packed form, so they got faster too: group by destination 59 ms → 0.14 ms. In a FastAPI server
 holding the data, 731 MB → 72 MB at rest, identical responses.
 
-4/ Where it loses: a plain loop over every row is 4.9x slower, random row access 6.7x slower, and polars tuned for
+4/ New in 0.2.0: packmem.open() memory-maps a saved table, so PyTorch DataLoader workers share one copy.
+4 workers over 665k LLaVA fine-tuning records on Linux: 16.0 GB with a list, 1.8 GB with HF datasets, 1.1 GB with
+packmem. First batch 63 s → 1.0 s. https://hamedmp.github.io/packmem/blog/dataloader-workers-copy-your-dataset/
+
+5/ Where it loses: a plain loop over every row is 4.9x slower, random row access 6.7x slower, and polars tuned for
 memory comes within 1.6–2.9x. It's not a dataframe.
 
-5/ Alpha (0.2.0). Python, Node and a WebAssembly build for Cloudflare Workers, Rust core, Apache-2.0.
+6/ Alpha (0.2.0). Python, Node and a WebAssembly build for Cloudflare Workers, Rust core, Apache-2.0.
 pip install packmem / npm install packmem — every number on the site is rebuilt from the results files in the repo.
