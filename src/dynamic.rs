@@ -2318,7 +2318,10 @@ impl DynTable {
 }
 
 use crate::wire::{R, Res, W, bad};
-const MAGIC: &[u8; 4] = b"PKM2";
+const MAGIC: &[u8; 4] = b"PKMT";
+const MAGIC_0_2: &[u8; 4] = b"PKM2";
+/// Raised whenever a reader built before the change could misread the bytes.
+pub const FORMAT: u8 = 3;
 
 fn write_cell(w: &mut W, c: &Cell) {
     match c {
@@ -2522,6 +2525,7 @@ impl DynTable {
     }
     fn write(&self, w: &mut W) {
         w.raw(MAGIC);
+        w.u8(FORMAT);
         w.u8(match self.hint {
             Hint::Memory => 0,
             Hint::Balanced => 1,
@@ -2548,10 +2552,17 @@ impl DynTable {
         Self::read(R::borrowing(&owner))
     }
     fn read(mut r: R) -> Res<DynTable> {
-        if r.take(4)? != MAGIC {
-            return Err(
-                "not packed table data, or written by a different version of packmem".into(),
-            );
+        let magic = r.take(4)?;
+        if magic == MAGIC {
+            let format = r.get_u8()?;
+            if format > FORMAT {
+                return Err(format!(
+                    "written by a newer packmem (format {format}, this build reads up to {FORMAT}): upgrade packmem to read it"
+                )
+                .into());
+            }
+        } else if magic != MAGIC_0_2 {
+            return Err("not packed table data, or written by packmem 0.1".into());
         }
         let hint = match r.get_u8()? {
             0 => Hint::Memory,

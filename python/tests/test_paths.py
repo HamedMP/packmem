@@ -236,6 +236,17 @@ def test_pickle_take_extend_and_surrogates():
     assert big[0] == want[0] and big[-1]["a"] == "plain" and big[19_999]["a"] == want[0]["a"]
 
 
+def test_byte_header_carries_a_format_version():
+    import os
+    rows = [{"id": i, "name": f"user{i % 7}", "score": (i % 50) * 0.5 if i % 3 else None, "tags": ["a", "b"][: i % 3], "meta": {"k": i % 4}, "ok": i % 2 == 0} for i in range(16500)]
+    rows[5]["extra"] = "x"
+    with open(os.path.join(os.path.dirname(__file__), "fixtures", "table_0.2.0.pkm"), "rb") as f: old = f.read()
+    assert old[:4] == b"PKM2" and list(packmem.Table.from_bytes(old)) == rows
+    new = packmem.Table(rows).to_bytes()
+    assert new[:4] == b"PKMT" and list(packmem.Table.from_bytes(new)) == rows
+    try: packmem.Table.from_bytes(new[:4] + bytes([new[4] + 1]) + new[5:]); raise AssertionError("expected ValueError")
+    except ValueError as e: assert "newer packmem" in str(e)
+
 
 def test_set_column():
     m = [{"id": i, "s": "v%d" % (i % 5), **({"opt": i} if i % 2 else {})} for i in range(40_000)]

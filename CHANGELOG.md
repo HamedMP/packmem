@@ -47,7 +47,9 @@ to 4 times faster.
   footprint for good.
 - `to_json()` writes nested values stored as sub-columns in a canonical form (as `json.dumps` would), not as
   they were written in the source. Values are unchanged.
-- Files written by this version that contain sub-columns cannot be read by 0.2.0. Files from 0.2.0 still open.
+- The byte form (`to_bytes`, `save`, `share`, pickles) now starts with a format version. Files from 0.2.0 still
+  open. 0.2.0 cannot read files written by this version and says so. From this version on, a file written by a
+  newer packmem is refused with "written by a newer packmem" instead of a parse error.
 
 ## 0.2.0 - 2026-11-14
 
