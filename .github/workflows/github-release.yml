@@ -1,0 +1,40 @@
+# A GitHub release page for every v* tag, with that version's CHANGELOG section as its notes. The packages themselves
+# are published by release.yml (PyPI) and node-release.yml (npm).
+name: github-release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Notes from CHANGELOG.md
+        run: |
+          python3 - "${GITHUB_REF_NAME#v}" > notes.md <<'EOF'
+          import re, sys
+          version = sys.argv[1]
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          m = re.search(rf"^## {re.escape(version)} - .*?\n(.*?)(?=^## |\Z)", text, re.M | re.S)
+          if not m:
+              sys.exit(f"CHANGELOG.md has no section for {version}")
+          out = []
+          for line in re.sub(r"^### ", "## ", m.group(1).strip(), flags=re.M).split("\n"):
+              # join hard-wrapped lines, which a release page would show as line breaks
+              if out and line.strip() and not line.startswith(("- ", "## ")) and out[-1].strip() and not out[-1].startswith("## "):
+                  out[-1] = out[-1].rstrip() + " " + line.strip()
+              else:
+                  out.append(line)
+          print("\n".join(out))
+          print(f"\nInstall: `pip install packmem=={version}` or `npm install packmem@{version}`. "
+                "Full history in [CHANGELOG.md](https://github.com/HamedMP/packmem/blob/main/CHANGELOG.md).")
+          EOF
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --title "packmem ${GITHUB_REF_NAME#v}" --notes-file notes.md

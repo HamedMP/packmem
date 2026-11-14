@@ -227,6 +227,10 @@ Needs Rust and Node 18 or later.
 Status: alpha. CI builds and tests the addon on Linux (x86-64 and arm64), macOS and Windows with Node 20
 and 22, and against Postgres 17.
 
+Bun and Deno install it from npm and load the same addon (`bun add packmem`; `import { from } from "npm:packmem"` in
+Deno, with `--allow-ffi` or `-A`). Each release runs the package's smoke test, native and WebAssembly, under both on
+Linux and macOS.
+
 The npm package includes prebuilt addons for Linux x86-64 and arm64 (glibc 2.17 or later, and musl for
 Alpine), macOS on Apple silicon and Intel, and Windows x64, plus `packmem/wasm` for runtimes without native
 addons such as Cloudflare Workers. Elsewhere, build from source with `npm run build` (needs Rust). Each

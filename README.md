@@ -146,7 +146,7 @@ The full study, including the cases above and the method, is in [docs/report.md]
 
 ```
 pip install packmem          # Python 3.10 or later; wheels for Linux, macOS and Windows
-npm install packmem          # Node, see node/README.md
+npm install packmem          # Node, Bun and Deno, see node/README.md
 ```
 
 From a checkout, with Rust:

@@ -862,7 +862,7 @@ export default function Page() {
               </TabsContent>
               <TabsContent value="node" className="flex flex-col gap-3">
                 <Code install={SNIPPETS.node.install} lang={SNIPPETS.node.lang}>{SNIPPETS.node.code}</Code>
-                <p className="text-sm text-muted-foreground">An array-like table for Node 20+: list methods, lazy rows, CSV and Postgres COPY loaders, and JSON responses streamed from the columns. The same API runs on Cloudflare Workers through <code className="font-mono text-xs">packmem/wasm</code>. Prebuilt for Linux x86-64 and arm64 (glibc 2.17+ and musl), macOS on Apple silicon and Intel, and Windows x64; other platforms build from source with Rust.</p>
+                <p className="text-sm text-muted-foreground">An array-like table for Node 20+, Bun and Deno: list methods, lazy rows, CSV and Postgres COPY loaders, and JSON responses streamed from the columns. The same API runs on Cloudflare Workers through <code className="font-mono text-xs">packmem/wasm</code>. Prebuilt for Linux x86-64 and arm64 (glibc 2.17+ and musl), macOS on Apple silicon and Intel, and Windows x64; other platforms build from source with Rust.</p>
               </TabsContent>
               <TabsContent value="rust" className="flex flex-col gap-3">
                 <Code install={SNIPPETS.rust.install} lang={SNIPPETS.rust.lang}>{SNIPPETS.rust.code}</Code>
