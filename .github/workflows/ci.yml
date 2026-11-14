@@ -8,7 +8,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # one group per pull request, but one per commit on main: a queued run on main must not be replaced by the next push
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   # several people push to main in quick succession; every commit there should get a full run
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
