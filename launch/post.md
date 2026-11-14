@@ -14,7 +14,7 @@ rows = [json.loads(line) for line in open("flights.jsonl")]   # 712 MB
 rows = packmem.load_jsonl("flights.jsonl")                    # 19.7 MB
 ```
 
-packmem is alpha (0.1.1), open source (Apache-2.0), on PyPI and npm (`pip install packmem`, `npm install packmem`), with a Rust
+packmem is alpha (0.1.2), open source (Apache-2.0), on PyPI and npm (`pip install packmem`, `npm install packmem`), with a Rust
 core. This post is about why that 36x is possible, where it holds, and where it does not.
 
 ## Where the memory goes

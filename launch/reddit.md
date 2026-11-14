@@ -22,7 +22,7 @@
     there. Workers share one mapped copy, so a node with 4 workers peaked at 1.8 GB against packmem's 2.8 GB, and it
     reloads from cache in 0.02 s against 8.5 s (Linux, timings indicative). Against a plain list that node used 15.7 GB.
 
-    Alpha (0.1.1). pip install packmem — benchmarks, scripts and every results file: https://github.com/HamedMP/packmem
+    Alpha (0.1.2). pip install packmem — benchmarks, scripts and every results file: https://github.com/HamedMP/packmem
 
 ## r/node
 
@@ -42,4 +42,4 @@
     Honest part: V8 already stores same-shape objects compactly, so the gain in Node is memory more than speed, and a
     loop over every row is slower than over a plain array. Details and every number's source in the repo.
 
-    Alpha (0.1.1). npm install packmem — https://github.com/HamedMP/packmem
+    Alpha (0.1.2). npm install packmem — https://github.com/HamedMP/packmem

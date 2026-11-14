@@ -11,7 +11,7 @@
     I built packmem after measuring what a Python process actually holds after json.loads: in our test, 77% of the
     heap words were zeros, pointers and small integers, not data. packmem keeps records as packed columns (dictionary,
     frame-of-reference, run-length and FSST encodings, picked per column from a sample) behind the list-of-dicts and
-    array-of-objects APIs people already use, so the switch is one line. It is alpha (0.1.1).
+    array-of-objects APIs people already use, so the switch is one line. It is alpha (0.1.2).
 
     On 336,776 real flights (Mac figures, on a machine in normal use): 712 MB as a list of dicts, 19.7 MB in packmem; filters and group-bys run on the packed
     columns (group by destination: 59 ms to 0.14 ms). Inside FastAPI, Express and Next.js servers it cut settled
