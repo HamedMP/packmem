@@ -51,7 +51,8 @@ const table = await fetchTable(pm, "/api/flights?carrier=UA");
 `fetchTable(pm, input, init?)` sends `Accept: application/vnd.packmem, application/json;q=0.9` unless you set an
 `accept` header, then reads bytes with `pm.Table.fromBytes` or JSON with `pm.parse`, by the response's
 `content-type`. A response that is not OK throws an `Error` naming the status and URL. Either way you get a
-`Table`.
+`Table`. From 0.3.1, if the server sends bytes from a newer packmem than `pm` can read, `fetchTable` asks again with
+`Accept: application/json` and returns the table from the JSON.
 
 It works as an SWR or TanStack Query fetcher:
 
@@ -67,6 +68,10 @@ or copied.
 Bytes carry a format version, and a reader refuses bytes from a newer format. The client's packmem must be the
 same version as the server's, or newer. Pin the same version on both sides (one `package.json` for a Next.js app
 does this), and deploy the client no later than the server when you upgrade. See [Byte format](/docs/format/).
+
+If the client falls behind anyway, `fetchTable` from 0.3.1 on falls back to JSON: the page keeps working, with a
+second request and without the gain from bytes. `fetchTable` in 0.3.0 throws the "written by a newer packmem"
+error instead.
 
 ## When to send bytes
 

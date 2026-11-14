@@ -149,8 +149,8 @@ virtualized scroll list and carrier buttons.
 
 The server and the browser read and write packed bytes with the packmem installed in the app, so one
 `package.json` keeps them on the same version. If the browser code is cached or served separately (a CDN, another
-app), deploy it no later than the server: a reader refuses bytes from a newer format. See
-[Byte format](/docs/format/).
+app), deploy it no later than the server: a reader refuses bytes from a newer format. From 0.3.1, `fetchTable`
+then falls back to JSON instead of failing. See [Byte format](/docs/format/).
 
 ## Deploying
 

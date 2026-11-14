@@ -13,10 +13,11 @@ The bytes start with `PKMT` and a format version.
 | --- | --- | --- |
 | 0.2.0 | `PKM2` (format 2) | format 2 |
 | 0.3.0 | format 4 | formats 2, 3 and 4 |
-| next release (unreleased) | format 5 | formats 2 to 5 |
+| 0.3.1 | format 5 | formats 2 to 5 |
 
-Format 3 was only ever written by development builds between 0.2.0 and 0.3.0. A reader refuses bytes from a newer
-format with an error that says so:
+Format 3 was only written by development builds between 0.2.0 and 0.3.0. Format 5 stores no per-row offsets for
+columns of records that are never absent, which 0.3.0 did. A reader refuses bytes from a newer format with an error
+that says so:
 
 ```text
 written by a newer packmem (format 5, this build reads up to 4): upgrade packmem to read it
@@ -31,7 +32,9 @@ the two are deployed separately, upgrade the reader first: the browser bundle, t
 the service that receives bytes. So far every release reads the formats of the releases before it, so files saved
 with `save()` keep opening after an upgrade.
 
-For HTTP, [`packmem/http`](/docs/http/) negotiates per request, and clients that do not ask for bytes get JSON.
+Over HTTP, [`packmem/http`](/docs/http/) negotiates per request: clients that do not ask for bytes get JSON, and
+from 0.3.1 `fetchTable` asks again for JSON when the server's bytes are from a newer packmem than the client's.
+`fetchTable` in 0.3.0 does not, and throws instead.
 
 ## What is inside
 

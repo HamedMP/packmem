@@ -84,7 +84,8 @@ const visible = useRows(table, { offset, limit: 20 });   // objects only for the
 - Next.js: add `serverExternalPackages: ["packmem"]` to `next.config.ts`. Route handlers that use packmem need
   the Node.js runtime, not Edge.
 - Use the same packmem version on the server and the client, or a newer one on the client. A reader refuses bytes
-  written by a newer packmem ("written by a newer packmem (format N, this build reads up to M)").
+  written by a newer packmem ("written by a newer packmem (format N, this build reads up to M)"); from 0.3.1,
+  `fetchTable` then asks again for JSON, so the page keeps working without the gain from bytes.
 - `fetchTable` asks for bytes and accepts JSON; servers using `respond` or `send` send JSON to clients that do not
   ask for bytes. Keep small endpoints on JSON.
 - With TanStack Query, set `structuralSharing: false` for queries that return a packmem `Table`.
