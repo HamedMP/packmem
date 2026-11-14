@@ -14,11 +14,14 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - The byte form written by `to_bytes`, pickling and `share()` has a new layout (arrays are aligned so they can be
   read in place). Data written by 0.1.x cannot be read by this version, and the reverse.
 
-## 0.1.2 - 2026-11-13
+## 0.1.2 - 2026-11-14
 
 ### Changed
 - Nested JSON values are kept as written instead of being parsed and re-serialised, which makes records
-  dominated by nested text faster to load and smaller once loaded.
+  dominated by nested text faster to load and smaller once loaded. Rows read back equal, but text
+  inside a nested value is no longer normalised: `\uXXXX` escapes in the source stay escapes, so `to_json()`
+  can differ byte for byte from 0.1.1 on such input (1.6% longer on one real dataset) while parsing to the
+  same values.
 - `PACKMEM_LOAD_THREADS=1` packs text-heavy chunks on a background thread, about halving the load time of such
   data. It is off by default because it leaves more memory counted against the process on macOS.
 

@@ -27,6 +27,9 @@ const express = d.servers.find((s) => s.f === "express")
 const jello = d.tools[1]
 const ml = d.mlLoader
 const hf = d.hfDatasets
+const wk = d.workers?.sizes.at(-1) ?? null
+const workersVersion = d.workers?.version
+const workersLoad = d.workers ? `${d.workers.load.lo.toFixed(1)} to ${d.workers.load.hi.toFixed(1)}` : ""
 const gb = (v: number) => `${(v / 1000).toFixed(1)} GB`
 const pyBookkeeping = d.composition.find((c) => c.label === "Python")!.parts[0]
 
@@ -573,13 +576,36 @@ export default function Page() {
                   </div>
                 </Fit>
               )}
-              <Fit title="Edge functions and small containers">
-                <p>
-                  A Cloudflare Worker gets 128 MB, WebAssembly included. <code className="font-mono text-xs">packmem/wasm</code> runs the
-                  same table, queries and streamed JSON there, so a reference dataset can ship inside the Worker instead of sitting behind
-                  another network hop. We have not benchmarked it there yet.
-                </p>
-              </Fit>
+              {wk ? (
+                <Fit
+                  title="Edge functions and small containers"
+                  stat={`${mb(wk.plain.held_mb)} → ${mb(wk.packmem.wasm_mb)}`}
+                  statSub={`${wk.rows.toLocaleString("en-US")} rows held in a Worker, as objects and in packmem's WebAssembly memory`}
+                >
+                  <p>
+                    A Cloudflare Worker gets 128 MB, WebAssembly included, and <code className="font-mono text-xs">packmem/wasm</code> runs
+                    the same table, queries and streamed JSON there. In the Workers runtime run locally by wrangler, the rows as objects grew
+                    it by {mb(wk.plain.held_mb)}; packmem held them in {mb(wk.packmem.wasm_mb)} of WebAssembly memory
+                    ({mb(wk.packmem.packed_mb ?? 0)} packed). A filtered group count took {ms(wk.packmem.stats_ms)} against{" "}
+                    {ms(wk.plain.stats_ms)}, and exports were level.
+                  </p>
+                  <p className="text-xs leading-relaxed">
+                    Building the table took {Math.round(wk.packmem.first_request_ms / wk.plain.first_request_ms)} times as long, because rows go
+                    from objects through JSON into WebAssembly, and that leaves garbage: the runtime as a whole grew {mb(wk.packmem.held_mb)}.
+                    Local workerd neither collects garbage on demand nor enforces the 128 MB limit, so this is not a capacity test on
+                    Cloudflare. packmem {workersVersion}, load average {workersLoad}.{" "}
+                    <a className="underline underline-offset-4" href={`${d.REPO}/tree/main/demos/workers`}>Script and results</a>.
+                  </p>
+                </Fit>
+              ) : (
+                <Fit title="Edge functions and small containers">
+                  <p>
+                    A Cloudflare Worker gets 128 MB, WebAssembly included. <code className="font-mono text-xs">packmem/wasm</code> runs the
+                    same table, queries and streamed JSON there, so a reference dataset can ship inside the Worker instead of sitting behind
+                    another network hop.
+                  </p>
+                </Fit>
+              )}
               <Fit title="Data processing before the dataframe">
                 <p>
                   Rows from a database cursor, a CSV file or an API arrive as records, and most pipeline code handles them as records.
@@ -687,6 +713,13 @@ export default function Page() {
                 <li><b className="font-medium">Group-by over very many distinct values is slow.</b> 436 thousand distinct IP addresses over 2 million rows took {ms(d.ipGroup.packmem)}, against {ms(d.ipGroup.lo)} to {ms(d.ipGroup.hi)} in polars.</li>
               )}
               <li><b className="font-medium">Small tables gain nothing.</b> {d.breakEven}</li>
+              {wk && (
+                <li>
+                  <b className="font-medium">Building a table from JavaScript objects is slow in WebAssembly.</b> In the Workers runtime,{" "}
+                  {wk.rows.toLocaleString("en-US")} rows took {ms(wk.packmem.first_request_ms)} against {ms(wk.plain.first_request_ms)} for an
+                  array, and the objects left behind count until the runtime collects them.
+                </li>
+              )}
               {hf && (
                 <li>
                   <b className="font-medium">Memory-mapped Arrow datasets share better across worker processes.</b> Each worker gets its own

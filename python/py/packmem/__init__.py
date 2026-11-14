@@ -273,7 +273,9 @@ class Table:
             h.path = _os.path.join(_share_dir(dir), f"packmem-{h.pid}-{secrets.token_hex(8)}.pkm")
             h.size = self._t.write_file(h.path)
             h.release = weakref.finalize(h, _unlink, h.path, h.pid)
-            self._t.set_frozen(True)
+            # this process now reads the table from the file too and drops its own copy, so the data exists once:
+            # in the file's pages, shared with every worker, including ones created by fork
+            self._t = _Table.attach(h.path, h.size)
             self._share = h
         return self
 
@@ -297,12 +299,15 @@ class Table:
             raise
 
     def unshare(self):
-        """Remove the shared file and make this table writable again. Processes that already loaded it keep their copy."""
+        """Make this table private and writable again: its data is copied back into this process, and if this
+        process created the shared file, the file is removed. Other processes that have it open keep reading it
+        until they let go (on Windows the file stays until then).
+        """
         h = getattr(self, "_share", None)
         if h is not None:
-            h.release()
+            self._t = _Table.from_bytes(self._t.to_bytes())      # an owned copy; drops this process's mapping
             self._share = None
-            self._t.set_frozen(False)
+            h.release()
 
     @property
     def shared(self):

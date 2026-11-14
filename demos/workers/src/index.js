@@ -1,43 +1,77 @@
 // packmem on Cloudflare Workers, through its WebAssembly build. A Worker has 128 MB of memory, so holding a dataset
 // in it is exactly where packed columns help. The data is generated here so the example is self-contained.
+// MODE=plain holds the same rows as an array of objects instead, for the benchmark in bench.mjs; every response is
+// the same in both modes.
 import wasm from "packmem/wasm/packmem.wasm";
 import { initSync } from "packmem/wasm";
 
 const pm = initSync(wasm);
-const ROWS = 200_000;
-let table;
+const PATHS = ["/", "/pricing", "/docs", "/api/v1/search", "/api/v1/items", "/login", "/blog/packmem"];
+const COUNTRIES = ["SE", "DE", "US", "FR", "IN", "BR", "JP"];
+let held;
 
-function dataset() {
-  // deterministic synthetic web log, appended in batches so no full array of objects ever exists
-  const t = new pm.Table();
-  const paths = ["/", "/pricing", "/docs", "/api/v1/search", "/api/v1/items", "/login", "/blog/packmem"];
-  const countries = ["SE", "DE", "US", "FR", "IN", "BR", "JP"];
+// a deterministic synthetic web log, made in batches of 10,000
+function* batches(rows) {
   let s = 42;
   const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32);
-  for (let a = 0; a < ROWS; a += 10_000) {
+  for (let a = 0; a < rows; a += 10_000) {
     const batch = [];
-    for (let i = a; i < a + 10_000; i++)
-      batch.push({ id: i, path: paths[Math.floor(rnd() * paths.length)], country: countries[Math.floor(rnd() * countries.length)], status: rnd() < 0.05 ? 404 : 200, ms: Math.round(rnd() * 900) });
-    t.extend(batch);
+    for (let i = a; i < Math.min(rows, a + 10_000); i++)
+      batch.push({ id: i, path: PATHS[Math.floor(rnd() * PATHS.length)], country: COUNTRIES[Math.floor(rnd() * COUNTRIES.length)], status: rnd() < 0.05 ? 404 : 200, ms: Math.round(rnd() * 900) });
+    yield batch;
   }
-  return t;
 }
 
+const packed = (rows) => {
+  // appended batch by batch, so no full array of objects ever exists
+  const t = new pm.Table();
+  for (const b of batches(rows)) t.extend(b);
+  return {
+    length: t.length,
+    packedMb: +(t.nbytes / 1e6).toFixed(2),
+    where: (f) => {
+      const v = t.where(f);
+      return { length: v.length, byCountry: () => ({ ...v.groupCount("country") }), sum: (c) => v.sum(c), json: () => v.jsonWebStream() };
+    },
+  };
+};
+
+const plain = (rows) => {
+  const all = [];
+  for (const b of batches(rows)) for (const r of b) all.push(r);
+  const keep = (f) => (r) =>
+    (f.country === undefined || r.country === f.country) && (f.path === undefined || r.path.startsWith(f.path.prefix)) && (f.status === undefined || r.status === f.status);
+  return {
+    length: all.length,
+    packedMb: null,
+    where: (f) => {
+      const v = all.filter(keep(f));
+      const byCountry = () => {
+        const g = {};
+        for (const r of v) g[r.country] = (g[r.country] ?? 0) + 1;
+        return g;
+      };
+      return { length: v.length, byCountry, sum: (c) => v.reduce((s, r) => s + r[c], 0), json: () => JSON.stringify(v) };
+    },
+  };
+};
+
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const url = new URL(request.url);
-    const t0 = Date.now();
-    table ??= dataset();
+    if (url.pathname !== "/stats" && url.pathname !== "/export")
+      return new Response("packmem on Workers: try /stats?country=SE&path=/api or /export?status=404\n");
+    held ??= (env.MODE === "plain" ? plain : packed)(Number(env.ROWS ?? 200_000));
     const q = Object.fromEntries(url.searchParams);
-    const filters = { country: q.country, path: q.path ? { prefix: q.path } : undefined, status: q.status ? Number(q.status) : undefined };
+    const filters = Object.fromEntries(
+      Object.entries({ country: q.country, path: q.path ? { prefix: q.path } : undefined, status: q.status ? Number(q.status) : undefined }).filter(([, v]) => v !== undefined),
+    );
     if (url.pathname === "/stats") {
-      const v = table.where(filters);
-      return Response.json({ rows: table.length, packed_mb: +(table.nbytes / 1e6).toFixed(2), matching: v.length, by_country: v.groupCount("country"), ms_sum: v.sum("ms"), took_ms: Date.now() - t0 });
+      const v = held.where(filters);
+      const byCountry = Object.fromEntries(Object.entries(v.byCountry()).sort(([a], [b]) => (a < b ? -1 : 1)));
+      return Response.json({ rows: held.length, packed_mb: held.packedMb, matching: v.length, by_country: byCountry, ms_sum: v.sum("ms") });
     }
-    if (url.pathname === "/export") {
-      // every matching row as one JSON array, written from the packed columns and streamed
-      return new Response(table.where(filters).jsonWebStream(), { headers: { "content-type": "application/json" } });
-    }
-    return new Response("packmem on Workers: try /stats?country=SE&path=/api or /export?status=404\n");
+    // every matching row as one JSON array; packmem writes it from the packed columns and streams it
+    return new Response(held.where(filters).json(), { headers: { "content-type": "application/json" } });
   },
 };

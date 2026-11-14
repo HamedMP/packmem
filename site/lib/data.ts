@@ -312,3 +312,19 @@ export const hfDatasets = (() => {
     anonMb: { arrowInMemory: median(hfMem.map((r) => r.mem_after_pass.Pss_Anon / 1e6)), packmem: median(pmFull.map((r) => r.mem_after_pass.Pss_Anon / 1e6)) },
   }
 })()
+
+// ---------- Cloudflare Workers (demos/workers/bench.mjs, local workerd under wrangler dev) ----------
+type WorkersRow = { mode: "plain" | "packmem"; rows: number; held_mb: number; wasm_mb: number; first_request_ms: number; stats_ms: number; export_ms: number; packed_mb: number | null }
+const workersRun = read("demos/workers/results/darwin-arm64.json") as { packmem: string; responses_identical: boolean; summary: WorkersRow[]; runs: { loadavg_at_start: number }[] } | null
+export const workers = workersRun?.responses_identical
+  ? (() => {
+      const at = (rows: number) => {
+        const p = workersRun.summary.find((r) => r.rows === rows && r.mode === "packmem")
+        const a = workersRun.summary.find((r) => r.rows === rows && r.mode === "plain")
+        return p && a ? { rows, packmem: p, plain: a } : null
+      }
+      const sizes = [...new Set(workersRun.summary.map((r) => r.rows))].sort((a, b) => a - b)
+      const loads = workersRun.runs.map((r) => r.loadavg_at_start)
+      return { version: workersRun.packmem, sizes: sizes.map(at).filter((x) => x !== null), load: { lo: Math.min(...loads), hi: Math.max(...loads) } }
+    })()
+  : null
