@@ -1261,6 +1261,108 @@ impl PyTable {
         }
         Ok(l)
     }
+    /// The column as Arrow buffers, built without a Python object per value: (kind, nulls, validity, buffers...)
+    /// with kind "null", "bool", "int", "float" or "str". None when the column holds anything else (nested values,
+    /// text mixed with numbers, integers beyond 64 bits), which the caller converts value by value.
+    fn arrow_buffers<'py>(
+        &self,
+        py: Python<'py>,
+        name: &str,
+    ) -> PyResult<Option<Bound<'py, PyTuple>>> {
+        enum B {
+            Null,
+            Bool(Vec<u8>),
+            Int(Vec<i64>),
+            Float(Vec<f64>),
+            Str(Vec<i32>, Vec<u8>),
+        }
+        let Some(c) = self.t.col_index(name) else {
+            return Ok(None);
+        };
+        let n = self.t.len();
+        let (mut b, mut valid, mut nulls) = (B::Null, vec![0u8; n.div_ceil(8)], 0usize);
+        for i in 0..n {
+            let cell = self.t.get(i, c);
+            if matches!(cell, Cell::Missing | Cell::Null) {
+                nulls += 1;
+                match &mut b {
+                    B::Int(v) => v.push(0),
+                    B::Float(v) => v.push(0.0),
+                    B::Str(o, d) => o.push(d.len() as i32),
+                    B::Null | B::Bool(_) => {}
+                }
+                continue;
+            }
+            valid[i / 8] |= 1 << (i % 8);
+            match (&mut b, cell) {
+                (B::Null, Cell::Bool(x)) => {
+                    let mut v = vec![0u8; n.div_ceil(8)];
+                    v[i / 8] |= (x as u8) << (i % 8);
+                    b = B::Bool(v)
+                }
+                (B::Null, Cell::Int(x)) => {
+                    let mut v = vec![0; i];
+                    v.reserve(n - i);
+                    v.push(x);
+                    b = B::Int(v)
+                }
+                (B::Null, Cell::Float(x)) => {
+                    let mut v = vec![0.0; i];
+                    v.reserve(n - i);
+                    v.push(x);
+                    b = B::Float(v)
+                }
+                (B::Null, Cell::Str(x)) => {
+                    let mut o = vec![0i32; i + 1];
+                    o.reserve(n - i);
+                    o.push(x.len() as i32);
+                    b = B::Str(o, x.into_bytes())
+                }
+                (B::Bool(v), Cell::Bool(x)) => v[i / 8] |= (x as u8) << (i % 8),
+                (B::Int(v), Cell::Int(x)) => v.push(x),
+                (B::Float(v), Cell::Float(x)) => v.push(x),
+                (B::Float(v), Cell::Int(x)) => v.push(x as f64),
+                (B::Int(v), Cell::Float(x)) => {
+                    let mut f: Vec<f64> = v.iter().map(|&x| x as f64).collect();
+                    f.reserve(n - i);
+                    f.push(x);
+                    b = B::Float(f)
+                }
+                (B::Str(o, d), Cell::Str(x)) if d.len() + x.len() <= i32::MAX as usize => {
+                    d.extend_from_slice(x.as_bytes());
+                    o.push(d.len() as i32)
+                }
+                _ => return Ok(None),
+            }
+        }
+        fn raw<'py, T>(py: Python<'py>, v: &[T]) -> Bound<'py, PyAny> {
+            // SAFETY: plain numbers viewed as their bytes, in the machine's byte order, which Arrow shares on the
+            // little-endian platforms packmem builds for.
+            let bytes = unsafe {
+                std::slice::from_raw_parts(v.as_ptr().cast::<u8>(), std::mem::size_of_val(v))
+            };
+            PyBytes::new(py, bytes).into_any()
+        }
+        let validity = if nulls == 0 {
+            py.None().into_bound(py)
+        } else {
+            raw(py, &valid)
+        };
+        let (kind, bufs) = match &b {
+            B::Null => ("null", vec![]),
+            B::Bool(v) => ("bool", vec![raw(py, v)]),
+            B::Int(v) => ("int", vec![raw(py, v)]),
+            B::Float(v) => ("float", vec![raw(py, v)]),
+            B::Str(o, d) => ("str", vec![raw(py, o), raw(py, d)]),
+        };
+        let mut items = vec![
+            kind.into_pyobject(py)?.into_any(),
+            nulls.into_pyobject(py)?.into_any(),
+            validity,
+        ];
+        items.extend(bufs);
+        Ok(Some(PyTuple::new(py, items)?))
+    }
     /// Per row: is the key present and not null? A column that does not exist gives all False.
     fn notna(&self, name: &str) -> Vec<bool> {
         match self.t.col_index(name) {

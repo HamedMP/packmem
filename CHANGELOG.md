@@ -14,8 +14,9 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 - Python: `hint="compact"` compresses long text with Zstandard in small blocks with a trained dictionary. Native
   builds only; a table saved this way cannot be opened by the WebAssembly build.
-- Python: `Table.to_arrow()`, `packmem.from_arrow()` and `packmem.read_parquet()`, using pyarrow when it is
-  installed. They copy through Python values; absent keys become nulls in Arrow.
+- Python: `Table.to_arrow()`, `Table.to_parquet()`, `packmem.from_arrow()` and `packmem.read_parquet()`, using
+  pyarrow when it is installed. They copy the data; absent keys become nulls in Arrow. Columns of numbers,
+  booleans and text are written straight into Arrow buffers.
 
 ### Changed
 - Filters, group counts over a whole column, and sums of decimal columns run on several threads once a table has

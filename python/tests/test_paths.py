@@ -589,9 +589,13 @@ def test_arrow_and_parquet():
 
     with tempfile.TemporaryDirectory() as d:
         path = os.path.join(d, "t.parquet")
-        pq.write_table(a, path)
-        assert list(packmem.read_parquet(path)) == rows
+        t.to_parquet(path, compression="zstd")
+        assert pq.read_table(path).equals(a) and list(packmem.read_parquet(path)) == rows
         assert list(packmem.read_parquet(path, columns=["id", "name"])) == [{"id": r["id"], "name": r["name"]} for r in rows]
+
+    plain = packmem.Table([{"a": None, "b": True, "c": "x", "d": 1, "e": 2 ** 40}, {"b": None, "c": None, "d": 2.5}, {"a": None, "b": False, "c": "\u00e9", "d": None, "e": -1}]).to_arrow()
+    assert [str(x) for x in plain.schema.types] == ["null", "bool", "string", "double", "int64"]
+    assert plain.to_pylist() == [{"a": None, "b": True, "c": "x", "d": 1.0, "e": 2 ** 40}, {"a": None, "b": None, "c": None, "d": 2.5, "e": None}, {"a": None, "b": False, "c": "\u00e9", "d": None, "e": -1}]
 
     dated = pa.table({"d": [datetime.date(2026, 1, 2), None]})
     try: packmem.from_arrow(dated); raise AssertionError("expected TypeError without default")

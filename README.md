@@ -190,9 +190,10 @@ With pyarrow installed, tables convert both ways (unreleased, on `main`):
 rows = packmem.read_parquet("events.parquet", columns=["status", "bytes"])
 rows = packmem.from_arrow(arrow_table)           # or a record batch, or an iterable of batches
 rows.to_arrow()                                  # a pyarrow.Table, for polars, pandas or DuckDB
+rows.to_parquet("events.parquet")
 ```
 
-These copy through Python values. Arrow has no way to say a key is absent, so absent keys become nulls
+These copy the data. Arrow has no way to say a key is absent, so absent keys become nulls
 on the way out, and a column holding more than one type has to be converted before `to_arrow()`.
 
 See [python/README.md](python/README.md) for the full API and its semantics.

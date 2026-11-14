@@ -402,17 +402,30 @@ class Table:
     def to_arrow(self):
         """A `pyarrow.Table` with one column per key (needs pyarrow). Absent keys become nulls.
 
-        Values pass through Python objects, so this copies. A column holding more than one type
-        has no Arrow type and raises `TypeError` naming the column.
+        Columns of numbers, booleans and text are written straight into Arrow buffers; nested values
+        pass through Python objects. Either way this copies. A column holding more than one type has
+        no Arrow type and raises `TypeError` naming the column.
         """
         import pyarrow
-        cols = {}
+        types = {"bool": pyarrow.bool_(), "int": pyarrow.int64(), "float": pyarrow.float64(), "str": pyarrow.string()}
+        cols, n = {}, len(self)
         for name in self._t.names():
+            packed = self._t.arrow_buffers(name)
+            if packed is not None:
+                kind, nulls, *buffers = packed
+                cols[name] = pyarrow.nulls(n) if kind == "null" else pyarrow.Array.from_buffers(
+                    types[kind], n, [b if b is None else pyarrow.py_buffer(b) for b in buffers], null_count=nulls)
+                continue
             try:
                 cols[name] = pyarrow.array(self._t.column(name))
             except (pyarrow.ArrowInvalid, pyarrow.ArrowTypeError) as e:
                 raise TypeError(f"column {name!r} has no single Arrow type: {e}") from None
         return pyarrow.table(cols)
+
+    def to_parquet(self, path, **kwargs):
+        """Write the table as a parquet file (needs pyarrow). `kwargs` go to `pyarrow.parquet.write_table`."""
+        import pyarrow.parquet as pq
+        pq.write_table(self.to_arrow(), path, **kwargs)
 
     @property
     def columns(self):
