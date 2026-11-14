@@ -63,6 +63,51 @@ test("fetchTable reads a Node server's bytes, and JSON from a server without pac
   }
 });
 
+test("bytes are gzipped inside the payload only for clients that read that", async () => {
+  const t = new pm.Table(rows);
+  const plainBytes = t.toBytes();
+  const gzReq = new Request("http://x/", { headers: { accept: `${PACKMEM_TYPE}; enc=gzip, ${PACKMEM_TYPE};q=0.9` } });
+  const gz = respond(gzReq, t);
+  assert.equal(gz.headers.get("content-type"), `${PACKMEM_TYPE}; enc=gzip`);
+  const packed = new Uint8Array(await gz.arrayBuffer());
+  assert.ok(packed.byteLength < plainBytes.byteLength / 2, `gzip took ${plainBytes.byteLength} bytes to ${packed.byteLength}`);
+  const unzipped = new Uint8Array(await new Response(new Blob([packed]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());
+  assert.deepEqual(unzipped, new Uint8Array(plainBytes));
+  // a 0.3 client does not ask for gzip, so it gets plain bytes it can read
+  const old = respond(new Request("http://x/", { headers: { accept: PACKMEM_TYPE } }), t);
+  assert.equal(old.headers.get("content-type"), PACKMEM_TYPE);
+  assert.equal(respond(gzReq, t, {}, { gzip: false }).headers.get("content-type"), PACKMEM_TYPE);
+  const tiny = respond(gzReq, new pm.Table(rows.slice(0, 2)));
+  assert.equal(tiny.headers.get("content-type"), PACKMEM_TYPE, "a tiny table is not worth gzipping");
+  assert.equal(wantsPackmem(`${PACKMEM_TYPE}; enc=gzip;q=0, application/json`), false);
+});
+
+test("fetchTable reads gzipped bytes from respond and send", async () => {
+  const t = new pm.Table(rows);
+  const types = [];
+  const server = createServer(async (req, res) => {
+    if (req.url === "/web") {
+      const r = respond(new Request("http://x/", { headers: { accept: req.headers.accept } }), t.where({ level: "info" }));
+      types.push(r.headers.get("content-type"));
+      res.writeHead(200, { "content-type": r.headers.get("content-type") });
+      res.end(new Uint8Array(await r.arrayBuffer()));
+    } else {
+      await send(req, res, t.where({ level: "info" }));
+      types.push(res.getHeader("content-type"));
+    }
+  });
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const want = rows.filter((r) => r.level === "info");
+    assert.deepEqual([...(await fetchTable(pm, `${base}/web`))], want);
+    assert.deepEqual([...(await fetchTable(pm, `${base}/node`))], want);
+    assert.deepEqual(types, [`${PACKMEM_TYPE}; enc=gzip`, `${PACKMEM_TYPE}; enc=gzip`]);
+  } finally {
+    server.close();
+  }
+});
+
 test("fetchTable asks again for JSON when the server's packmem is newer", async () => {
   const t = new pm.Table(rows.slice(0, 100));
   const newer = Uint8Array.from(t.toBytes());

@@ -197,6 +197,11 @@ app.get("/api/rows", (req, res) => send(req, res, table));                // Nod
 const rows = await fetchTable(pm, "/api/rows");
 ```
 
+Bytes over 1 KB go out gzipped inside the payload (`application/vnd.packmem; enc=gzip`) to clients that say they
+read that, which `fetchTable` does. Hosts compress only the types they know (Next.js gzips JSON but not packmem bytes,
+and drops a route's own `Content-Encoding`), so without this the bytes would travel uncompressed. Pass
+`{ gzip: false }` to `respond` or `send` when a proxy in front compresses them already.
+
 A reader refuses bytes written by a newer packmem, so give the browser the same packmem version as the server, or a
 newer one. If the server is ahead, `fetchTable` asks again for JSON.
 
