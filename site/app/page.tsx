@@ -4,9 +4,11 @@ import { ArrowRight01Icon, Cancel01Icon, GithubIcon, MinusSignIcon, Tick02Icon }
 import { Backdrop } from "@/components/site/backdrop"
 import { Logo } from "@/components/site/logo"
 import { ThemeToggle } from "@/components/site/theme-toggle"
-import { Dumbbell, Figure, HBars, LogLines, NumbersTable, Stacked } from "@/components/site/charts"
+import { CompareBars, Dumbbell, Figure, HBars, LogLines, NumbersTable, Stacked } from "@/components/site/charts"
+import { SectionNav, type NavSection } from "@/components/site/section-nav"
+import { WorkersDiagram } from "@/components/site/workers-diagram"
 import { HowItWorks } from "@/components/site/how-it-works"
-import { less, mb, ms, speed } from "@/lib/format"
+import { less, mb, ms, size, speed } from "@/lib/format"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -85,6 +87,19 @@ const COMPARE: { feature: string; cells: [Verdict, string?][] }[] = [
   },
 ]
 
+const NAV: NavSection[] = [
+  { id: "why", title: "Where the memory goes", summary: "Parsed records are mostly object headers, pointers and padding, not data." },
+  { id: "how", title: "Pack the columns, query them packed", summary: "One encoded column per field; filters and counts read the codes." },
+  { id: "results", title: "On real data, in Python", summary: "336,776 flights: 712 MB as a list of dicts, 20 MB in packmem." },
+  { id: "servers", title: "Inside a web server", summary: "Express, Next.js and FastAPI holding the same data, with identical responses." },
+  { id: "linux", title: "The same benchmarks on Linux", summary: "The Mac results, repeated on a Linux server." },
+  { id: "fit", title: "What it is for", summary: "Servers, scripts, training data loaders, edge functions, pipelines." },
+  { id: "compare", title: "packmem, polars, pandas and Arrow", summary: "Which to use when, feature by feature." },
+  { id: "limits", title: "Where it loses", summary: "Plain loops, random rows, big group-bys, batched Arrow access." },
+  { id: "use", title: "Use it", summary: "pip install, npm install, or the Rust crate." },
+  { id: "method", title: "How these numbers were made", summary: "Machines, medians, load averages and the results files." },
+]
+
 function Section({ id, title, children }: { id?: string; title?: string; children: React.ReactNode }) {
   return (
     <section id={id} className="flex scroll-mt-32 flex-col gap-6">
@@ -111,7 +126,7 @@ async function Code({ install, lang, children }: { install: string; lang: Lang; 
   )
 }
 
-function Fit({ title, stat, statSub, tag, wide, children }: { title: string; stat?: string; statSub?: string; tag?: string; wide?: boolean; children: React.ReactNode }) {
+function Fit({ title, stat, statSub, tag, wide, figure, children }: { title: string; stat?: string; statSub?: string; tag?: string; wide?: boolean; figure?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className={cn("flex flex-col gap-3", wide && "md:col-span-2")}>
       <div className="flex flex-wrap items-center gap-2">
@@ -124,6 +139,7 @@ function Fit({ title, stat, statSub, tag, wide, children }: { title: string; sta
           {statSub && <span className="text-xs text-muted-foreground">{statSub}</span>}
         </div>
       )}
+      {figure && <div className="py-1">{figure}</div>}
       <div className={cn("text-sm leading-relaxed text-muted-foreground", wide ? "grid gap-4 md:grid-cols-2 md:gap-10" : "flex flex-col gap-2")}>{children}</div>
     </div>
   )
@@ -221,6 +237,7 @@ export default function Page() {
   return (
     <>
       <Backdrop />
+      <SectionNav sections={NAV} />
       <div className="pointer-events-none fixed inset-0 z-[1] bg-background/85 md:bg-transparent md:bg-linear-to-r md:from-background md:from-30% md:via-background/70 md:via-45% md:to-transparent md:to-62%" />
 
       <header className="fixed inset-x-0 top-0 z-20 flex items-center justify-between px-5 py-6 md:px-12 md:py-8">
@@ -519,7 +536,20 @@ export default function Page() {
             </Lead>
             <div className="grid gap-x-10 gap-y-10 md:grid-cols-2">
               {fastapi && express && (
-                <Fit title="Servers that keep a dataset in memory" stat={`${mb(fastapi.a)} → ${mb(fastapi.b)}`} statSub="A whole FastAPI server, settled, holding the flights">
+                <Fit
+                  title="Servers that keep a dataset in memory"
+                  stat={`${mb(fastapi.a)} → ${mb(fastapi.b)}`}
+                  statSub="A whole FastAPI server, settled, holding the flights"
+                  figure={
+                    <CompareBars
+                      unit="mb"
+                      rows={d.servers.flatMap((sv) => [
+                        { label: `${sv.label}, plain objects`, value: sv.a },
+                        { label: `${sv.label}, packmem`, value: sv.b, hi: true },
+                      ])}
+                    />
+                  }
+                >
                   <p>
                     Load at start-up, then serve filtered pages, counts and exports from memory. Express settled at {mb(express.b)} instead
                     of {mb(express.a)}, and every response was identical to the plain version. A smaller footprint is a smaller instance,
@@ -527,14 +557,54 @@ export default function Page() {
                   </p>
                 </Fit>
               )}
-              <Fit title="Scripts and command-line tools" stat={`${mb(jello.a)} → ${mb(jello.b)}`} statSub="Peak memory, jello querying 104 MB of JSON lines">
+              <Fit
+                title="Scripts and command-line tools"
+                stat={`${mb(jello.a)} → ${mb(jello.b)}`}
+                statSub="Peak memory, jello querying 104 MB of JSON lines"
+                figure={
+                  <CompareBars
+                    unit="mb"
+                    rows={d.tools.flatMap((t, i) => {
+                      const name = ["sqlite-utils, 104 MB JSON", "jello, 104 MB JSON lines", "jello, 12 MB of logs"][i] ?? t.label
+                      return [
+                        { label: name, value: t.a },
+                        { label: `${name}, packmem`, value: t.b, hi: true },
+                      ]
+                    })}
+                  />
+                }
+              >
                 <p>
                   Tools that parse a whole file into a list and then query it. jello also finished in {jello.tb.toFixed(2)} s instead
                   of {jello.ta.toFixed(2)} s. Not every tool gets faster: sqlite-utils used less memory but more time.
                 </p>
               </Fit>
               {ml && (
-                <Fit wide title="Training data for LLMs and vision-language models" tag="Indicative" stat={`${gb(ml.list.forkPeakMb)} → ${gb(ml.packmem.forkPeakMb)}`} statSub="Parent and 4 data-loader workers, one full shuffled epoch">
+                <Fit
+                  wide
+                  title="Training data for LLMs and vision-language models"
+                  tag="Indicative"
+                  stat={`${gb(ml.list.forkPeakMb)} → ${gb(ml.packmem.forkPeakMb)}`}
+                  statSub="Parent and 4 data-loader workers, one full shuffled epoch"
+                  figure={
+                    <div className="md:w-1/2 md:pr-5">
+                      <CompareBars
+                        unit="size"
+                        caption="Qwen3-VL loader, 4 workers, Apple M4 Pro"
+                        rows={[
+                          { label: "List of dicts, fork", value: ml.list.forkPeakMb },
+                          { label: "packmem, fork", value: ml.packmem.forkPeakMb, hi: true },
+                          ...(share
+                            ? [
+                                { label: "packmem, spawn, pickled", value: share.pickled.peakMb },
+                                { label: "packmem share() (0.1.2), spawn", value: share.shared.peakMb, hi: true },
+                              ]
+                            : []),
+                        ]}
+                      />
+                    </div>
+                  }
+                >
                   <p>
                     A fine-tuning loader keeps the annotation list in the main process and gives every worker a copy. We swapped that list
                     for packmem in Qwen3-VL&apos;s fine-tuning dataset class and ran it on the real {ml.list.records.toLocaleString("en-US")}-record
@@ -553,23 +623,42 @@ export default function Page() {
                   </p>
                 </Fit>
               )}
-              {ld?.spawn.open020 && ld.spawn.hf && ld.spawn.list && ld.fork.open020 && ld.fork.hf && (
+              {ld?.spawn.open020 && ld.spawn.hf && ld.spawn.list && ld.fork.open020 && ld.fork.hf && ld.costs && (
                 <Fit
                   wide
                   title="Against Hugging Face datasets"
                   tag="0.2.0, verified"
-                  stat={`+${mb(ld.spawn.hf.aboveMb)} → +${mb(ld.spawn.open020.aboveMb)}`}
-                  statSub={`Memory above a no-data loader, ${ld.workers} spawn workers: datasets' memory-mapped Arrow against packmem.open()`}
+                  stat={`${mb(ld.costs.mapped_file_mb.datasets_arrow_cache)} → ${mb(ld.costs.mapped_file_mb.packmem_saved_table)}`}
+                  statSub="The file every worker maps: datasets' Arrow cache against packmem's saved table"
+                  figure={
+                    <div className="flex flex-col gap-6">
+                    <WorkersDiagram left="List or pickled table: a copy per worker" right="packmem.open(): one file for all" />
+                    <CompareBars
+                      unit="size"
+                      caption={`What the loader adds above one holding no data, ${ld.workers} spawn workers, ${ld.records.toLocaleString("en-US")} LLaVA records; a list took ${size(ld.spawn.list.aboveMb)}. Most of datasets' bar is each worker importing the library (${mb(ld.costs.import_extra_mb["torch+datasets"])} a process), not data.`}
+                      rows={[
+                        ...(ld.spawn.share012 ? [{ label: "packmem 0.1.2 share()", value: ld.spawn.share012.aboveMb }] : []),
+                        { label: "Hugging Face datasets, memory-mapped Arrow", value: ld.spawn.hf.aboveMb },
+                        ...(ld.spawn.share020 ? [{ label: "packmem 0.2.0 share()", value: ld.spawn.share020.aboveMb, hi: true }] : []),
+                        { label: "packmem 0.2.0 open()", value: ld.spawn.open020.aboveMb, hi: true },
+                      ]}
+                    />
+                    </div>
+                  }
                 >
                   <div className="flex flex-col gap-2">
-                    <p className="font-medium text-foreground">0.2.0 holds the same training data in less memory than memory-mapped Arrow.</p>
+                    <p className="font-medium text-foreground">The same zero-copy sharing as memory-mapped Arrow, from a file half the size.</p>
                     <p>
                       Save the packed table once, then <code className="font-mono text-xs">packmem.open()</code> it in every run: the parent and
-                      every worker read the same mapped file, with no schema to declare. In our fine-tuning loader demo on{" "}
-                      {ld.records.toLocaleString("en-US")} LLaVA records, {ld.workers} spawn workers held {mb(ld.spawn.open020.aboveMb)} above a
-                      loader with no data, against {mb(ld.spawn.hf.aboveMb)} for Hugging Face datasets and {gb(ld.spawn.list.aboveMb)} for a list;
-                      with fork it was {mb(ld.fork.open020.aboveMb)} against {mb(ld.fork.hf.aboveMb)}. The first batch arrived in{" "}
-                      {ld.spawn.open020.firstBatchS.toFixed(1)} s against {ld.spawn.hf.firstBatchS.toFixed(1)} s.
+                      every worker read one mapped file, as with Hugging Face datasets, and neither keeps the records in a worker&apos;s private
+                      memory. packmem&apos;s file is {mb(ld.costs.mapped_file_mb.packmem_saved_table)} against a{" "}
+                      {mb(ld.costs.mapped_file_mb.datasets_arrow_cache)} Arrow cache, so half the page cache per machine, with no schema to declare.
+                      Under spawn each worker also imports the library it reads with ({mb(ld.costs.import_extra_mb["torch+datasets"])} for datasets,{" "}
+                      {mb(ld.costs.import_extra_mb["torch+packmem"])} for packmem), so in our fine-tuning loader demo on{" "}
+                      {ld.records.toLocaleString("en-US")} LLaVA records, {ld.workers} spawn workers added {mb(ld.spawn.open020.aboveMb)} with packmem
+                      against {mb(ld.spawn.hf.aboveMb)} with datasets and {gb(ld.spawn.list.aboveMb)} with a list; with fork,{" "}
+                      {mb(ld.fork.open020.aboveMb)} against {mb(ld.fork.hf.aboveMb)}. The first batch arrived in {ld.spawn.open020.firstBatchS.toFixed(1)} s
+                      against {ld.spawn.hf.firstBatchS.toFixed(1)} s.
                     </p>
                   </div>
                   <div className="flex flex-col gap-2">
@@ -594,6 +683,15 @@ export default function Page() {
                   title="Edge functions and small containers"
                   stat={`${mb(wk.plain.held_mb)} → ${mb(wk.packmem.wasm_mb)}`}
                   statSub={`${wk.rows.toLocaleString("en-US")} rows held in a Worker, as objects and in packmem's WebAssembly memory`}
+                  figure={
+                    <CompareBars
+                      rows={[
+                        { label: "Array of objects", value: wk.plain.held_mb },
+                        { label: "Whole runtime with packmem, before garbage collection", value: wk.packmem.held_mb },
+                        { label: "packmem's WebAssembly memory", value: wk.packmem.wasm_mb, hi: true },
+                      ]}
+                    />
+                  }
                 >
                   <p>
                     A Cloudflare Worker gets 128 MB, WebAssembly included, and <code className="font-mono text-xs">packmem/wasm</code> runs

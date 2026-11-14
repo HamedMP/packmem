@@ -2,8 +2,10 @@
 const nf = new Intl.NumberFormat("en-US")
 export const mb = (v: number) => (v < 10 ? v.toFixed(1) : nf.format(Math.round(v))) + " MB"
 export const ms = (v: number) => (v < 1 ? v.toFixed(2) : v < 10 ? v.toFixed(1) : nf.format(Math.round(v))) + " ms"
-export type Unit = "mb" | "ms"
-export const fmt = (u: Unit) => (u === "mb" ? mb : ms)
+/** Megabytes below a gigabyte, gigabytes above. */
+export const size = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1)} GB` : mb(v))
+export type Unit = "mb" | "ms" | "size"
+export const fmt = (u: Unit) => (u === "mb" ? mb : u === "size" ? size : ms)
 export function less(a: number, b: number) {
   const r = a / b
   return r >= 1 ? `${r >= 10 ? Math.round(r) : r.toFixed(1)}× less` : `${(1 / r).toFixed(1)}× more`

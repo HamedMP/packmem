@@ -350,7 +350,7 @@ export const mlShare = (() => {
 // Medians of the per-run result files, as demos/finetune-loader/table.py computes them; "above" subtracts the no-data floor.
 const LOADER = "demos/finetune-loader/results"
 const loaderRuns: Rec[] = existsSync(file(LOADER))
-  ? readdirSync(file(LOADER)).filter((f) => f.endsWith(".json") && !f.endsWith("prepare.json")).map((f) => json(`${LOADER}/${f}`))
+  ? readdirSync(file(LOADER)).filter((f) => f.endsWith(".json") && !f.endsWith("prepare.json") && f !== "costs.json").map((f) => json(`${LOADER}/${f}`))
   : []
 export const loaderDemo = (() => {
   if (!loaderRuns.length) return null
@@ -372,6 +372,7 @@ export const loaderDemo = (() => {
     workers: loaderRuns[0].workers as number,
     records: data[0].records as number,
     sameBatches: new Set(data.map((r) => r.batch_digest)).size === 1,
+    costs: (read(`${LOADER}/costs.json`) as { mapped_file_mb: { datasets_arrow_cache: number; packmem_saved_table: number }; import_extra_mb: Record<string, number> } | null) ?? null,
     load: { lo: Math.min(...loads), hi: Math.max(...loads) },
   }
 })()

@@ -283,3 +283,26 @@ export function LogLines({ points, aName, bName = "packmem", xTicks, yTicks, xLo
     </div>
   )
 }
+
+/** Compact before/after bars for a narrow card: label and value on one line, a thin bar under it. packmem rows take
+ * the accent; the bar keeps a visible sliver however small its value. */
+export function CompareBars({ rows, unit = "mb", caption }: { rows: { label: string; value: number; hi?: boolean }[]; unit?: Unit; caption?: string }) {
+  const max = Math.max(...rows.map((r) => r.value))
+  const f = fmt(unit)
+  return (
+    <figure className="flex flex-col gap-2.5">
+      {rows.map((r) => (
+        <Mark key={r.label} title={r.label} rows={[["", f(r.value)]]} className="flex flex-col gap-1 rounded-md">
+          <span className="flex items-baseline justify-between gap-3 text-xs">
+            <span className={cn("truncate text-muted-foreground", r.hi && "text-foreground")}>{r.label}</span>
+            <span className={cn("shrink-0 tabular-nums text-muted-foreground", r.hi && "font-medium text-foreground")}>{f(r.value)}</span>
+          </span>
+          <span className="block h-2 w-full rounded-full bg-muted/60">
+            <span className={cn("block h-2 rounded-full", r.hi ? "bg-series-pm" : "bg-series-base")} style={{ width: `${Math.max(1.2, (r.value / max) * 100)}%` }} />
+          </span>
+        </Mark>
+      ))}
+      {caption && <figcaption className="text-[11px] text-muted-foreground">{caption}</figcaption>}
+    </figure>
+  )
+}
