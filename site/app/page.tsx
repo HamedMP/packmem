@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowRight01Icon, Cancel01Icon, GithubIcon, MinusSignIcon, Tick02Icon } from "@hugeicons/core-free-icons"
 
@@ -15,7 +16,8 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import * as d from "@/lib/data"
-import { highlight, type Lang } from "@/lib/highlight"
+import { Code } from "@/components/site/code"
+import type { Lang } from "@/lib/highlight"
 import { cn } from "@/lib/utils"
 
 const x = (v: number) => `${v >= 10 ? Math.round(v) : v.toFixed(1)}×`
@@ -112,19 +114,6 @@ function Section({ id, title, children }: { id?: string; title?: string; childre
 
 function Lead({ children }: { children: React.ReactNode }) {
   return <p className="text-lg leading-relaxed text-foreground/90 md:text-xl md:leading-relaxed">{children}</p>
-}
-
-async function Code({ install, lang, children }: { install: string; lang: Lang; children: string }) {
-  const [cmd, code] = await Promise.all([highlight(install, "shellscript"), highlight(children, lang)])
-  return (
-    <div className="code overflow-hidden rounded-lg border bg-muted/60 font-mono text-[13px] leading-relaxed backdrop-blur-sm">
-      <div className="flex gap-2 overflow-x-auto border-b px-4 py-2.5">
-        <span aria-hidden className="text-muted-foreground select-none">$</span>
-        <div dangerouslySetInnerHTML={{ __html: cmd }} />
-      </div>
-      <div className="overflow-x-auto p-4" dangerouslySetInnerHTML={{ __html: code }} />
-    </div>
-  )
 }
 
 function Fit({ title, stat, statSub, tag, wide, figure, children }: { title: string; stat?: string; statSub?: string; tag?: string; wide?: boolean; figure?: React.ReactNode; children: React.ReactNode }) {
@@ -246,6 +235,9 @@ export default function Page() {
           <Logo />
         </a>
         <nav className="flex items-center gap-2">
+          <Button variant="secondary" size="lg" className="bg-secondary/70 backdrop-blur" nativeButton={false} render={<Link href="/blog/" />}>
+            Blog
+          </Button>
           <Button variant="secondary" size="lg" className="hidden bg-secondary/70 backdrop-blur sm:inline-flex" nativeButton={false} render={<a href="#results" />}>
             Results
           </Button>

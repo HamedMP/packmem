@@ -2,9 +2,9 @@
 
 [![packmem: 712 MB as a Python list of dicts, 19.7 MB in packmem](https://hamedmp.github.io/packmem/og.png)](https://hamedmp.github.io/packmem/)
 
-[![PyPI](https://img.shields.io/pypi/v/packmem?label=PyPI)](https://pypi.org/project/packmem/)
-[![npm](https://img.shields.io/npm/v/packmem?label=npm)](https://www.npmjs.com/package/packmem)
-[![Python versions](https://img.shields.io/pypi/pyversions/packmem)](https://pypi.org/project/packmem/)
+[![PyPI](https://img.shields.io/pypi/v/packmem?label=PyPI&cacheSeconds=3600)](https://pypi.org/project/packmem/)
+[![npm](https://img.shields.io/npm/v/packmem?label=npm&cacheSeconds=3600)](https://www.npmjs.com/package/packmem)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://pypi.org/project/packmem/)
 [![CI](https://github.com/HamedMP/packmem/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/HamedMP/packmem/actions/workflows/ci.yml)
 [![Node CI](https://github.com/HamedMP/packmem/actions/workflows/node.yml/badge.svg?branch=main)](https://github.com/HamedMP/packmem/actions/workflows/node.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
