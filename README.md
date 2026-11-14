@@ -96,7 +96,13 @@ an empty one, and on macOS that figure leaves out clean memory-mapped pages for 
 | packmem `share()` | 139 MB | 141 MB | 0.6 s |
 | packmem `open()` of a saved table | 3 MB | 3 MB | 0.6 s |
 
-- **Where packmem is ahead:** the file is about 2.5 times smaller than the Arrow cache, a random
+Most of `datasets`' 228 MB under spawn is not data: each spawned worker imports the library it
+reads with, and importing `datasets` adds 55 MB to a process against 1 MB for packmem
+(`demos/finetune-loader/costs.py`). Under fork that import is inherited, and the two are 9 MB and
+3 MB. The data itself is memory-mapped by both and shared by every process; what differs is the
+file: 94 MB for packmem's saved table against 184 MB for the Arrow cache on this dataset.
+
+- **Where packmem is ahead:** the file is 2 to 2.5 times smaller than the Arrow cache, a random
   row as a dict takes 6 µs against 22 µs (the path a map-style loader uses), and it takes the
   JSON file as it is, where `datasets` needed a hand-written schema.
 - **Where `datasets` is ahead:** batched and columnar access is about twice as fast, a
@@ -106,8 +112,9 @@ an empty one, and on macOS that figure leaves out clean memory-mapped pages for 
 
 The size and per-row figures are from a Linux run on 665,298 records with packmem 0.1.1
 ([benchmarks/ml_swaps/hf-datasets](benchmarks/ml_swaps/hf-datasets)); a Linux run on 0.2.0 is
-pending. If you already use memory-mapped `datasets` and are happy with it, there is no
-memory reason to switch; the reasons would be per-row speed and file size.
+pending. If you already use memory-mapped `datasets` with fork workers and are happy with it,
+there is no memory reason to switch; the reasons would be file size, per-row speed and, with
+spawn workers, not paying for the library in every worker.
 
 ### Where it loses
 

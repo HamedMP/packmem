@@ -21,7 +21,9 @@
     `packmem.open()` in every run memory-maps the packed table, so DataLoader workers share it. In a fine-tuning loader
     over 157,712 LLaVA records with 4 spawn workers, that held 3 MB above an empty loader, against 228 MB for Hugging
     Face `datasets` (memory-mapped Arrow) and 4.0 GB for a list (Apple M4 Pro, medians of 3, annotations only).
-    `datasets` is still faster for batched access, and its Parquet is smaller at rest.
+    To be fair to `datasets`: most of its 228 MB is each spawned worker importing the library, not data. Both keep the
+    records in one mapped file; packmem's is half the size. `datasets` is still faster for batched access, and its
+    Parquet is smaller at rest.
 
     Alpha (0.2.0). pip install packmem — benchmarks, scripts and every results file: https://github.com/HamedMP/packmem
 
