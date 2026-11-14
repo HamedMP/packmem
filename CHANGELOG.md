@@ -2,6 +2,15 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+### Fixed
+- A column of records with none absent (`{"k": 1}` in every row) stored four bytes a row of offsets that said
+  nothing, in memory and in the byte form. On a 16,500-row table with one such column, 0.3.0 wrote 126,641 bytes
+  where 0.2.0 wrote 61,388; this version writes 60,641 (`python/tests/fixtures/`). The offsets are now a row
+  count. This raises the byte format version to 5: files from 0.2.0 and 0.3.0 still open, and 0.3.0 refuses
+  files from this version with "written by a newer packmem".
+
 ## 0.3.0 - 2026-11-14
 
 Checked against 0.2.0 on Linux with the Qwen3-VL and LLaVA-NeXT dataset builds

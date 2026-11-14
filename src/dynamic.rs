@@ -597,7 +597,9 @@ enum Data {
 struct ListCol {
     /// Every row holds a single record rather than a list of them.
     is_record: bool,
+    /// Empty when every row owns exactly one element (a column of records with none absent): row `i` is element `i`.
     offs: Buf<u32>,
+    rows: u32,
     names: Vec<String>,
     /// Each field name as a JSON string followed by a colon, ready to write.
     keys_json: Vec<String>,
@@ -825,7 +827,8 @@ impl ListCol {
         }
         Some(ListCol {
             is_record: nest.is_record,
-            offs: offs.into(),
+            rows: t.len() as u32,
+            offs: Self::sparse(offs),
             names: sh.names.clone(),
             keys_json: sh
                 .names
@@ -841,9 +844,22 @@ impl ListCol {
                 .collect(),
         })
     }
+    /// Offsets that say row `i` is element `i` are dropped: they cost four bytes a row to say nothing.
+    fn sparse(offs: impl Into<Buf<u32>>) -> Buf<u32> {
+        let offs = offs.into();
+        if offs.iter().enumerate().all(|(i, &o)| o as usize == i) {
+            Vec::new().into()
+        } else {
+            offs
+        }
+    }
     #[inline]
     fn range(&self, i: usize) -> (usize, usize) {
-        (self.offs[i] as usize, self.offs[i + 1] as usize)
+        if self.offs.is_empty() {
+            (i, i + 1)
+        } else {
+            (self.offs[i] as usize, self.offs[i + 1] as usize)
+        }
     }
     /// Row `i` as compact JSON text.
     fn text(&self, i: usize) -> String {
@@ -891,6 +907,7 @@ impl ListCol {
     }
     fn write(&self, w: &mut W) {
         w.bool(self.is_record);
+        w.u32(self.rows);
         w.v_u32(&self.offs);
         w.u64(self.shapes.len() as u64);
         for s in &self.shapes {
@@ -905,11 +922,23 @@ impl ListCol {
     }
     fn read(r: &mut R) -> Res<ListCol> {
         let is_record = r.get_bool()?;
+        // before format 5 the offsets were always written, and gave the row count
+        let rows = if r.format >= 5 {
+            Some(r.get_u32()?)
+        } else {
+            None
+        };
         let offs = r.get_v_u32()?;
-        if offs.first() != Some(&0) || offs.windows(2).any(|p| p[0] > p[1]) {
+        let dense = rows.is_some() && offs.is_empty();
+        if !dense
+            && (offs.first() != Some(&0)
+                || offs.windows(2).any(|p| p[0] > p[1])
+                || rows.is_some_and(|n| n as usize != offs.len() - 1))
+        {
             return bad("list offsets");
         }
-        let elems = *offs.last().unwrap() as usize;
+        let rows = rows.unwrap_or(offs.len().max(1) as u32 - 1);
+        let elems = if dense { rows } else { *offs.last().unwrap() } as usize;
         let mut shapes = Vec::new();
         for _ in 0..r.len(1)? {
             shapes.push(r.get_v_u16()?.to_vec())
@@ -936,7 +965,8 @@ impl ListCol {
             .collect();
         Ok(ListCol {
             is_record,
-            offs,
+            rows,
+            offs: Self::sparse(offs),
             names,
             keys_json,
             shapes,
@@ -2244,7 +2274,10 @@ impl DynTable {
             match (&ch.data, ch.clean()) {
                 (Data::List(l), true) if !l.is_record => {
                     for i in 0..ch.len as usize {
-                        out.push((!ch.hole(i)).then(|| l.offs[i + 1] - l.offs[i]))
+                        out.push((!ch.hole(i)).then(|| {
+                            let (a, b) = l.range(i);
+                            (b - a) as u32
+                        }))
                     }
                 }
                 _ => out.extend((0..ch.len as usize).map(|i| json_list_len(&ch.get(i)))),
@@ -2321,7 +2354,7 @@ use crate::wire::{R, Res, W, bad};
 const MAGIC: &[u8; 4] = b"PKMT";
 const MAGIC_0_2: &[u8; 4] = b"PKM2";
 /// Raised whenever a reader built before the change could misread the bytes.
-pub const FORMAT: u8 = 4;
+pub const FORMAT: u8 = 5;
 
 fn write_cell(w: &mut W, c: &Cell) {
     match c {
@@ -2464,7 +2497,7 @@ impl Chunk {
             Data::Int { p, .. } | Data::Dec { p, .. } => p.len(),
             Data::F64(v) => v.len(),
             Data::Str(p) | Data::Mixed(p) => p.len(),
-            Data::List(l) => l.offs.len() - 1,
+            Data::List(l) => l.rows as usize,
         };
         if n > max || stored != n || holes > len {
             return bad("chunk length");
@@ -2568,6 +2601,7 @@ impl DynTable {
         }
         // formats 2 and 3 wrote every single integer at full width
         r.fixed = format < 4;
+        r.format = format;
         let hint = match r.get_u8()? {
             0 => Hint::Memory,
             1 => Hint::Balanced,

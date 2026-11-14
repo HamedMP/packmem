@@ -88,6 +88,8 @@ pub struct R<'a> {
     pub dicts: Vec<Arc<dyn std::any::Any + Send + Sync>>,
     /// Single integers are at full width (formats before 4), not varints.
     pub fixed: bool,
+    /// The format the bytes were written in, for readers of parts that changed since.
+    pub format: u8,
 }
 
 /// How a single integer is written: as a varint, or (u8, f64) as it is.
@@ -241,6 +243,7 @@ impl<'a> R<'a> {
             owner: None,
             dicts: Vec::new(),
             fixed: false,
+            format: 0,
         }
     }
     /// Reads vectors in place from `owner`'s bytes, which they then keep alive.
@@ -251,6 +254,7 @@ impl<'a> R<'a> {
             owner: Some(owner),
             dicts: Vec::new(),
             fixed: false,
+            format: 0,
         }
     }
     fn varint(&mut self) -> Res<u64> {

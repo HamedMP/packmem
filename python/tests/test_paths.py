@@ -242,7 +242,10 @@ def test_byte_header_carries_a_format_version():
     rows[5]["extra"] = "x"
     with open(os.path.join(os.path.dirname(__file__), "fixtures", "table_0.2.0.pkm"), "rb") as f: old = f.read()
     assert old[:4] == b"PKM2" and list(packmem.Table.from_bytes(old)) == rows
+    with open(os.path.join(os.path.dirname(__file__), "fixtures", "table_0.3.0.pkm"), "rb") as f: v4 = f.read()
+    assert v4[:5] == b"PKMT\x04" and list(packmem.Table.from_bytes(v4)) == rows
     new = packmem.Table(rows).to_bytes()
+    assert len(new) <= len(old), "a column of small records must not cost more than it did as JSON text"
     assert new[:4] == b"PKMT" and list(packmem.Table.from_bytes(new)) == rows
     try: packmem.Table.from_bytes(new[:4] + bytes([new[4] + 1]) + new[5:]); raise AssertionError("expected ValueError")
     except ValueError as e: assert "newer packmem" in str(e)
