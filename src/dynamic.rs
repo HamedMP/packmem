@@ -1474,6 +1474,7 @@ impl DynTable {
             self.compact();
             self.spare_tails = Vec::new();
             release_spare_tails();
+            crate::ztext::release();
             for c in &mut self.cols {
                 if c.tail.len() == 0 {
                     c.tail = Tail::default()
@@ -2156,6 +2157,7 @@ impl DynTable {
             Hint::Memory => 0,
             Hint::Balanced => 1,
             Hint::Speed => 2,
+            Hint::Compact => 3,
         });
         w.u64(self.len as u64);
         w.u64(self.cols.len() as u64);
@@ -2186,6 +2188,7 @@ impl DynTable {
             0 => Hint::Memory,
             1 => Hint::Balanced,
             2 => Hint::Speed,
+            3 => Hint::Compact,
             _ => return bad("hint"),
         };
         let len = r.get_u64()? as usize;

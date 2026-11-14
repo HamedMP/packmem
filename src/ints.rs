@@ -9,6 +9,10 @@ pub enum Hint {
     Memory,
     Balanced,
     Speed,
+    /// As `Memory`, and long text is compressed with Zstandard in small blocks: about half the size on prose, at the
+    /// cost of decoding a block to read a value and of filters reading the text. Builds without Zstandard treat it
+    /// as `Memory`.
+    Compact,
 }
 
 fn width(max: u64) -> u8 {
@@ -84,7 +88,7 @@ impl Store {
         let use_bits = w <= 56
             && w < aligned
             && match hint {
-                Hint::Memory => true,
+                Hint::Memory | Hint::Compact => true,
                 Hint::Balanced => aligned as f64 / w.max(1) as f64 >= 1.34,
                 Hint::Speed => false,
             };
@@ -291,7 +295,7 @@ pub fn estimates(st: &IntStats) -> Vec<(Scheme, f64)> {
 pub fn choose(st: &IntStats, hint: Hint) -> Scheme {
     let pen = |s: Scheme| -> f64 {
         match (hint, s) {
-            (Hint::Memory, _) => 1.0,
+            (Hint::Memory | Hint::Compact, _) => 1.0,
             (Hint::Balanced, Scheme::Dict) => 1.1,
             (Hint::Balanced, Scheme::BlockFor) => 1.25,
             (Hint::Balanced, Scheme::Rle) => 1.5,

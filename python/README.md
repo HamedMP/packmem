@@ -138,6 +138,19 @@ rows.col("image").notna()                                     # which records ha
 The names follow pandas (`notna`, `.str`, `.list`). Each returns one value per record as a list, with
 `.to_numpy()` and `.to_arrow()` when those libraries are installed.
 
+## Long text
+
+`hint="compact"` compresses long text (documents, conversation turns) with Zstandard in small blocks that share a
+dictionary trained on the column. Use it when most of a table's size is prose:
+
+```python
+rows = packmem.load_json("conversations.json", hint="compact")
+```
+
+Everything else behaves the same. The costs: loading is slower, reading a value decodes its block, and filters on
+such a column read the text instead of comparing compressed bytes. Short strings and numbers are stored as with
+`hint="memory"`. Not available in the WebAssembly build, which refuses to open a table saved this way.
+
 ## Saving and reopening
 
 ```python

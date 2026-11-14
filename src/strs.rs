@@ -2,6 +2,7 @@
 //! (per-string random access, equality on compressed bytes).
 use crate::buf::Buf;
 use crate::ints::{Hint, Store};
+use crate::ztext::ZBlocks;
 use fsst::{Compressor, CompressorParts, Decompressor};
 use std::collections::HashMap;
 use std::mem::MaybeUninit;
@@ -15,6 +16,8 @@ pub struct StrPool {
     raw_bytes: usize,
     /// Encoder for needles, built lazily on the first equality query (not needed for decoding).
     enc: std::sync::OnceLock<Compressor>,
+    /// When set, the strings live here (Zstandard blocks) and `bytes` and `offs` are empty.
+    z: Option<Box<ZBlocks>>,
 }
 
 fn rebuild(p: &CompressorParts) -> Compressor {
@@ -26,6 +29,7 @@ impl StrPool {
     fn build<'a>(items: &[&'a str], hint: Hint) -> Self {
         let raw: usize = items.iter().map(|s| s.len()).sum();
         let mut fsst = None;
+        let mut fsst_ratio = 1.0;
         if hint != Hint::Speed && raw >= 128 * 1024 {
             let step = (items.len() / 4096).max(1);
             let sample: Vec<&[u8]> = items.iter().step_by(step).map(|s| s.as_bytes()).collect();
@@ -34,8 +38,31 @@ impl StrPool {
                 (a + s.len(), b + c.compress(s).len())
             });
             let ratio = a as f64 / b.max(1) as f64;
-            if ratio >= if hint == Hint::Memory { 1.05 } else { 1.3 } {
-                fsst = Some(Box::new(c.into_parts()))
+            if ratio
+                >= if matches!(hint, Hint::Memory | Hint::Compact) {
+                    1.05
+                } else {
+                    1.3
+                }
+            {
+                fsst = Some(Box::new(c.into_parts()));
+                fsst_ratio = ratio
+            }
+        }
+        if hint == Hint::Compact && raw >= 256 * 1024 {
+            // long text: Zstandard blocks, if they come out clearly smaller than what FSST is expected to give
+            if let Some(z) = ZBlocks::build(items) {
+                let other = raw as f64 / fsst_ratio + 4.0 * items.len() as f64;
+                if (z.bytes() as f64) < other * 0.9 {
+                    return StrPool {
+                        bytes: Vec::new().into(),
+                        offs: vec![0u32].into(),
+                        fsst: None,
+                        raw_bytes: raw,
+                        enc: std::sync::OnceLock::new(),
+                        z: Some(Box::new(z)),
+                    };
+                }
             }
         }
         let mut bytes = Vec::with_capacity(raw / 2);
@@ -57,13 +84,18 @@ impl StrPool {
             fsst,
             raw_bytes: raw,
             enc: std::sync::OnceLock::new(),
+            z: None,
         }
     }
     pub fn len(&self) -> usize {
-        self.offs.len() - 1
+        match &self.z {
+            Some(z) => z.len(),
+            None => self.offs.len() - 1,
+        }
     }
     pub fn bytes(&self) -> usize {
-        self.bytes.len()
+        self.z.as_ref().map_or(0, |z| z.bytes())
+            + self.bytes.len()
             + self.offs.len() * 4
             + if self.fsst.is_some() {
                 std::mem::size_of::<CompressorParts>()
@@ -78,6 +110,9 @@ impl StrPool {
     /// Decode string i into `buf` (reused across calls) and return it. Touches only that string.
     #[inline]
     pub fn get<'a>(&'a self, i: usize, buf: &'a mut Vec<u8>) -> &'a [u8] {
+        if let Some(z) = &self.z {
+            return z.get(i, buf);
+        }
         let e = self.enc(i);
         match &self.fsst {
             None => e,
@@ -94,6 +129,12 @@ impl StrPool {
     }
     /// Equality without decoding: compress the needle once, then compare encoded bytes.
     fn count_eq(&self, needle: &[u8]) -> usize {
+        if let Some(z) = &self.z {
+            let mut buf = Vec::new();
+            return (0..z.len())
+                .filter(|&i| z.get(i, &mut buf) == needle)
+                .count();
+        }
         let nd = match &self.fsst {
             Some(c) => self.enc.get_or_init(|| rebuild(c)).compress(needle),
             None => needle.to_vec(),
@@ -179,7 +220,15 @@ impl PackedStrs {
         }
     }
     pub fn describe(&self) -> String {
-        let f = |p: &StrPool| if p.fsst.is_some() { "+fsst" } else { "" };
+        let f = |p: &StrPool| {
+            if p.z.is_some() {
+                "+zstd"
+            } else if p.fsst.is_some() {
+                "+fsst"
+            } else {
+                ""
+            }
+        };
         match self {
             PackedStrs::Dict { pool, codes, .. } => {
                 format!("dict({}){}/{}", pool.len(), f(pool), codes.kind())
@@ -315,6 +364,10 @@ impl StrPool {
         w.v_u8(&self.bytes);
         w.v_u32(&self.offs);
         w.u64(self.raw_bytes as u64);
+        if let Some(z) = &self.z {
+            w.u8(2);
+            return z.write(w);
+        }
         match &self.fsst {
             None => w.u8(0),
             Some(p) => {
@@ -335,8 +388,13 @@ impl StrPool {
         {
             return bad("string offsets");
         }
+        let mut z = None;
         let fsst = match r.get_u8()? {
             0 => None,
+            2 => {
+                z = Some(Box::new(ZBlocks::read(r)?));
+                None
+            }
             1 => {
                 let n_symbols = r.get_u8()?;
                 let mut symbols = [fsst::Symbol::ZERO; 255];
@@ -361,6 +419,7 @@ impl StrPool {
             fsst,
             raw_bytes,
             enc: std::sync::OnceLock::new(),
+            z,
         })
     }
 }

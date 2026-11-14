@@ -6,6 +6,11 @@ pub mod ints;
 pub mod strs;
 pub mod table;
 pub mod wire;
+#[cfg(feature = "ztext")]
+pub mod ztext;
+#[cfg(not(feature = "ztext"))]
+#[path = "ztext_off.rs"]
+pub mod ztext;
 pub use dynamic::{Cell, DynTable, Num, Pred, StrMeasure};
 pub use ints::{Hint, PackedInts};
 pub use strs::PackedStrs;

@@ -9,7 +9,7 @@ name = "_packmem"
 crate-type = ["cdylib"]
 
 [dependencies]
-packmem = { path = "..", default-features = false }
+packmem = { path = "..", default-features = false, features = ["ztext"] }
 pyo3 = { version = "0.23", features = ["abi3-py310"] }
 memmap2 = "0.9"
 serde = "1"

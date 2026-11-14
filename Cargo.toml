@@ -17,6 +17,8 @@ default = ["baselines"]
 # Bindings and WebAssembly builds depend on the crate with `default-features = false`, which
 # leaves it without any C code.
 baselines = ["dep:lz4_flex", "dep:zstd"]
+# Long text compressed with Zstandard under `Hint::Compact`. Native builds only: Zstandard is C code.
+ztext = ["dep:zstd"]
 
 [dependencies]
 fsst-rs = "0.7.0"

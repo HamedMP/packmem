@@ -12,6 +12,9 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
   `.list.len()`, and for lists of records `.list.field(name).str.len().list.sum()` and
   `.str.split().list.len().list.sum()` (word counts as `str.split()` gives them).
 
+- Python: `hint="compact"` compresses long text with Zstandard in small blocks with a trained dictionary. Native
+  builds only; a table saved this way cannot be opened by the WebAssembly build.
+
 ### Changed
 - `to_json()` writes nested values stored as sub-columns in a canonical form (as `json.dumps` would), not as
   they were written in the source. Values are unchanged.

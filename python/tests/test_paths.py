@@ -344,6 +344,44 @@ def test_nested_lists_of_records():
     assert list(packmem.Table(deep)) == deep
 
 
+def test_compact_hint_compresses_long_text():
+    import pickle, tempfile
+    r = random.Random(12)
+    # a few thousand distinct words, as prose has: too many for byte-pair codes alone to do well
+    vocab = ["".join(r.choice("abcdefghijklmnopqrstuvwxyz") for _ in range(r.randint(3, 9))) for _ in range(4000)] + ["é", "日本語", "naïve"]
+    vocab[10:13] = ["layouts", "and", "column"]
+    para = lambda k: " ".join(r.choice(vocab) for _ in range(k))
+    m = [{"id": i, "kind": r.choice(["a", "b"]), "text": para(r.randint(30, 200)) if i % 53 else "",
+          "turns": [{"from": "human" if k % 2 == 0 else "gpt", "value": para(r.randint(5, 40))} for k in range(r.choice([2, 4, 6]))],
+          **({"note": para(3)} if i % 4 else {})} for i in range(36_000)]
+    plain = packmem.Table(m, hint="memory"); t = packmem.Table(m, hint="compact")
+    kinds = dict((n, e) for n, e, _ in t.describe())
+    assert "+zstd" in kinds["text"] and "+zstd" in kinds["turns"] and "+zstd" not in kinds["kind"], kinds
+    assert t.nbytes < plain.nbytes * 0.8, (t.nbytes, plain.nbytes)
+    assert list(t) == m and t[17] == m[17] and t[-1] == m[-1] and [t[i] for i in range(len(m) - 1, 0, -997)] == [m[i] for i in range(len(m) - 1, 0, -997)]
+    needle = m[100]["text"]
+    assert t.count(text=needle) == sum(1 for x in m if x["text"] == needle) and t.count(text="") == sum(1 for x in m if x["text"] == "")
+    assert t.where(text__contains=" and ").indices() == [i for i, x in enumerate(m) if " and " in x["text"]]
+    pre = m[7]["text"][:6]
+    assert t.where(text__prefix=pre).indices() == [i for i, x in enumerate(m) if x["text"].startswith(pre)]
+    assert t.col("turns").list.field("value").str.split().list.len().list.sum() == [sum(len(e["value"].split()) for e in x["turns"]) for x in m]
+    assert t.to_json() == plain.to_json() and t._t.hint == "compact"
+    u = pickle.loads(pickle.dumps(t)); assert list(u) == m and "+zstd" in dict((n, e) for n, e, _ in u.describe())["text"]
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "c.pkm"); t.save(p); o = packmem.open(p)
+        assert list(o) == m and o.count(kind="a") == t.count(kind="a") and os.path.getsize(p) < plain.nbytes * 0.8
+        raw = builtins_open(p, "rb").read(); bad = os.path.join(d, "bad.pkm"); builtins_open(bad, "wb").write(raw[: len(raw) * 2 // 3])
+        try: packmem.open(bad); raise AssertionError("expected ValueError")
+        except (ValueError, OSError): pass
+        del o; gc_collect()
+    t.update(5, text="changed"); t.append({"id": -1, "text": "new"}); m[5]["text"] = "changed"; m.append({"id": -1, "text": "new"})
+    assert list(t) == m
+    short = packmem.Table([{"s": "ab%d" % (i % 9)} for i in range(40_000)], hint="compact")          # nothing to gain: stays as it was
+    assert "+zstd" not in short.describe()[0][1] and short[5] == {"s": "ab5"}
+    try: packmem.Table(hint="tiny"); raise AssertionError("expected ValueError")
+    except ValueError: pass
+
+
 def gc_collect():
     import gc
     gc.collect()

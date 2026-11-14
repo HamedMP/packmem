@@ -280,8 +280,9 @@ fn hint_of(h: &str) -> PyResult<Hint> {
         "memory" => Ok(Hint::Memory),
         "balanced" => Ok(Hint::Balanced),
         "speed" => Ok(Hint::Speed),
+        "compact" => Ok(Hint::Compact),
         _ => Err(PyValueError::new_err(
-            "hint must be 'memory', 'balanced' or 'speed'",
+            "hint must be 'memory', 'balanced', 'speed' or 'compact'",
         )),
     }
 }
@@ -1372,6 +1373,7 @@ impl PyTable {
             Hint::Memory => "memory",
             Hint::Balanced => "balanced",
             Hint::Speed => "speed",
+            Hint::Compact => "compact",
         }
     }
     /// Rebuild the table from the given row numbers, in that order.
