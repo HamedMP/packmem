@@ -1,0 +1,26 @@
+{
+  "mapped_file_mb": {
+    "datasets_arrow_cache": 184.171688,
+    "packmem_saved_table": 93.650144
+  },
+  "import_mb": {
+    "torch": 150.0,
+    "torch+packmem": 151.0,
+    "torch+datasets": 205.0
+  },
+  "versions": {
+    "torch": "2.15.0",
+    "packmem": "0.2.0",
+    "datasets": "5.2.0"
+  },
+  "machine": {
+    "platform": "darwin",
+    "machine": "arm64"
+  },
+  "metric": "phys_footprint",
+  "loadavg_at_start": 6.0400390625,
+  "import_extra_mb": {
+    "torch+packmem": 1.0,
+    "torch+datasets": 55.0
+  }
+}

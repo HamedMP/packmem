@@ -26,7 +26,7 @@ def label(r):
 
 
 def table():
-    runs = [json.load(open(p)) for p in sorted(glob.glob(os.path.join(HERE, "results", "*.json"))) if not p.endswith("prepare.json")]
+    runs = [json.load(open(p)) for p in sorted(glob.glob(os.path.join(HERE, "results", "*.json"))) if not p.endswith(("prepare.json", "costs.json"))]
     if not runs:
         sys.exit("no results yet: run bench.py")
     metric = runs[0]["charged_metric"]

@@ -85,6 +85,12 @@ llava_instruct_150k.json (157,712 records, 229 MB). darwin arm64, 12 cores, 48 G
 - **In 0.2.0** workers read that file in place: with `share()` they hold nothing beyond the floor and only the
   parent's own table remains (+139 MB). Saving the table once and calling `packmem.open()` in every run leaves 3 MB
   above the floor, against 228 MB for `datasets`, and opening takes no measurable time.
+- **Why `datasets` shows 228 MB: mostly the library, not the data.** Both options memory-map one file, so neither
+  keeps the records in a worker's private memory. Under spawn each worker is a fresh interpreter that imports what the
+  dataset class needs: importing `datasets` adds 55 MB to a process here, packmem 1 MB (`python costs.py`,
+  `results/costs.json`). Four workers make the 228 MB. Under fork the import is inherited, and the two are 9 MB and
+  3 MB. The mapped files themselves are page cache, shared by every process and paid once per machine: the Arrow
+  cache is 184 MB and packmem's saved table 94 MB.
 - **Where packmem loses:**
   - Parsing the JSON takes 1.6 s against 0.4 s for `json.load`. `datasets` builds its Arrow cache once and reloads
     it in about 0.5 s; packmem loads and saves its table once (1.6 s) and then opens it in no measurable time.
@@ -107,4 +113,5 @@ Reproduce, with packmem 0.1.2 in one environment and 0.2.0 in another:
 ```sh
 python bench.py --python venv-0.1.2/bin/python --python-next venv-0.2.0/bin/python --reps 3 --fork-reps 1
 python table.py --write
+python costs.py                  # file sizes and import costs, into results/costs.json
 ```
