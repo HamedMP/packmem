@@ -2,7 +2,9 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased
+## 0.3.1 - 2026-11-14
+
+This version writes byte format 5, which 0.3.0 cannot read: upgrade readers before, or together with, writers.
 
 ### Fixed
 - A column of records with none absent (`{"k": 1}` in every row) stored four bytes a row of offsets that said
@@ -10,6 +12,9 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
   where 0.2.0 wrote 61,388; this version writes 60,641 (`python/tests/fixtures/`). The offsets are now a row
   count. This raises the byte format version to 5: files from 0.2.0 and 0.3.0 still open, and 0.3.0 refuses
   files from this version with "written by a newer packmem".
+- Node: `fetchTable` from `packmem/http` asks again for JSON when the server sends bytes from a newer packmem
+  than the reader. A browser on 0.3.0 talking to a 0.3.1 server then gets JSON instead of an error. Give the
+  browser the same packmem version as the server, or a newer one.
 
 ## 0.3.0 - 2026-11-14
 
