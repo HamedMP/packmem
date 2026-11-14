@@ -54,14 +54,31 @@ export function send(req, res, rows, status = 200) {
 
 /**
  * Fetch a table: asks for packmem bytes and reads them with `pm` (the API from `packmem` or `packmem/wasm`), or parses
- * the JSON a server without packmem sends. Works as an SWR or TanStack Query fetcher.
+ * the JSON a server without packmem sends. Bytes from a newer packmem than `pm` are refused by the reader, so then it
+ * asks again for JSON. Works as an SWR or TanStack Query fetcher.
  */
 export async function fetchTable(pm, input, init = {}) {
   const headers = new Headers(init.headers);
   if (!headers.has("accept")) headers.set("accept", `${PACKMEM_TYPE}, application/json;q=0.9`);
-  const res = await fetch(input, { ...init, headers });
+  const got = await get(pm, input, { ...init, headers });
+  if (!got.newer) return got.table;
+  // The server runs a newer packmem whose bytes this build cannot read; its JSON reads anywhere.
+  headers.set("accept", "application/json");
+  const again = await get(pm, input, { ...init, headers });
+  if (again.newer) throw again.newer;
+  return again.table;
+}
+
+async function get(pm, input, init) {
+  const res = await fetch(input, init);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} from ${res.url || input}`);
   const body = new Uint8Array(await res.arrayBuffer());
   const type = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
-  return type === PACKMEM_TYPE ? pm.Table.fromBytes(body) : pm.parse(body);
+  if (type !== PACKMEM_TYPE) return { table: pm.parse(body) };
+  try {
+    return { table: pm.Table.fromBytes(body) };
+  } catch (e) {
+    if (/newer packmem/.test(String(e?.message))) return { newer: e };
+    throw e;
+  }
 }

@@ -62,3 +62,24 @@ test("fetchTable reads a Node server's bytes, and JSON from a server without pac
     server.close();
   }
 });
+
+test("fetchTable asks again for JSON when the server's packmem is newer", async () => {
+  const t = new pm.Table(rows.slice(0, 100));
+  const newer = Uint8Array.from(t.toBytes());
+  newer[4] = 250; // a format this build has not heard of
+  const asked = [];
+  const server = createServer((req, res) => {
+    asked.push(req.headers.accept);
+    if (wantsPackmem(req)) res.writeHead(200, { "content-type": PACKMEM_TYPE }).end(newer);
+    else res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(rows.slice(0, 100)));
+  });
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  try {
+    const got = await fetchTable(pm, `http://127.0.0.1:${server.address().port}/rows`);
+    assert.deepEqual([...got], rows.slice(0, 100));
+    assert.equal(asked.length, 2);
+    assert.equal(asked[1], "application/json");
+  } finally {
+    server.close();
+  }
+});

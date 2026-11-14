@@ -73,7 +73,7 @@ sys.stdout.buffer.write(packmem.Table.from_bytes(sys.stdin.buffer.read()).to_jso
   assert.deepEqual(JSON.parse(execFileSync(python, ["-c", roundTrip], { input: t.toBytes(), maxBuffer: 1 << 28 })), JSON.parse(json(t)));
 });
 
-test("the header carries a format version, and 0.2.0 bytes still read", () => {
+test("the header carries a format version, and 0.2.0 and 0.3.0 bytes still read", () => {
   // The same rows as python/tests/test_paths.py, written there by the PyPI 0.2.0 wheel.
   const want = Array.from({ length: 16_500 }, (_, i) => {
     const r = { id: i, name: `user${i % 7}`, score: i % 3 ? (i % 50) * 0.5 : null, tags: ["a", "b"].slice(0, i % 3) };
@@ -85,6 +85,9 @@ test("the header carries a format version, and 0.2.0 bytes still read", () => {
   const old = readFileSync(new URL("../../python/tests/fixtures/table_0.2.0.pkm", import.meta.url));
   assert.equal(old.subarray(0, 4).toString(), "PKM2");
   assert.deepEqual([...Table.fromBytes(old)], want);
+  const v030 = readFileSync(new URL("../../python/tests/fixtures/table_0.3.0.pkm", import.meta.url));
+  assert.deepEqual([v030.subarray(0, 4).toString(), v030[4]], ["PKMT", 4], "written by 0.3.0 from PyPI");
+  assert.deepEqual([...Table.fromBytes(v030)], want);
   const now = new Table(want).toBytes();
   assert.equal(new TextDecoder().decode(now.subarray(0, 4)), "PKMT");
   const newer = Uint8Array.from(now);

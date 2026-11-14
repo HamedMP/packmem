@@ -197,6 +197,9 @@ app.get("/api/rows", (req, res) => send(req, res, table));                // Nod
 const rows = await fetchTable(pm, "/api/rows");
 ```
 
+A reader refuses bytes written by a newer packmem, so give the browser the same packmem version as the server, or a
+newer one. If the server is ahead, `fetchTable` asks again for JSON.
+
 `useRows(rows, { offset, limit })` from `packmem/react` returns plain objects for just that window, and the same
 array on each render until the window or the table changes, for virtualized lists. It does not import React, so it
 also works where Next.js loads packmem outside its bundle (`serverExternalPackages`). `../demos/nextjs` has a page

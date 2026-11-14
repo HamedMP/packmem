@@ -13,7 +13,10 @@ export declare function send(
   rows: Table | View,
   status?: number,
 ): void;
-/** Fetch a table: packmem bytes when the server sends them, else its JSON. `pm` is the API from `packmem` or `packmem/wasm`. */
+/**
+ * Fetch a table: packmem bytes when the server sends them, else its JSON. `pm` is the API from `packmem` or `packmem/wasm`.
+ * Bytes written by a newer packmem than `pm` cannot be read, so then it asks again for JSON.
+ */
 export declare function fetchTable<R extends Row = Row>(
   pm: { Table: typeof Table; parse: (input: Uint8Array) => Table },
   input: RequestInfo | URL,
