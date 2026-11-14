@@ -66,8 +66,9 @@ def table():
     prep = os.path.join(HERE, "results", "prepare.json")
     if os.path.exists(prep):
         p = {x["mode"]: x for x in json.load(open(prep))}
-        once = [f"the Arrow cache took {p['hf']['build_s']:.1f} s" if "hf" in p else "",
-                f"saving the .pkm took {p['packmem-open']['build_s']:.1f} s" if "packmem-open" in p else ""]
+        built = lambda m, what: (f"{what} was already there from an earlier run" if p[m]["build_s"] < 0.05 else f"{what} took {p[m]['build_s']:.1f} s")
+        once = [f"load_dataset took {p['hf']['build_s']:.1f} s (it reuses its Arrow cache when one exists)" if "hf" in p else "",
+                built("packmem-open", "the saved .pkm") if "packmem-open" in p else ""]
         note += f" Built once before the runs: {', '.join(x for x in once if x)}."
     return "\n".join(lines) + "\n\n" + note
 

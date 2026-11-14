@@ -3,7 +3,7 @@
     python bench.py --python /path/to/venv-0.1.2/bin/python --python-next /path/to/venv-main/bin/python
 
 --python runs list, hf and packmem with packmem as released; --python-next, if given, runs packmem and
-packmem-open with a build that has packmem.open (main, until the next release). Before each measured run it waits
+packmem-open with packmem 0.2.0 or later (packmem.open is new in 0.2.0). Before each measured run it waits
 for the 1-minute load average to fall to --max-load, for at most 10 minutes, and records the load it started at.
 Each mode's cache (the Arrow files, the .pkm file) is built once first, like a training job's first run.
 """

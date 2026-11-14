@@ -1,7 +1,7 @@
 [
   {
     "mode": "hf",
-    "build_s": 4.170777832994645,
+    "build_s": 0.5404721250015427,
     "records": 157712,
     "versions": {
       "python": "3.12.10",
@@ -12,12 +12,12 @@
   },
   {
     "mode": "packmem-open",
-    "build_s": 1.7044273329956923,
+    "build_s": 0.009500084001047071,
     "records": 157712,
     "versions": {
       "python": "3.12.10",
       "torch": "2.15.0",
-      "packmem": "0.2.0.dev0",
+      "packmem": "0.2.0",
       "datasets": "5.2.0"
     }
   }
