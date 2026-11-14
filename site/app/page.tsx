@@ -27,6 +27,7 @@ const express = d.servers.find((s) => s.f === "express")
 const jello = d.tools[1]
 const ml = d.mlLoader
 const hf = d.hfDatasets
+const share = d.mlShare
 const wk = d.workers?.sizes.at(-1) ?? null
 const workersVersion = d.workers?.version
 const workersLoad = d.workers ? `${d.workers.load.lo.toFixed(1)} to ${d.workers.load.hi.toFixed(1)}` : ""
@@ -539,12 +540,14 @@ export default function Page() {
                     LLaVA mix on an Apple M4 Pro. With spawn workers the first batch arrived in {ml.packmem.spawnFirstBatchS.toFixed(1)} s
                     instead of {ml.list.spawnFirstBatchS.toFixed(1)} s, because the pickled dataset is {mb(ml.packmem.pickleMb)} instead
                     of {mb(ml.list.pickleMb)}.
+                    {share &&
+                      ` In 0.1.2, rows.share() writes the table to a file once, and each spawn worker loads it from there instead of receiving a pickle: parent and workers peaked at ${gb(share.shared.peakMb)} instead of ${gb(share.pickled.peakMb)}, and the first batch arrived in ${share.shared.firstBatchS.toFixed(1)} s instead of ${share.pickled.firstBatchS.toFixed(1)} s.`}
                   </p>
                   <p className="text-xs leading-relaxed">
                     Annotations only: no images, model or GPU. Building the dataset took {(ml.packmem.buildS / ml.list.buildS).toFixed(1)} times
                     as long, because conversation turns are stored as JSON text. None of the patched repositories has tests for the patched
                     code, so correctness rests on every record equalling json.load&apos;s output and on identical batch hashes. This is our
-                    patch, not an upstream integration.{" "}
+                    patch, not an upstream integration.{share && " share() was measured on 20,000 random samples with 4 spawn workers; each worker still holds its own copy of the packed table."}{" "}
                     <a className="underline underline-offset-4" href={`${d.REPO}/tree/main/benchmarks/ml_swaps`}>Patches, harness and raw outputs</a>.
                   </p>
                 </Fit>

@@ -328,3 +328,20 @@ export const workers = workersRun?.responses_identical
       return { version: workersRun.packmem, sizes: sizes.map(at).filter((x) => x !== null), load: { lo: Math.min(...loads), hi: Math.max(...loads) } }
     })()
   : null
+
+// ---------- Table.share() in the same Qwen3-VL loader (benchmarks/ml_swaps/qwen3-vl/share, macOS) ----------
+// 4 spawn workers, 20,000 seeded random samples of the 665,298 records: packmem pickled to every worker against share().
+const SHARE = "benchmarks/ml_swaps/qwen3-vl/share/harness/v3/out/A_spawn20k"
+const shareRuns = (arm: string): Rec[] =>
+  existsSync(file(SHARE))
+    ? readdirSync(file(SHARE)).filter((f) => new RegExp(`^${arm}_\\d+\\.json$`).test(f)).map((f) => json(`${SHARE}/${f}`))
+    : []
+export const mlShare = (() => {
+  const [pickled, shared] = [shareRuns("repo"), shareRuns("repo-share")]
+  if (!pickled.length || !shared.length) return null
+  const arm = (rs: Rec[]) => ({
+    peakMb: median(rs.map((r) => r.main_peak_plus_worker_peaks_mib * 1.048576)),
+    firstBatchS: median(rs.map((r) => r.iter_to_first_batch_s)),
+  })
+  return { pickled: arm(pickled), shared: arm(shared) }
+})()

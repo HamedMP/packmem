@@ -103,7 +103,10 @@ hand. polars also loads 6 times faster, its filters are 2 to 4 times faster at m
   unpickles (308 MB). `datasets` also reloads from its cache in 0.02 s where packmem parses the JSON again (8.5 s), and
   its batched access is about twice as fast. packmem turns a random row into a dict faster (6 µs against 22 µs) and
   needs no schema, and against the list the same node peaked at 15.7 GB. If you already use memory-mapped datasets
-  with worker processes, stay there. (Linux server shared with CI: memory figures hold, timings are indicative.)
+  with worker processes, stay there. (Linux server shared with CI: memory figures hold, timings are indicative;
+  packmem 0.1.1.) Since 0.1.2, `rows.share()` writes the table to a file once and workers load it from there instead
+  of receiving a pickle: in Qwen3-VL's fine-tuning loader on a Mac, parent and 4 spawn workers peaked at 2.7 GB instead
+  of 4.5 GB and the first batch arrived in 1.2 s instead of 4.1 s. Each worker still holds its own copy.
 
 ## On Linux
 
