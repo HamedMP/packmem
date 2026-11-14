@@ -14,6 +14,8 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 - Python: `hint="compact"` compresses long text with Zstandard in small blocks with a trained dictionary. Native
   builds only; a table saved this way cannot be opened by the WebAssembly build.
+- Python: `Table.to_arrow()`, `packmem.from_arrow()` and `packmem.read_parquet()`, using pyarrow when it is
+  installed. They copy through Python values; absent keys become nulls in Arrow.
 
 ### Changed
 - `to_json()` writes nested values stored as sub-columns in a canonical form (as `json.dumps` would), not as

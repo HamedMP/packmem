@@ -66,6 +66,7 @@ Filters: `col=value`, `col__prefix`, `col__contains`, `col__gt`, `col__gte`, `co
 | `list(csv.DictReader(f))` | `packmem.read_csv(path)` (add `infer=True` for numbers instead of strings) or `packmem.Table(csv.DictReader(f))` |
 | `[dict(r) for r in cursor]` | `packmem.Table(cursor)` |
 | `[dict(zip(names, r)) for r in cursor]` | `packmem.from_cursor(cursor)` (any DB-API cursor) |
+| `pyarrow_table.to_pylist()`, `pq.read_table(path).to_pylist()` | `packmem.from_arrow(table)`, `packmem.read_parquet(path, columns=[...])`; back with `rows.to_arrow()` (needs pyarrow) |
 | `list(queryset.values())` (Django) | `packmem.from_queryset(queryset)` |
 | any iterable of dicts | `packmem.Table(records)` |
 

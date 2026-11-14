@@ -507,6 +507,39 @@ def test_subclasses_survive_pickling():
 
 
 
+def test_arrow_and_parquet():
+    try:
+        import pyarrow as pa, pyarrow.parquet as pq
+    except ImportError:
+        return
+    import datetime, os, tempfile
+    rows = [{"id": i, "name": "n%d" % (i % 50), "score": i / 4 if i % 7 else None,
+             "turns": [{"from": "human", "text": "hello " * (i % 5)}, {"from": "gpt", "text": "ok"}][: i % 3]} for i in range(70000)]
+    t = packmem.Table(rows)
+    a = t.to_arrow()
+    assert a.num_rows == len(rows) and a.column_names == ["id", "name", "score", "turns"]
+    assert a.to_pylist() == rows and pa.types.is_list(a.schema.field("turns").type)
+    back = packmem.from_arrow(a)
+    assert list(back) == rows and back.count(name="n7") == 1400
+    assert back.col("turns").list.len() == [len(r["turns"]) for r in rows]
+    assert list(packmem.from_arrow(a.to_batches()[0])) == rows[: a.to_batches()[0].num_rows]
+    assert len(packmem.from_arrow(pa.table({}))) == 0
+
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, "t.parquet")
+        pq.write_table(a, path)
+        assert list(packmem.read_parquet(path)) == rows
+        assert list(packmem.read_parquet(path, columns=["id", "name"])) == [{"id": r["id"], "name": r["name"]} for r in rows]
+
+    dated = pa.table({"d": [datetime.date(2026, 1, 2), None]})
+    try: packmem.from_arrow(dated); raise AssertionError("expected TypeError without default")
+    except TypeError: pass
+    assert list(packmem.from_arrow(dated, default=str)) == [{"d": "2026-01-02"}, {"d": None}]
+
+    try: packmem.Table([{"x": 1}, {"x": "a"}]).to_arrow(); raise AssertionError("expected TypeError for a mixed column")
+    except TypeError as e: assert "'x'" in str(e)
+
+
 def test_from_queryset():
     try:
         import django

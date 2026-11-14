@@ -13,7 +13,7 @@ import os as _os
 from collections.abc import MutableSequence as _MutableSequence
 from ._packmem import _Table, Selection, Row
 
-__all__ = ["Table", "View", "Row", "load_jsonl", "load_json", "from_records", "from_cursor", "from_queryset", "read_csv", "open", "cleanup_stale", "Values"]
+__all__ = ["Table", "View", "Row", "load_jsonl", "load_json", "from_records", "from_cursor", "from_queryset", "from_arrow", "read_parquet", "read_csv", "open", "cleanup_stale", "Values"]
 try:
     from importlib.metadata import version as _version
     __version__ = _version("packmem")
@@ -399,6 +399,21 @@ class Table:
         `rows.col("turns").list.len()`, `rows.col("turns").list.field("text").str.len().list.sum()`."""
         return _Col(self._t, name)
 
+    def to_arrow(self):
+        """A `pyarrow.Table` with one column per key (needs pyarrow). Absent keys become nulls.
+
+        Values pass through Python objects, so this copies. A column holding more than one type
+        has no Arrow type and raises `TypeError` naming the column.
+        """
+        import pyarrow
+        cols = {}
+        for name in self._t.names():
+            try:
+                cols[name] = pyarrow.array(self._t.column(name))
+            except (pyarrow.ArrowInvalid, pyarrow.ArrowTypeError) as e:
+                raise TypeError(f"column {name!r} has no single Arrow type: {e}") from None
+        return pyarrow.table(cols)
+
     @property
     def columns(self):
         return self._t.names()
@@ -645,6 +660,31 @@ def from_queryset(queryset, fields=None, hint="balanced", default=None):
     t = Table(hint=hint)
     t._t.extend_rows(fields, queryset.values_list(*fields).iterator(), default)
     return t
+
+
+def from_arrow(data, hint="balanced", default=None):
+    """Pack a `pyarrow.Table`, `RecordBatch` or an iterable of record batches, one batch at a time.
+
+    Nulls become None. See `from_cursor` for `default`, which Arrow dates, timestamps, decimals
+    and binary values need.
+    """
+    t = Table(hint=hint)
+    if hasattr(data, "to_batches"):
+        data = data.to_batches(max_chunksize=65536)
+    elif hasattr(data, "schema") and hasattr(data, "columns"):
+        data = [data]
+    for batch in data:
+        cols = [c.to_pylist() for c in batch.columns]
+        if cols:
+            t._t.extend_rows(list(batch.schema.names), zip(*cols), default)
+    return t
+
+
+def read_parquet(path, hint="balanced", columns=None, default=None):
+    """Pack a parquet file (needs pyarrow), reading it in batches. `columns` limits what is read."""
+    import pyarrow.parquet as pq
+    with pq.ParquetFile(path) as f:
+        return from_arrow(f.iter_batches(batch_size=65536, columns=columns), hint=hint, default=default)
 
 
 def _only(fields):
