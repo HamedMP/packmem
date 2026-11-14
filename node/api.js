@@ -471,6 +471,39 @@ export function createApi(NativeTable, { bytes = (u) => u } = {}) {
     }
 
     /**
+     * Share this table with worker threads without copying it: it becomes read-only, and the returned handle can be sent
+     * to a worker (workerData or postMessage), where `Table.fromShared(handle)` reads the same table.
+     */
+    share() {
+      if (typeof this._t.share !== "function") throw new Error("share() is not available in the WebAssembly build");
+      const id = this._t.share();
+      return { packmemShared: id, pid: process.pid, rows: this.length, columns: this.names };
+    }
+    /** Writable again; workers already reading keep the table they had. */
+    unshare() {
+      if (typeof this._t.unshare !== "function") throw new Error("unshare() is not available in the WebAssembly build");
+      this._t.unshare();
+      this._version++;
+      return this;
+    }
+    /** True while the table is shared (and read-only). */
+    get shared() {
+      return this._t.shared === true;
+    }
+    /** A read-only table over one that another thread of this process shared with `share()`. */
+    static fromShared(handle) {
+      if (typeof NativeTable.fromShared !== "function")
+        throw new Error("fromShared() is not available in the WebAssembly build");
+      if (!handle || typeof handle.packmemShared !== "string")
+        throw new TypeError("fromShared needs the handle returned by table.share()");
+      if (handle.pid !== process.pid)
+        throw new Error("shared tables work across worker threads, not processes: this handle is from another process");
+      const out = new Table();
+      out._t = NativeTable.fromShared(handle.packmemShared);
+      return out;
+    }
+
+    /**
      * Iterate rows as lazy objects: a field is read from the packed column only when the loop touches it, one column per
      * batch of 4,096 rows. Faster than full objects for loops that read a few fields; assigning a field writes to the table.
      */

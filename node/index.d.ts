@@ -70,6 +70,14 @@ export declare class Table<R extends Row = Row> extends Rows<R> {
   /** A new table holding these rows, in this order. */
   take(ids: Iterable<number> | Uint32Array): Table<R>;
   copy(): Table<R>;
+  /** Share with worker threads without copying: the table becomes read-only. Send the handle to a worker. */
+  share(): SharedTable;
+  /** Writable again; workers already reading keep the table they had. */
+  unshare(): this;
+  /** True while the table is shared (and read-only). */
+  readonly shared: boolean;
+  /** A read-only table over one another thread of this process shared. */
+  static fromShared<R extends Row = Row>(handle: SharedTable): Table<R>;
   /** Rows as lazy objects that read a field only when it is touched; assigning a field writes to the table. */
   lazy(): Generator<LazyRow<R>>;
   where(filters: Filters): View<R>;
@@ -103,6 +111,14 @@ export declare function parse<R extends Row = Row>(input: string | Uint8Array, o
 export declare function from<R extends Row = Row>(records: Iterable<R>, opts?: { hint?: Hint }): Table<R>;
 
 /** Minimal shape of a node-postgres client; `pg.Client`, `pg.PoolClient` fit. */
+/** What `table.share()` returns: plain data, safe to send to a worker thread. */
+export interface SharedTable {
+  readonly packmemShared: string;
+  readonly pid: number;
+  readonly rows: number;
+  readonly columns: string[];
+}
+
 export interface PgClientLike {
   query(q: unknown): unknown;
 }

@@ -1,0 +1,644 @@
+{
+  "what": "records held by the main thread and 4 worker threads of one process; process RSS after GC in every thread and 20 s idle; medians of 5 fresh processes per mode",
+  "machine": {
+    "cpu": "Apple M4 Pro",
+    "node": "v22.22.3",
+    "platform": "darwin-arm64",
+    "date": "2026-11-13T23:36:37.768Z",
+    "loadavg_range": [
+      1.87,
+      5.61
+    ]
+  },
+  "datasets": {
+    "flights": {
+      "rows": 336776,
+      "packed_mb": 8.1,
+      "medians": {
+        "floor": {
+          "rss_mb": 85.9,
+          "peak_rss_mb": 95.4,
+          "ready_ms": 35
+        },
+        "copy": {
+          "rss_mb": 314,
+          "peak_rss_mb": 323.2,
+          "ready_ms": 611
+        },
+        "share": {
+          "rss_mb": 253.5,
+          "peak_rss_mb": 263.4,
+          "ready_ms": 341
+        },
+        "objects": {
+          "rss_mb": 1071.5,
+          "peak_rss_mb": 1504.3,
+          "ready_ms": 1240
+        }
+      }
+    },
+    "logs_2m": {
+      "rows": 2000000,
+      "packed_mb": 65.4,
+      "medians": {
+        "floor": {
+          "rss_mb": 85.4,
+          "peak_rss_mb": 95,
+          "ready_ms": 35
+        },
+        "copy": {
+          "rss_mb": 700.9,
+          "peak_rss_mb": 710.2,
+          "ready_ms": 3410
+        },
+        "share": {
+          "rss_mb": 427.7,
+          "peak_rss_mb": 438.1,
+          "ready_ms": 1701
+        }
+      }
+    }
+  },
+  "runs": [
+    {
+      "name": "flights",
+      "mode": "floor",
+      "rows": 0,
+      "packed_mb": null,
+      "workers": 4,
+      "ready_ms": 36,
+      "rss_mb": 86.1,
+      "peak_rss_mb": 95.6,
+      "answer": {},
+      "run": 1,
+      "loadavg_at_start": 3.45
+    },
+    {
+      "name": "flights",
+      "mode": "copy",
+      "rows": 336776,
+      "packed_mb": 8.1,
+      "workers": 4,
+      "ready_ms": 610,
+      "rss_mb": 310.8,
+      "peak_rss_mb": 320.2,
+      "answer": {
+        "n": 58665,
+        "sum": 140906931,
+        "groups": 105,
+        "bytes": 17638481
+      },
+      "run": 1,
+      "loadavg_at_start": 3.55
+    },
+    {
+      "name": "flights",
+      "mode": "share",
+      "rows": 336776,
+      "packed_mb": 8.1,
+      "workers": 4,
+      "ready_ms": 341,
+      "rss_mb": 255.2,
+      "peak_rss_mb": 264.8,
+      "answer": {
+        "n": 58665,
+        "sum": 140906931,
+        "groups": 105,
+        "bytes": 17638481
+      },
+      "run": 1,
+      "loadavg_at_start": 3.89
+    },
+    {
+      "name": "flights",
+      "mode": "objects",
+      "rows": 336776,
+      "packed_mb": null,
+      "workers": 4,
+      "ready_ms": 1246,
+      "rss_mb": 869,
+      "peak_rss_mb": 1510.1,
+      "answer": {
+        "n": 58665,
+        "sum": 140906931,
+        "groups": 105,
+        "bytes": 17638481
+      },
+      "run": 1,
+      "loadavg_at_start": 3.48
+    },
+    {
+      "name": "flights",
+      "mode": "floor",
+      "rows": 0,
+      "packed_mb": null,
+      "workers": 4,
+      "ready_ms": 35,
+      "rss_mb": 86.3,
+      "peak_rss_mb": 94.7,
+      "answer": {},
+      "run": 2,
+      "loadavg_at_start": 3.36
+    },
+    {
+      "name": "flights",
+      "mode": "copy",
+      "rows": 336776,
+      "packed_mb": 8.1,
+      "workers": 4,
+      "ready_ms": 612,
+      "rss_mb": 315.9,
+      "peak_rss_mb": 326.1,
+      "answer": {
+        "n": 58665,
+        "sum": 140906931,
+        "groups": 105,
+        "bytes": 17638481
+      },
+      "run": 2,
+      "loadavg_at_start": 3.27
+    },
+    {
+      "name": "flights",
+      "mode": "share",
+      "rows": 336776,
+      "packed_mb": 8.1,
+      "workers": 4,
+      "ready_ms": 337,
+      "rss_mb": 255.4,
+      "peak_rss_mb": 264.9,
+      "answer": {
+        "n": 58665,
+        "sum": 140906931,
+        "groups": 105,
+        "bytes": 17638481
+      },
+      "run": 2,
+      "loadavg_at_start": 2.97
+    },
+    {
+      "name": "flights",
+      "mode": "objects",
+      "rows": 336776,
+      "packed_mb": null,
+      "workers": 4,
+      "ready_ms": 1244,
+      "rss_mb": 1146.7,
+      "peak_rss_mb": 1585.2,
+      "answer": {
+        "n": 58665,
+        "sum": 140906931,
+        "groups": 105,
+        "bytes": 17638481
+      },
+      "run": 2,
+      "loadavg_at_start": 3.18
+    },
+    {
+      "name": "flights",
+      "mode": "floor",
+      "rows": 0,
+      "packed_mb": null,
+      "workers": 4,
+      "ready_ms": 35,
+      "rss_mb": 85,
+      "peak_rss_mb": 95.3,
+      "answer": {},
+      "run": 3,
+      "loadavg_at_start": 3.04
+    },
+    {
+      "name": "flights",
+      "mode": "copy",
+      "rows": 336776,
+      "packed_mb": 8.1,
+      "workers": 4,
+      "ready_ms": 611,
+      "rss_mb": 311.8,
+      "peak_rss_mb": 322.5,
+      "answer": {
+        "n": 58665,
+        "sum": 140906931,
+        "groups": 105,
+        "bytes": 17638481
+      },
+      "run": 3,
+      "loadavg_at_start": 3.01
+    },
+    {
+      "name": "flights",
+      "mode": "share",
+      "rows": 336776,
+      "packed_mb": 8.1,
+      "workers": 4,
+      "ready_ms": 343,
+      "rss_mb": 252.5,
+      "peak_rss_mb": 261.8,
+      "answer": {
+        "n": 58665,
+        "sum": 140906931,
+        "groups": 105,
+        "bytes": 17638481
+      },
+      "run": 3,
+      "loadavg_at_start": 2.96
+    },
+    {
+      "name": "flights",
+      "mode": "objects",
+      "rows": 336776,
+      "packed_mb": null,
+      "workers": 4,
+      "ready_ms": 1235,
+      "rss_mb": 856.8,
+      "peak_rss_mb": 1504.3,
+      "answer": {
+        "n": 58665,
+        "sum": 140906931,
+        "groups": 105,
+        "bytes": 17638481
+      },
+      "run": 3,
+      "loadavg_at_start": 5.61
+    },
+    {
+      "name": "flights",
+      "mode": "floor",
+      "rows": 0,
+      "packed_mb": null,
+      "workers": 4,
+      "ready_ms": 34,
+      "rss_mb": 85.9,
+      "peak_rss_mb": 95.6,
+      "answer": {},
+      "run": 4,
+      "loadavg_at_start": 4.83
+    },
+    {
+      "name": "flights",
+      "mode": "copy",
+      "rows": 336776,
+      "packed_mb": 8.1,
+      "workers": 4,
+      "ready_ms": 606,
+      "rss_mb": 314.5,
+      "peak_rss_mb": 324.6,
+      "answer": {
+        "n": 58665,
+        "sum": 140906931,
+        "groups": 105,
+        "bytes": 17638481
+      },
+      "run": 4,
+      "loadavg_at_start": 4.42
+    },
+    {
+      "name": "flights",
+      "mode": "share",
+      "rows": 336776,
+      "packed_mb": 8.1,
+      "workers": 4,
+      "ready_ms": 332,
+      "rss_mb": 252.1,
+      "peak_rss_mb": 261.3,
+      "answer": {
+        "n": 58665,
+        "sum": 140906931,
+        "groups": 105,
+        "bytes": 17638481
+      },
+      "run": 4,
+      "loadavg_at_start": 3.71
+    },
+    {
+      "name": "flights",
+      "mode": "objects",
+      "rows": 336776,
+      "packed_mb": null,
+      "workers": 4,
+      "ready_ms": 1232,
+      "rss_mb": 1071.5,
+      "peak_rss_mb": 1498.6,
+      "answer": {
+        "n": 58665,
+        "sum": 140906931,
+        "groups": 105,
+        "bytes": 17638481
+      },
+      "run": 4,
+      "loadavg_at_start": 3.86
+    },
+    {
+      "name": "flights",
+      "mode": "floor",
+      "rows": 0,
+      "packed_mb": null,
+      "workers": 4,
+      "ready_ms": 37,
+      "rss_mb": 85,
+      "peak_rss_mb": 95.4,
+      "answer": {},
+      "run": 5,
+      "loadavg_at_start": 4.2
+    },
+    {
+      "name": "flights",
+      "mode": "copy",
+      "rows": 336776,
+      "packed_mb": 8.1,
+      "workers": 4,
+      "ready_ms": 624,
+      "rss_mb": 314,
+      "peak_rss_mb": 323.2,
+      "answer": {
+        "n": 58665,
+        "sum": 140906931,
+        "groups": 105,
+        "bytes": 17638481
+      },
+      "run": 5,
+      "loadavg_at_start": 4.17
+    },
+    {
+      "name": "flights",
+      "mode": "share",
+      "rows": 336776,
+      "packed_mb": 8.1,
+      "workers": 4,
+      "ready_ms": 343,
+      "rss_mb": 253.5,
+      "peak_rss_mb": 263.4,
+      "answer": {
+        "n": 58665,
+        "sum": 140906931,
+        "groups": 105,
+        "bytes": 17638481
+      },
+      "run": 5,
+      "loadavg_at_start": 4.58
+    },
+    {
+      "name": "flights",
+      "mode": "objects",
+      "rows": 336776,
+      "packed_mb": null,
+      "workers": 4,
+      "ready_ms": 1240,
+      "rss_mb": 1073.8,
+      "peak_rss_mb": 1483.7,
+      "answer": {
+        "n": 58665,
+        "sum": 140906931,
+        "groups": 105,
+        "bytes": 17638481
+      },
+      "run": 5,
+      "loadavg_at_start": 5.17
+    },
+    {
+      "name": "logs_2m",
+      "mode": "floor",
+      "rows": 0,
+      "packed_mb": null,
+      "workers": 4,
+      "ready_ms": 34,
+      "rss_mb": 85.9,
+      "peak_rss_mb": 95,
+      "answer": {},
+      "run": 1,
+      "loadavg_at_start": 4.58
+    },
+    {
+      "name": "logs_2m",
+      "mode": "copy",
+      "rows": 2000000,
+      "packed_mb": 65.4,
+      "workers": 4,
+      "ready_ms": 3461,
+      "rss_mb": 774.7,
+      "peak_rss_mb": 784,
+      "answer": {
+        "n": 100363,
+        "sum": 11472344077,
+        "groups": 10,
+        "bytes": 25259999
+      },
+      "run": 1,
+      "loadavg_at_start": 4.75
+    },
+    {
+      "name": "logs_2m",
+      "mode": "share",
+      "rows": 2000000,
+      "packed_mb": 65.4,
+      "workers": 4,
+      "ready_ms": 1701,
+      "rss_mb": 380.3,
+      "peak_rss_mb": 440.1,
+      "answer": {
+        "n": 100363,
+        "sum": 11472344077,
+        "groups": 10,
+        "bytes": 25259999
+      },
+      "run": 1,
+      "loadavg_at_start": 3.91
+    },
+    {
+      "name": "logs_2m",
+      "mode": "floor",
+      "rows": 0,
+      "packed_mb": null,
+      "workers": 4,
+      "ready_ms": 37,
+      "rss_mb": 85.4,
+      "peak_rss_mb": 95.6,
+      "answer": {},
+      "run": 2,
+      "loadavg_at_start": 4.74
+    },
+    {
+      "name": "logs_2m",
+      "mode": "copy",
+      "rows": 2000000,
+      "packed_mb": 65.4,
+      "workers": 4,
+      "ready_ms": 3417,
+      "rss_mb": 720.1,
+      "peak_rss_mb": 730.8,
+      "answer": {
+        "n": 100363,
+        "sum": 11472344077,
+        "groups": 10,
+        "bytes": 25259999
+      },
+      "run": 2,
+      "loadavg_at_start": 3.79
+    },
+    {
+      "name": "logs_2m",
+      "mode": "share",
+      "rows": 2000000,
+      "packed_mb": 65.4,
+      "workers": 4,
+      "ready_ms": 1709,
+      "rss_mb": 427.7,
+      "peak_rss_mb": 437.3,
+      "answer": {
+        "n": 100363,
+        "sum": 11472344077,
+        "groups": 10,
+        "bytes": 25259999
+      },
+      "run": 2,
+      "loadavg_at_start": 3.22
+    },
+    {
+      "name": "logs_2m",
+      "mode": "floor",
+      "rows": 0,
+      "packed_mb": null,
+      "workers": 4,
+      "ready_ms": 34,
+      "rss_mb": 84.9,
+      "peak_rss_mb": 94.5,
+      "answer": {},
+      "run": 3,
+      "loadavg_at_start": 3.33
+    },
+    {
+      "name": "logs_2m",
+      "mode": "copy",
+      "rows": 2000000,
+      "packed_mb": 65.4,
+      "workers": 4,
+      "ready_ms": 3410,
+      "rss_mb": 641.3,
+      "peak_rss_mb": 651,
+      "answer": {
+        "n": 100363,
+        "sum": 11472344077,
+        "groups": 10,
+        "bytes": 25259999
+      },
+      "run": 3,
+      "loadavg_at_start": 2.66
+    },
+    {
+      "name": "logs_2m",
+      "mode": "share",
+      "rows": 2000000,
+      "packed_mb": 65.4,
+      "workers": 4,
+      "ready_ms": 1714,
+      "rss_mb": 339.4,
+      "peak_rss_mb": 441.5,
+      "answer": {
+        "n": 100363,
+        "sum": 11472344077,
+        "groups": 10,
+        "bytes": 25259999
+      },
+      "run": 3,
+      "loadavg_at_start": 2.53
+    },
+    {
+      "name": "logs_2m",
+      "mode": "floor",
+      "rows": 0,
+      "packed_mb": null,
+      "workers": 4,
+      "ready_ms": 35,
+      "rss_mb": 85.4,
+      "peak_rss_mb": 94.3,
+      "answer": {},
+      "run": 4,
+      "loadavg_at_start": 2.23
+    },
+    {
+      "name": "logs_2m",
+      "mode": "copy",
+      "rows": 2000000,
+      "packed_mb": 65.4,
+      "workers": 4,
+      "ready_ms": 3404,
+      "rss_mb": 662.5,
+      "peak_rss_mb": 671.9,
+      "answer": {
+        "n": 100363,
+        "sum": 11472344077,
+        "groups": 10,
+        "bytes": 25259999
+      },
+      "run": 4,
+      "loadavg_at_start": 2.02
+    },
+    {
+      "name": "logs_2m",
+      "mode": "share",
+      "rows": 2000000,
+      "packed_mb": 65.4,
+      "workers": 4,
+      "ready_ms": 1698,
+      "rss_mb": 428.8,
+      "peak_rss_mb": 437.8,
+      "answer": {
+        "n": 100363,
+        "sum": 11472344077,
+        "groups": 10,
+        "bytes": 25259999
+      },
+      "run": 4,
+      "loadavg_at_start": 2.06
+    },
+    {
+      "name": "logs_2m",
+      "mode": "floor",
+      "rows": 0,
+      "packed_mb": null,
+      "workers": 4,
+      "ready_ms": 35,
+      "rss_mb": 85.4,
+      "peak_rss_mb": 95,
+      "answer": {},
+      "run": 5,
+      "loadavg_at_start": 2.12
+    },
+    {
+      "name": "logs_2m",
+      "mode": "copy",
+      "rows": 2000000,
+      "packed_mb": 65.4,
+      "workers": 4,
+      "ready_ms": 3375,
+      "rss_mb": 700.9,
+      "peak_rss_mb": 710.2,
+      "answer": {
+        "n": 100363,
+        "sum": 11472344077,
+        "groups": 10,
+        "bytes": 25259999
+      },
+      "run": 5,
+      "loadavg_at_start": 1.87
+    },
+    {
+      "name": "logs_2m",
+      "mode": "share",
+      "rows": 2000000,
+      "packed_mb": 65.4,
+      "workers": 4,
+      "ready_ms": 1701,
+      "rss_mb": 428.6,
+      "peak_rss_mb": 438.1,
+      "answer": {
+        "n": 100363,
+        "sum": 11472344077,
+        "groups": 10,
+        "bytes": 25259999
+      },
+      "run": 5,
+      "loadavg_at_start": 1.94
+    }
+  ]
+}

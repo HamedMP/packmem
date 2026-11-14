@@ -33,7 +33,35 @@ fn lone_surrogate(e: &serde_json::Error, text: &str) -> bool {
     })
 }
 
-/// One JSON value from its source text. Integers beyond 64 bits stay exact as JSON text.
+/// Nested JSON text with the whitespace between tokens removed. Callers pass text the JSON parser has already
+/// validated, so it is kept as written (escapes, number text and key order included) instead of being parsed into a
+/// tree and written back. The Python binding does the same.
+fn compact_json(t: &str) -> String {
+    let mut out = Vec::with_capacity(t.len());
+    let (mut in_string, mut escaped) = (false, false);
+    for &c in t.as_bytes() {
+        if in_string {
+            out.push(c);
+            if escaped {
+                escaped = false
+            } else if c == b'\\' {
+                escaped = true
+            } else if c == b'"' {
+                in_string = false
+            }
+        } else if c == b'"' {
+            in_string = true;
+            out.push(c)
+        } else if !matches!(c, b' ' | b'\n' | b'\r' | b'\t') {
+            out.push(c)
+        }
+    }
+    // only ASCII whitespace outside strings was dropped, so the bytes are still valid UTF-8
+    String::from_utf8(out).expect("compacting JSON keeps it valid UTF-8")
+}
+
+/// One JSON value from its source text, which must be valid JSON (the loaders' parser has checked it). Integers
+/// beyond 64 bits stay exact as JSON text.
 pub fn raw_cell(t: &str) -> Result<Cell, String> {
     let b = t.as_bytes();
     Ok(match b.first() {
@@ -55,11 +83,7 @@ pub fn raw_cell(t: &str) -> Result<Cell, String> {
         Some(b'n') => Cell::Null,
         Some(b't') => Cell::Bool(true),
         Some(b'f') => Cell::Bool(false),
-        Some(b'[' | b'{') => Cell::Json(match serde_json::from_str::<Value>(t) {
-            Ok(v) => v.to_string(),
-            Err(e) if lone_surrogate(&e, t) => return Ok(Cell::Json(t.to_string())),
-            Err(e) => return Err(e.to_string()),
-        }),
+        Some(b'[' | b'{') => Cell::Json(compact_json(t)),
         _ => {
             if !b.iter().any(|c| matches!(c, b'.' | b'e' | b'E')) {
                 match t.parse::<i64>() {
