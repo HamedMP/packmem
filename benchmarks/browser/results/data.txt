@@ -1,0 +1,5 @@
+chat.jsonl 100000 records 105505148 bytes
+flights.jsonl 100000 records 31066995 bytes
+issues.jsonl 3000 records 16497957 bytes
+logs.jsonl 100000 records 20903889 bytes
+traces.jsonl 100000 records 31372571 bytes
