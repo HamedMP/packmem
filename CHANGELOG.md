@@ -2,7 +2,7 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased
+## 0.3.2 - 2026-11-15
 
 ### Added
 - Node: `packmem/react` adds `useTable(url, options?)`, returning `{ table, error, loading, ms }`. It fetches a
