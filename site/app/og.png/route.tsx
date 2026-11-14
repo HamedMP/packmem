@@ -40,34 +40,28 @@ function Logo({ scale }: { scale: number }) {
 }
 
 export function GET() {
-  const barMax = 1056
+  const ratio = Math.round(d.hero.a / d.hero.b)
   return new ImageResponse(
     (
-      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "64px 72px", background: C.bg, color: C.fg }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
-          <Logo scale={2.4} />
-          <div style={{ fontSize: 46, letterSpacing: -1 }}>packmem</div>
+      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "60px 72px", background: C.bg, color: C.fg }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          <Logo scale={2.2} />
+          <div style={{ fontSize: 42, letterSpacing: -1 }}>packmem</div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 30, fontSize: 112, letterSpacing: -4, lineHeight: 1 }}>
-            <span>{LIST} MB</span>
-            <span style={{ color: C.muted, fontSize: 84 }}>→</span>
-            <span style={{ color: C.lime }}>{PACKED} MB</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 28, fontSize: 196, letterSpacing: -9, lineHeight: 1 }}>
+            <span style={{ color: C.lime }}>{`${ratio}×`}</span>
+            <span style={{ fontSize: 96, letterSpacing: -3 }}>less memory</span>
           </div>
-          <div style={{ fontSize: 31, color: C.muted, lineHeight: 1.35 }}>
-            336,776 flight records as a Python list of dicts, then in packmem after a one-line change. The code still
-            indexes, loops over and queries them, without unpacking.
+          <div style={{ fontSize: 40, color: C.muted, letterSpacing: -0.5 }}>
+            {`A ${LIST} MB list of dicts → ${PACKED} MB, still queryable.`}
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ width: barMax, height: 14, borderRadius: 4, background: C.faint }} />
-          <div style={{ width: Math.max(6, (barMax * d.hero.b) / d.hero.a), height: 14, borderRadius: 4, background: C.lime }} />
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 18, fontSize: 25, color: C.muted }}>
-            <span>Python · Node · Rust · Apache-2.0</span>
-            <span>hamedmp.github.io/packmem</span>
-          </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 26, color: C.muted }}>
+          <span>Python · Node · Rust</span>
+          <span>hamedmp.github.io/packmem</span>
         </div>
       </div>
     ),
