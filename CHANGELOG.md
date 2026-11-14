@@ -2,6 +2,17 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+### Added
+- Node: `packmem/react` adds `useTable(url, options?)`, returning `{ table, error, loading, ms }`. It fetches a
+  table as packmem bytes, or JSON from servers without packmem, and opens it with `packmem/wasm`, which it loads
+  once per page. It refetches when the URL changes and drops stale responses. On the server it renders the
+  loading state, so it works where Next.js loads packmem outside its bundle. The `.wasm` file is found through
+  `new URL(..., import.meta.url)`, which Next.js, Vite and webpack serve without setup.
+- Demos: `demos/log-viewer`, a Next.js app that sends 1,000,000 generated log records to the browser with
+  `useTable` and `useRows`, next to the same rows loaded as JSON.
+
 ## 0.3.1 - 2026-11-14
 
 This version writes byte format 5, which 0.3.0 cannot read: upgrade readers before, or together with, writers.
