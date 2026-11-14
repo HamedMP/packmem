@@ -606,6 +606,37 @@ def test_large_json_array_loads_on_threads_like_json_load():
             except ValueError: pass
 
 
+def test_large_csv_loads_on_threads_like_dictreader():
+    import csv, os, random, tempfile
+    rnd = random.Random(21)
+    names = ["id", "late", "code", "note", "amount"]
+    rows = [{"id": str(i), "late": "" if i < 40000 else str(i % 5), "code": "%04d" % (i % 300),
+             "note": rnd.choice(('plain', 'has, comma', 'has "quotes"', 'two\nlines', '5"10', '')) + " " * rnd.randrange(60), "amount": "%.2f" % (i / 7)}
+            for i in range(9 * 16384 + 77)]
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, "big.csv")
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            w = csv.DictWriter(f, names); w.writeheader(); w.writerows(rows)
+        assert os.path.getsize(path) > 8 << 20
+        with open(path, encoding="utf-8", newline="") as f:
+            want = list(csv.DictReader(f))
+        t = packmem.read_csv(path)
+        assert len(t) == len(want) == len(rows) and t.columns == names
+        assert all(t[i] == want[i] for i in range(0, len(want), 311)) and t[-1] == want[-1] and t[39999] == want[39999]
+        assert t.count(code="0007") == sum(r["code"] == "0007" for r in want) and t.group_count("late") == {k: sum(r["late"] == k for r in want) for k in ("", "0", "1", "2", "3", "4")}
+        n = packmem.read_csv(path, infer=True)
+        assert n[50001] == {"id": 50001, "late": 1, "code": "0201", "note": want[50001]["note"], "amount": float(want[50001]["amount"])}
+        assert n.sum("id") == sum(range(len(rows)))
+
+        with open(path, "a", encoding="utf-8", newline="") as f:
+            f.write("1,2\n")                                              # a short row: csv.DictReader's job
+        with open(path, encoding="utf-8", newline="") as f:
+            want = list(csv.DictReader(f))
+        assert list(packmem.read_csv(path))[-2:] == want[-2:]
+        try: packmem.read_csv(path, infer=True); raise AssertionError("expected ValueError")
+        except ValueError: pass
+
+
 def test_default_converts_values_json_has_no_form_for():
     import datetime, decimal, json, uuid
     u = uuid.UUID(int=7)

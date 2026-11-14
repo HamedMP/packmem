@@ -223,7 +223,7 @@ impl<'de, 'a, R: Raw<'de>> Visitor<'de> for RowSeed<'a, R> {
 #[cfg(target_os = "macos")]
 mod big_alloc {
     use std::alloc::{GlobalAlloc, Layout, System};
-    const BIG: usize = 96 << 10;
+    const BIG: usize = 32 << 10;
     pub struct Alloc;
     fn big(l: Layout) -> bool {
         l.size() >= BIG && l.align() <= 4096
@@ -295,6 +295,8 @@ enum Piece<'a> {
     Lines(&'a [u8]),
     /// Elements of a JSON array: the file and where each element starts and ends.
     Items(&'a [u8], Vec<(usize, usize)>),
+    /// Whole CSV records, read with these options.
+    Csv(&'a [u8], &'a CsvOptions),
 }
 impl Piece<'_> {
     /// Call `f` with each record until it returns false; true when every record was accepted.
@@ -302,7 +304,17 @@ impl Piece<'_> {
         match self {
             Piece::Lines(text) => text.split(|&b| b == b'\n').filter(|l| !blank(l)).all(f),
             Piece::Items(data, items) => items.iter().all(|&(a, b)| f(&data[a..b])),
+            Piece::Csv(..) => false,
         }
+    }
+    /// Parse every record into `t`; false when anything was rejected.
+    fn load(&self, t: &mut DynTable, only: Only<'_>) -> bool {
+        if let Piece::Csv(text, opts) = self {
+            return CsvLoader::new((*opts).clone())
+                .and_then(|mut l| l.feed(t, text).and_then(|_| l.finish(t)))
+                .is_ok();
+        }
+        self.records(|r| std::str::from_utf8(r).is_ok_and(|r| push_line(t, r, only).is_ok()))
     }
 }
 fn blank(l: &[u8]) -> bool {
@@ -832,10 +844,7 @@ impl PyTable {
                         let mut t = DynTable::new(hint);
                         t.reuse_buffers(std::mem::take(&mut spare));
                         t.set_bulk(true);
-                        let ok = piece.records(|r| {
-                            std::str::from_utf8(r)
-                                .is_ok_and(|r| push_line(&mut t, r, only.as_ref()).is_ok())
-                        });
+                        let ok = piece.load(&mut t, only.as_ref());
                         spare = t.take_buffers();
                         if done_tx.send((i, piece, ok.then_some(t))).is_err() {
                             return;
@@ -923,6 +932,58 @@ impl PyTable {
         })?;
         Ok(r.unwrap_or_else(|Redo| unreachable!("pieces of lines are redone in place")))
     }
+    /// Empty the table, before loading again what a threaded load could not take.
+    fn reset(&mut self) {
+        self.t = DynTable::new(self.t.hint);
+        self.keys.clear();
+        self.template = None;
+        self.seen_keys.clear()
+    }
+    /// The threaded load of a CSV file into an empty table; `Redo` as for `load_json_array_threads`.
+    fn load_csv_threads(
+        &mut self,
+        py: Python<'_>,
+        f: &std::fs::File,
+        threads: usize,
+        opts: &CsvOptions,
+    ) -> PyResult<Result<usize, Redo>> {
+        // SAFETY: as in `load_jsonl_threads`.
+        let map = unsafe { memmap2::Mmap::map(f)? };
+        let data: &[u8] = &map;
+        // read the header on its own, so every piece after it holds a whole chunk of rows
+        let head = &data[..data.len().min(1 << 20)];
+        let Some(&(body, _)) = packmem::csv::record_pieces(head, opts.delimiter, 1).get(1) else {
+            return Ok(Err(Redo));
+        };
+        let mut first = match CsvLoader::new(opts.clone()) {
+            Ok(l) => l,
+            Err(_) => return Ok(Err(Redo)),
+        };
+        let mut scratch = DynTable::new(self.t.hint);
+        let names = match first.feed(&mut scratch, &data[..body]) {
+            Ok(()) if scratch.len() == 0 => first.names().map(<[String]>::to_vec),
+            _ => None,
+        };
+        let Some(names) = names else {
+            return Ok(Err(Redo));
+        };
+        let opts = CsvOptions {
+            header: false,
+            names,
+            ..opts.clone()
+        };
+        let data = &data[body..];
+        let cuts = packmem::csv::record_pieces(data, opts.delimiter, packmem::dynamic::CHUNK);
+        let mut k = 0;
+        self.load_pieces(py, threads, |_| {
+            let Some(&(a, _)) = cuts.get(k) else {
+                return Ok(None);
+            };
+            let b = cuts.get(k + 1).map_or(data.len(), |c| c.0);
+            k += 1;
+            Ok((a < b).then_some(Piece::Csv(&data[a..b], &opts)))
+        })
+    }
     /// The threaded load of a file holding one JSON array of objects, into an empty table. `Redo` means the file is
     /// not laid out as this expects or holds something the fast parser rejects: the caller loads it on one thread
     /// instead, which also produces the error message if the file is wrong.
@@ -975,7 +1036,7 @@ impl PyTable {
                     _ => return Err(Redo),
                 }
             }
-            Ok((!items.is_empty()).then(|| Piece::Items(data, items)))
+            Ok((!items.is_empty()).then_some(Piece::Items(data, items)))
         })
     }
     /// Run a bulk load: rows are packed a chunk at a time, and whatever was loaded before an error stays consistent.
@@ -1164,12 +1225,19 @@ impl PyTable {
             ));
         };
         let mut f = std::fs::File::open(path)?;
+        let opts = CsvOptions {
+            delimiter,
+            default_type: if infer { ColType::Infer } else { ColType::Text },
+            ..Default::default()
+        };
+        let threads = packmem::dynamic::query_threads().min(4);
+        if threads > 1 && self.t.len() == 0 && f.metadata()?.len() >= PARALLEL_LOAD_BYTES {
+            if let Ok(n) = self.bulk(py, |s| s.load_csv_threads(py, &f, threads, &opts))? {
+                return Ok(n);
+            }
+            self.reset()
+        }
         self.bulk(py, |s| {
-            let opts = CsvOptions {
-                delimiter,
-                default_type: if infer { ColType::Infer } else { ColType::Text },
-                ..Default::default()
-            };
             let mut loader = CsvLoader::new(opts).map_err(PyValueError::new_err)?;
             let mut buf = vec![0u8; 1 << 20];
             loop {
@@ -1246,10 +1314,7 @@ impl PyTable {
             if let Ok(n) = self.bulk(py, |s| s.load_json_array_threads(py, &f, threads))? {
                 return Ok(n);
             }
-            self.t = DynTable::new(self.t.hint);
-            self.keys.clear();
-            self.template = None;
-            self.seen_keys.clear();
+            self.reset()
         }
         self.bulk(py, |s| {
             let mut de =
