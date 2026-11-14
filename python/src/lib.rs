@@ -199,6 +199,9 @@ impl<'de, 'a, R: Raw<'de>> Visitor<'de> for RowSeed<'a, R> {
     }
 }
 
+/// Files smaller than this load on one thread.
+const PARALLEL_LOAD_BYTES: u64 = 8 << 20;
+
 fn push_line(t: &mut DynTable, line: &str, only: Only<'_>) -> Result<(), String> {
     let mut de = serde_json::Deserializer::from_str(line);
     match RowSeed::<&RawValue>(&mut *t, only, PhantomData)
@@ -656,6 +659,113 @@ impl PyTable {
             }
         }
     }
+    /// Load JSON lines with the parsing and packing spread over threads: the file is mapped and cut into pieces of one
+    /// chunk's rows, each piece becomes a small table on a worker, and the pieces are joined here in file order. A
+    /// piece with a line the fast parser rejects is redone on this thread, so results and errors match a one-thread
+    /// load.
+    fn load_jsonl_threads(
+        &mut self,
+        py: Python<'_>,
+        f: &std::fs::File,
+        threads: usize,
+    ) -> PyResult<usize> {
+        use std::sync::mpsc;
+        const ROWS: usize = packmem::dynamic::CHUNK;
+        let blank = |l: &[u8]| l.iter().all(u8::is_ascii_whitespace);
+        // SAFETY: the mapping is read-only and private to this call; as with any reader, the file must not be
+        // truncated while it is being loaded.
+        let map = unsafe { memmap2::Mmap::map(f)? };
+        let data: &[u8] = &map;
+        let hint = self.t.hint;
+        let only = self.only.clone();
+        let (work_tx, work_rx) = mpsc::sync_channel::<(usize, &[u8])>(1);
+        let work_rx = std::sync::Mutex::new(work_rx);
+        let (done_tx, done_rx) = mpsc::channel::<(usize, &[u8], Option<DynTable>)>();
+        std::thread::scope(|sc| {
+            for _ in 0..threads {
+                let (work_rx, done_tx, only) = (&work_rx, done_tx.clone(), &only);
+                sc.spawn(move || {
+                    let mut spare = packmem::dynamic::Buffers::default();
+                    loop {
+                        let Ok((i, text)) = work_rx.lock().unwrap().recv() else {
+                            packmem::dynamic::release_thread_buffers();
+                            return;
+                        };
+                        let mut t = DynTable::new(hint);
+                        t.reuse_buffers(std::mem::take(&mut spare));
+                        t.set_bulk(true);
+                        let ok = std::str::from_utf8(text).is_ok_and(|text| {
+                            text.lines()
+                                .filter(|l| !blank(l.as_bytes()))
+                                .all(|l| push_line(&mut t, l, only.as_ref()).is_ok())
+                        });
+                        spare = t.take_buffers();
+                        if done_tx.send((i, text, ok.then_some(t))).is_err() {
+                            return;
+                        }
+                    }
+                });
+            }
+            drop(done_tx);
+            let mut pending = std::collections::BTreeMap::new();
+            let (mut pos, mut sent, mut joined, mut n) = (0usize, 0usize, 0usize, 0usize);
+            let r = (|| -> PyResult<usize> {
+                while pos < data.len() || joined < sent {
+                    if pos < data.len() {
+                        // the first piece brings the table to a chunk boundary, so later pieces can be moved in whole
+                        let want = if sent == 0 {
+                            ROWS - self.t.len() % ROWS
+                        } else {
+                            ROWS
+                        };
+                        let (start, mut rows) = (pos, 0);
+                        while rows < want && pos < data.len() {
+                            let end = data[pos..]
+                                .iter()
+                                .position(|&b| b == b'\n')
+                                .map_or(data.len(), |k| pos + k + 1);
+                            rows += !blank(&data[pos..end]) as usize;
+                            pos = end
+                        }
+                        if rows > 0 {
+                            work_tx
+                                .send((sent, &data[start..pos]))
+                                .expect("load threads stopped");
+                            sent += 1
+                        }
+                    }
+                    let mut next = if pos >= data.len() && joined < sent && pending.is_empty() {
+                        Some(done_rx.recv().map_err(|_| {
+                            pyo3::exceptions::PyRuntimeError::new_err("a load thread stopped early")
+                        })?)
+                    } else {
+                        done_rx.try_recv().ok()
+                    };
+                    while let Some((i, text, t)) = next {
+                        pending.insert(i, (text, t));
+                        next = done_rx.try_recv().ok()
+                    }
+                    while let Some((text, t)) = pending.remove(&joined) {
+                        joined += 1;
+                        if let Some(t) = t {
+                            n += t.len();
+                            self.t.append_table(t);
+                            continue;
+                        }
+                        let text = std::str::from_utf8(text)
+                            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+                        for l in text.lines().filter(|l| !blank(l.as_bytes())) {
+                            self.push_text(py, l, n + 1)?;
+                            n += 1
+                        }
+                    }
+                }
+                Ok(n)
+            })();
+            drop(work_tx);
+            r
+        })
+    }
     /// Run a bulk load: rows are packed a chunk at a time, and whatever was loaded before an error stays consistent.
     fn bulk<T>(&mut self, py: Python<'_>, f: impl FnOnce(&mut Self) -> PyResult<T>) -> PyResult<T> {
         // Packing text-heavy chunks on a background thread makes such loads about twice as fast, but on macOS the
@@ -848,6 +958,12 @@ impl PyTable {
     fn load_jsonl_path(&mut self, py: Python<'_>, path: &str) -> PyResult<usize> {
         self.guard()?;
         let f = std::fs::File::open(path)?;
+        // each load thread keeps its own row buffers, and macOS goes on counting them after they are freed, so loading
+        // uses at most four threads however many cores there are
+        let threads = packmem::dynamic::query_threads().min(4);
+        if threads > 1 && f.metadata()?.len() >= PARALLEL_LOAD_BYTES {
+            return self.bulk(py, |s| s.load_jsonl_threads(py, &f, threads));
+        }
         self.bulk(py, |s| {
             let mut rd = BufReader::with_capacity(1 << 20, f);
             let (mut line, mut n) = (String::new(), 0);

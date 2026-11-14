@@ -21,6 +21,10 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - Filters, group counts over a whole column, and sums of decimal columns run on several threads once a table has
   16 chunks (about 260,000 rows). Answers are the same as with one thread. `PACKMEM_THREADS` sets the number of
   threads (default: the cores, at most 8; 1 turns it off). The WebAssembly build stays single-threaded.
+- Python: `load_jsonl` on a file of 8 MB or more parses and packs on up to four threads and gives the same table
+  as a one-thread load. Each thread keeps its own row buffers, which macOS goes on counting after the load:
+  about 18 MB more for the process on the flights file on an M4 Pro (37 to 55 MB) for a load 3.5 times faster.
+  `PACKMEM_THREADS=1` restores the one-thread load. `load_json` (one array) and `read_csv` are unchanged.
 - `to_json()` writes nested values stored as sub-columns in a canonical form (as `json.dumps` would), not as
   they were written in the source. Values are unchanged.
 - Files written by this version that contain sub-columns cannot be read by 0.2.0. Files from 0.2.0 still open.

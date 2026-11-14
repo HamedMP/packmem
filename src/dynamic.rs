@@ -459,6 +459,12 @@ fn release_spare_tails() {
     SPARE_TAILS.with(|s| *s.borrow_mut() = Vec::new())
 }
 
+/// Drop this thread's reusable buffers; for a worker thread that has finished building tables.
+pub fn release_thread_buffers() {
+    release_spare_tails();
+    crate::ztext::release()
+}
+
 /// Collects the elements of a chunk's nested values into one tail per field.
 #[derive(Default)]
 struct Shredder {
@@ -1279,7 +1285,7 @@ impl Column {
 /// Whole-column queries on at least this many chunks are split across threads.
 const PAR_MIN_CHUNKS: usize = 16;
 /// Threads for whole-column queries: `PACKMEM_THREADS` if set (1 turns threading off), else the cores, at most 8.
-fn query_threads() -> usize {
+pub fn query_threads() -> usize {
     static N: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
     *N.get_or_init(|| {
         if cfg!(target_family = "wasm") {
@@ -1312,6 +1318,10 @@ fn par_runs<R: Send>(chunks: &[Chunk], f: impl Fn(usize, &[Chunk]) -> R + Sync) 
             .collect()
     })
 }
+
+/// Emptied row buffers passed from one table to the next.
+#[derive(Default)]
+pub struct Buffers(Vec<Tail>);
 
 pub struct DynTable {
     names: Vec<String>,
@@ -1374,7 +1384,10 @@ impl DynTable {
             } else {
                 None
             },
-            tail: Tail::missing(tl),
+            tail: match self.spare_tails.pop() {
+                Some(t) if tl == 0 => t,
+                _ => Tail::missing(tl),
+            },
         });
         self.names.push(name.to_string());
         self.index.insert(name.to_string(), self.cols.len() - 1);
@@ -1963,6 +1976,46 @@ impl DynTable {
         if !was_bulk {
             self.set_bulk(false)
         }
+    }
+    /// Take the emptied row buffers out of a table whose rows are all packed, to give to `reuse_buffers` on the next
+    /// table built on this thread. Building many short-lived tables then stops allocating a fresh set each time.
+    pub fn take_buffers(&mut self) -> Buffers {
+        let mut out = std::mem::take(&mut self.spare_tails);
+        for c in &mut self.cols {
+            if c.tail.len() == 0 {
+                out.push(std::mem::take(&mut c.tail))
+            }
+        }
+        Buffers(out)
+    }
+    pub fn reuse_buffers(&mut self, b: Buffers) {
+        self.spare_tails.extend(b.0)
+    }
+    /// Append another table's rows. When this table ends on a chunk boundary and the other holds only whole packed
+    /// chunks, the chunks are moved over as they are; otherwise the rows are copied one by one.
+    pub fn append_table(&mut self, mut other: DynTable) {
+        other.join_all();
+        let whole = |t: &DynTable| t.len % CHUNK == 0 && t.plen == 0 && t.sealers.is_empty();
+        if !(whole(self) && whole(&other)) {
+            return self.extend_from(&other);
+        }
+        let k = other.len / CHUNK;
+        let mut theirs: Vec<Option<Vec<Chunk>>> = (0..self.cols.len()).map(|_| None).collect();
+        for (name, col) in other.names.iter().zip(other.cols) {
+            let dst = self.col_or_create(name);
+            if dst == theirs.len() {
+                theirs.push(None)
+            }
+            theirs[dst] = Some(col.chunks)
+        }
+        for (c, chunks) in self.cols.iter_mut().zip(theirs) {
+            match chunks {
+                Some(chunks) => c.chunks.extend(chunks),
+                None => c.chunks.extend((0..k).map(|_| Chunk::absent(CHUNK))),
+            }
+        }
+        self.len += other.len;
+        self.epoch += 1
     }
     /// For every row: does it have a value for this column (the key is present and not null)?
     pub fn notna(&self, col: usize) -> Vec<bool> {

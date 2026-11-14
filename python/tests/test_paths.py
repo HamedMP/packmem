@@ -524,6 +524,51 @@ def test_queries_split_across_threads_match_python():
     assert t.group_count("status") == dict(collections.Counter(r["status"] for r in rows))
 
 
+def test_large_jsonl_loads_on_threads_like_one_thread():
+    import json, os, random, tempfile
+    rnd = random.Random(5)
+    rows = []
+    for i in range(9 * 16384 + 321):
+        r = {"id": i, "user": "u%d" % rnd.randrange(3000), "ms": rnd.random() * 50, "note": "request took a while " * rnd.randrange(4)}
+        if i > 70000: r["late"] = i % 7
+        if i % 11 == 0: del r["note"]
+        if i == 100000: r["turns"] = [{"from": "human", "text": "hi"}]
+        rows.append(r)
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, "big.jsonl")
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            for i, r in enumerate(rows):
+                f.write(json.dumps(r) + ("\r\n" if i % 5 == 0 else "\n"))
+                if i % 4001 == 0: f.write("\n   \n")
+            f.write(json.dumps(rows[0]))                                  # no newline at the end
+        assert os.path.getsize(path) > 8 << 20
+        want = rows + [rows[0]]
+        t = packmem.load_jsonl(path)
+        assert len(t) == len(want) and t.columns == ["id", "user", "ms", "note", "late", "turns"]
+        assert all(t[i] == want[i] for i in range(0, len(want), 997)) and t[-1] == want[-1] and t[100000] == want[100000]
+        assert t.sum("id") == sum(r["id"] for r in want) and t.count(late=3) == sum(r.get("late") == 3 for r in want)
+        assert list(t.lazy())[70000:70003] == want[70000:70003]
+
+        some = packmem.Table(want[:1000]); some._t.load_jsonl_path(path)  # onto a table that is not at a chunk boundary
+        assert len(some) == 1000 + len(want) and some[999] == want[999] and some[1000] == want[0] and some[-1] == want[-1]
+        assert some.sum("id") == sum(r["id"] for r in want[:1000]) + sum(r["id"] for r in want)
+
+        only = packmem.load_jsonl(path, fields=["id", "late"])
+        assert only.columns == ["id", "late"] and only[80000] == {"id": 80000, "late": 80000 % 7}
+
+        with open(path, "a", encoding="utf-8") as f:
+            f.write("\n" + json.dumps({"id": -1, "ms": float("nan")}) + "\n")       # the fast parser rejects NaN
+        t = packmem.load_jsonl(path)
+        assert len(t) == len(want) + 1 and t[-1]["id"] == -1 and t[-1]["ms"] != t[-1]["ms"] and t[-2] == want[-1]
+
+        with open(path, "a", encoding="utf-8") as f:
+            f.write("{broken\n" + json.dumps(rows[1]) + "\n")
+        bad = packmem.Table()
+        try: bad._t.load_jsonl_path(path); raise AssertionError("expected ValueError")
+        except ValueError as e: assert "line %d:" % (len(want) + 2) in str(e), e
+        assert len(bad) == len(want) + 1 and bad[-1]["id"] == -1
+
+
 def test_arrow_and_parquet():
     try:
         import pyarrow as pa, pyarrow.parquet as pq
