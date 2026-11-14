@@ -113,6 +113,7 @@ name = "packmem"
 version = "0.2.0"
 dependencies = [
  "fsst-rs",
+ "serde",
  "serde_json",
 ]
 

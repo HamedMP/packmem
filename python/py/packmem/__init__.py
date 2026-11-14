@@ -13,7 +13,7 @@ import os as _os
 from collections.abc import MutableSequence as _MutableSequence
 from ._packmem import _Table, Selection, Row
 
-__all__ = ["Table", "View", "Row", "load_jsonl", "load_json", "from_records", "from_cursor", "from_queryset", "read_csv", "open", "cleanup_stale"]
+__all__ = ["Table", "View", "Row", "load_jsonl", "load_json", "from_records", "from_cursor", "from_queryset", "read_csv", "open", "cleanup_stale", "Values"]
 try:
     from importlib.metadata import version as _version
     __version__ = _version("packmem")
@@ -394,6 +394,11 @@ class Table:
     def column(self, name):
         return self._t.column(name)
 
+    def col(self, name):
+        """A column to compute on, with pandas-style names: `rows.col("image").notna()`,
+        `rows.col("turns").list.len()`, `rows.col("turns").list.field("text").str.len().list.sum()`."""
+        return _Col(self._t, name)
+
     @property
     def columns(self):
         return self._t.names()
@@ -409,6 +414,158 @@ class Table:
 
 
 _MutableSequence.register(Table)
+
+
+class Values(list):
+    """One value per record: a plain list, with conversions for code that wants an array."""
+
+    __slots__ = ()
+
+    def to_list(self):
+        return list(self)
+
+    def to_numpy(self):
+        import numpy
+        return numpy.array(self, dtype=object if any(v is None for v in self) else None)
+
+    def to_arrow(self):
+        import pyarrow
+        return pyarrow.array(self)
+
+    def sum(self):
+        return sum(v for v in self if v is not None)
+
+
+class _Col:
+    """One column of a Table, with the pandas names for what can be computed on it: `notna()`, `isna()`,
+    `.str.len()`, `.list.len()`, and for a column holding lists of records `.list.field(name)`.
+    Results come back as one value per record, computed on the packed data where possible."""
+
+    __slots__ = ("_t", "_name")
+
+    def __init__(self, t, name):
+        self._t, self._name = t, name
+
+    def notna(self):
+        return Values(self._t.notna(self._name))
+
+    def isna(self):
+        return Values(not v for v in self._t.notna(self._name))
+
+    def to_list(self):
+        return Values(self._t.column(self._name))
+
+    @property
+    def list(self):
+        return _ListOf(self._t, self._name)
+
+    @property
+    def str(self):
+        return _StrOf(lambda: self._t.column(self._name))
+
+
+class _StrOf:
+    __slots__ = ("_values",)
+
+    def __init__(self, values):
+        self._values = values
+
+    def len(self):
+        return Values(len(v) if isinstance(v, str) else None for v in self._values())
+
+    def split(self):
+        return _SplitOf(lambda: [v.split() if isinstance(v, str) else None for v in self._values()])
+
+
+class _SplitOf:
+    __slots__ = ("_values",)
+
+    def __init__(self, values):
+        self._values = values
+
+    def to_list(self):
+        return Values(self._values())
+
+    @property
+    def list(self):
+        return self
+
+    def len(self):
+        return Values(len(v) if v is not None else None for v in self._values())
+
+
+class _ListOf:
+    __slots__ = ("_t", "_name")
+
+    def __init__(self, t, name):
+        self._t, self._name = t, name
+
+    def len(self):
+        """Elements per record, read from the packed layout; None where the value is not a list."""
+        return Values(self._t.list_len(self._name))
+
+    def field(self, name):
+        """One field of the records inside each list, e.g. the text of every turn of a conversation."""
+        return _FieldOf(self._t, self._name, name)
+
+
+class _FieldOf:
+    __slots__ = ("_t", "_name", "_field")
+
+    def __init__(self, t, name, field):
+        self._t, self._name, self._field = t, name, field
+
+    def to_list(self):
+        f = self._field
+        return Values([e.get(f) if isinstance(e, dict) else None for e in v] if isinstance(v, list) else None
+                      for v in self._t.column(self._name))
+
+    @property
+    def str(self):
+        return _FieldStr(self, None)
+
+
+class _FieldStr:
+    """A string field of the records inside each list. `.len()` and `.split().list.len()` give a number per
+    element; `.list.sum()` then adds those up per record, on the packed data, without building the elements."""
+
+    __slots__ = ("_f", "_measure")
+
+    def __init__(self, f, measure):
+        self._f, self._measure = f, measure
+
+    def len(self):
+        """Characters per element; after `.split()`, words per element."""
+        if self._measure is None:
+            return _FieldStr(self._f, "chars")
+        if self._measure == "split":
+            return _FieldStr(self._f, "words")
+        raise TypeError("already a number per element; use .list.sum() or .to_list()")
+
+    def split(self):
+        if self._measure is not None:
+            raise TypeError(".split() applies to the strings themselves")
+        return _FieldStr(self._f, "split")
+
+    @property
+    def list(self):
+        return self
+
+    def _apply(self, text):
+        if not isinstance(text, str):
+            return None
+        return {"chars": len, "words": lambda t: len(t.split()), "split": str.split, None: lambda t: t}[self._measure](text)
+
+    def sum(self):
+        """Per record, the total over its elements (None where the value is not a list of records)."""
+        if self._measure not in ("chars", "words"):
+            raise TypeError("nothing to add up yet: use .str.len().list.sum() or .str.split().list.len().list.sum()")
+        f = self._f
+        return Values(f._t.list_str_sum(f._name, f._field, self._measure))
+
+    def to_list(self):
+        """Per record, the per-element values as a list (built in Python; use `.list.sum()` for totals)."""
+        return Values([self._apply(e) for e in v] if v is not None else None for v in self._f.to_list())
 
 
 class View:

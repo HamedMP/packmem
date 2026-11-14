@@ -83,6 +83,78 @@ pub fn from_text(t: &[u8]) -> Cell {
     }
 }
 
+/// 1 for the ASCII bytes Python's `str.split()` treats as whitespace: space, tab to carriage return, 0x1c to 0x1f.
+const ASCII_SPACE: [u8; 256] = {
+    let mut t = [0u8; 256];
+    let mut i = 0;
+    while i < 256 {
+        t[i] = (i == 0x20 || (i >= 0x09 && i <= 0x0d) || (i >= 0x1c && i <= 0x1f)) as u8;
+        i += 1
+    }
+    t
+};
+
+/// What to measure of a string: see `DynTable::list_str_sum`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum StrMeasure {
+    /// Whitespace-separated words, with Python's definition of whitespace (`len(s.split())`).
+    Words,
+    /// Unicode characters (`len(s)` in Python).
+    Chars,
+    /// UTF-8 bytes.
+    Bytes,
+}
+impl StrMeasure {
+    fn of(self, s: &str) -> i64 {
+        // Python's str.isspace is Unicode White_Space plus the four ASCII separators 0x1c..0x1f
+        let space = |c: char| c.is_whitespace() || ('\x1c'..='\x1f').contains(&c);
+        match self {
+            StrMeasure::Bytes => s.len() as i64,
+            StrMeasure::Chars => s.chars().count() as i64,
+            StrMeasure::Words if s.is_ascii() => {
+                // the common case, counted on bytes: a word starts wherever a non-space follows a space
+                let mut prev = 1u8;
+                let mut n = 0i64;
+                for &b in s.as_bytes() {
+                    let sp = ASCII_SPACE[b as usize];
+                    n += (prev & !sp & 1) as i64;
+                    prev = sp
+                }
+                n
+            }
+            StrMeasure::Words => s.split(space).filter(|w| !w.is_empty()).count() as i64,
+        }
+    }
+}
+fn json_list_len(c: &Cell) -> Option<u32> {
+    match c {
+        Cell::Json(t) if t.starts_with('[') => {
+            serde_json::from_str::<Vec<serde::de::IgnoredAny>>(t)
+                .ok()
+                .map(|v| v.len() as u32)
+        }
+        _ => None,
+    }
+}
+fn json_list_str_sum(c: &Cell, field: &str, measure: StrMeasure) -> Option<i64> {
+    let Cell::Json(t) = c else { return None };
+    let serde_json::Value::Array(items) = serde_json::from_str(t).ok()? else {
+        return None;
+    };
+    let mut sum = 0;
+    for item in &items {
+        match item {
+            serde_json::Value::Object(m) => {
+                if let Some(serde_json::Value::String(s)) = m.get(field) {
+                    sum += measure.of(s)
+                }
+            }
+            _ => return None,
+        }
+    }
+    Some(sum)
+}
+
 #[derive(Clone, Debug)]
 pub enum Pred {
     Eq(Cell),
@@ -195,6 +267,17 @@ pub trait RowVisitor {
     );
     /// Nested values and integers beyond 64 bits.
     fn other(&mut self, col: usize, c: &Cell);
+    /// A nested value stored as sub-columns: a list of `len` records, or one record when `is_record`. Return `true`
+    /// to receive it piece by piece: `nested_elem_begin`, then for each field `nested_key` followed by exactly one
+    /// value call (`null`, `int`, `str`, ..., whose `col` is then the field's index), `nested_elem_end`, and finally
+    /// `nested_end`. The default declines, and the value arrives as JSON text through `other`.
+    fn nested_begin(&mut self, _col: usize, _is_record: bool, _len: usize) -> bool {
+        false
+    }
+    fn nested_elem_begin(&mut self) {}
+    fn nested_key(&mut self, _field: usize, _name: &str) {}
+    fn nested_elem_end(&mut self) {}
+    fn nested_end(&mut self, _col: usize) {}
 }
 fn emit_cell<V: RowVisitor>(v: &mut V, ci: usize, c: &Cell) {
     match c {
@@ -335,11 +418,361 @@ fn bit(b: &Option<Bits>, i: usize) -> bool {
 }
 enum Data {
     Absent,
-    Int { p: PackedInts, is_bool: bool },
-    Dec { scale: u8, p: PackedInts },
+    Int {
+        p: PackedInts,
+        is_bool: bool,
+    },
+    Dec {
+        scale: u8,
+        p: PackedInts,
+    },
     F64(Buf<f64>),
     Str(PackedStrs),
     Mixed(PackedStrs),
+    /// A list of records per row (or one record per row), stored as sub-columns.
+    List(Box<ListCol>),
+}
+
+/// Sub-column storage for a column whose values are lists of records, e.g. the turns of a conversation.
+/// Row `i` owns elements `offs[i]..offs[i + 1]`; each field of the records is a packed column over all elements.
+/// The layout is the one Arrow uses for a list of structs. Which keys an element has, and in what order, is its
+/// shape; shapes are stored once and referenced per element, so records read back exactly as they were written.
+struct ListCol {
+    /// Every row holds a single record rather than a list of them.
+    is_record: bool,
+    offs: Buf<u32>,
+    names: Vec<String>,
+    /// Each field name as a JSON string followed by a colon, ready to write.
+    keys_json: Vec<String>,
+    shapes: Vec<Vec<u16>>,
+    shape_of: PackedInts,
+    cols: Vec<Chunk>,
+}
+
+thread_local! {
+    /// Emptied buffers from the last chunk that was split into sub-columns, reused by the next one. Regrowing them
+    /// for every chunk leaves a trail of freed blocks that some allocators keep counted against the process.
+    static SPARE_TAILS: std::cell::RefCell<Vec<Tail>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+/// Drop the buffers kept between chunks; called when a bulk load ends.
+fn release_spare_tails() {
+    SPARE_TAILS.with(|s| *s.borrow_mut() = Vec::new())
+}
+
+/// Collects the elements of a chunk's nested values into one tail per field.
+#[derive(Default)]
+struct Shredder {
+    names: Vec<String>,
+    index: HashMap<String, u16>,
+    tails: Vec<Tail>,
+    shapes: Vec<Vec<u16>>,
+    shape_ix: HashMap<Vec<u16>, i64>,
+    shape_of: Vec<i64>,
+    shape: Vec<u16>,
+    elems: usize,
+}
+impl Shredder {
+    fn field(&mut self, name: &str) -> Option<u16> {
+        if let Some(&c) = self.index.get(name) {
+            return Some(c);
+        }
+        let c = u16::try_from(self.names.len()).ok()?;
+        self.names.push(name.to_string());
+        self.index.insert(name.to_string(), c);
+        let mut tail = SPARE_TAILS
+            .with(|s| s.borrow_mut().pop())
+            .unwrap_or_default();
+        tail.tags.resize(self.elems, T_MISSING);
+        tail.vals.resize(self.elems, 0);
+        self.tails.push(tail);
+        Some(c)
+    }
+    fn put(&mut self, c: u16, text: &str) {
+        let t = &mut self.tails[c as usize];
+        let fresh = t.len() == self.elems;
+        if fresh {
+            self.shape.push(c)
+        }
+        let b = text.as_bytes();
+        if fresh && b.first() == Some(&b'"') && !b.contains(&b'\\') {
+            // a plain string goes straight into the field's text buffer, with no allocation of its own
+            let v = t.intern(&text[1..text.len() - 1]);
+            t.tags.push(T_STR);
+            t.vals.push(v);
+            return;
+        }
+        let cell = from_text(b);
+        if fresh {
+            t.push(&cell)
+        } else {
+            t.set(self.elems, &cell) // a repeated key: the last value wins, as in json.loads
+        }
+    }
+    fn end_elem(&mut self) {
+        for t in &mut self.tails {
+            if t.len() == self.elems {
+                t.push(&Cell::Missing)
+            }
+        }
+        let next = self.shapes.len() as i64;
+        let id = match self.shape_ix.get(&self.shape) {
+            Some(&id) => id,
+            None => {
+                self.shapes.push(self.shape.clone());
+                self.shape_ix.insert(self.shape.clone(), next);
+                next
+            }
+        };
+        self.shape_of.push(id);
+        self.shape.clear();
+        self.elems += 1
+    }
+}
+struct FieldSeed<'a>(&'a mut Shredder);
+impl<'de> serde::de::DeserializeSeed<'de> for FieldSeed<'_> {
+    type Value = u16;
+    fn deserialize<D: serde::Deserializer<'de>>(self, d: D) -> Result<u16, D::Error> {
+        d.deserialize_str(self)
+    }
+}
+impl<'de> serde::de::Visitor<'de> for FieldSeed<'_> {
+    type Value = u16;
+    fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.write_str("a key")
+    }
+    fn visit_str<E: serde::de::Error>(self, k: &str) -> Result<u16, E> {
+        self.0
+            .field(k)
+            .ok_or_else(|| E::custom("too many distinct keys"))
+    }
+}
+struct ElemSeed<'a>(&'a mut Shredder);
+impl<'de> serde::de::DeserializeSeed<'de> for ElemSeed<'_> {
+    type Value = ();
+    fn deserialize<D: serde::Deserializer<'de>>(self, d: D) -> Result<(), D::Error> {
+        d.deserialize_map(self)
+    }
+}
+impl<'de> serde::de::Visitor<'de> for ElemSeed<'_> {
+    type Value = ();
+    fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.write_str("a record")
+    }
+    fn visit_map<A: serde::de::MapAccess<'de>>(self, mut m: A) -> Result<(), A::Error> {
+        while let Some(c) = m.next_key_seed(FieldSeed(&mut *self.0))? {
+            let v: &serde_json::value::RawValue = m.next_value()?;
+            self.0.put(c, v.get())
+        }
+        self.0.end_elem();
+        Ok(())
+    }
+}
+struct ListSeed<'a>(&'a mut Shredder);
+impl<'de> serde::de::DeserializeSeed<'de> for ListSeed<'_> {
+    type Value = ();
+    fn deserialize<D: serde::Deserializer<'de>>(self, d: D) -> Result<(), D::Error> {
+        d.deserialize_seq(self)
+    }
+}
+impl<'de> serde::de::Visitor<'de> for ListSeed<'_> {
+    type Value = ();
+    fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.write_str("a list of records")
+    }
+    fn visit_seq<A: serde::de::SeqAccess<'de>>(self, mut seq: A) -> Result<(), A::Error> {
+        while seq.next_element_seed(ElemSeed(&mut *self.0))?.is_some() {}
+        Ok(())
+    }
+}
+
+impl ListCol {
+    /// Try to store a chunk whose values are all JSON text as sub-columns. `None` when the values are not uniformly
+    /// lists of records (or uniformly records), in which case the chunk keeps them as text.
+    fn shred(t: &Tail, hint: Hint, depth: usize) -> Option<ListCol> {
+        use serde::de::DeserializeSeed;
+        let n = t.len();
+        let first = (0..n).find(|&k| t.tags[k] == T_JSON)?;
+        let is_record = match t.s(first).as_bytes().first()? {
+            b'{' => true,
+            b'[' => false,
+            _ => return None, // an integer beyond 64 bits
+        };
+        let mut sh = Shredder::default();
+        let mut offs = Vec::with_capacity(n + 1);
+        offs.push(0u32);
+        for k in 0..n {
+            if t.tags[k] == T_JSON {
+                let text = t.s(k);
+                if (text.as_bytes().first() == Some(&b'{')) != is_record {
+                    return None;
+                }
+                let mut de = serde_json::Deserializer::from_str(text);
+                let ok = if is_record {
+                    ElemSeed(&mut sh).deserialize(&mut de).is_ok()
+                } else {
+                    ListSeed(&mut sh).deserialize(&mut de).is_ok()
+                };
+                if !ok || de.end().is_err() {
+                    return None;
+                }
+            }
+            offs.push(u32::try_from(sh.elems).ok()?);
+        }
+        if sh.elems == 0 {
+            return None; // only empty lists: nothing to gain
+        }
+        let cols = sh
+            .tails
+            .iter()
+            .map(|tail| Chunk::seal_at(tail, hint, depth + 1))
+            .collect();
+        SPARE_TAILS.with(|s| {
+            let mut spare = s.borrow_mut();
+            for mut tail in sh.tails.drain(..) {
+                if spare.len() < 64 {
+                    tail.clear();
+                    spare.push(tail)
+                }
+            }
+        });
+        let keys_json = sh
+            .names
+            .iter()
+            .map(|k| format!("{}:", serde_json::to_string(k).unwrap()))
+            .collect();
+        Some(ListCol {
+            is_record,
+            offs: offs.into(),
+            names: sh.names,
+            keys_json,
+            shapes: sh.shapes,
+            shape_of: PackedInts::encode(&sh.shape_of, hint),
+            cols,
+        })
+    }
+    #[inline]
+    fn range(&self, i: usize) -> (usize, usize) {
+        (self.offs[i] as usize, self.offs[i + 1] as usize)
+    }
+    /// Row `i` as compact JSON text.
+    fn text(&self, i: usize) -> String {
+        let (a, b) = self.range(i);
+        let mut out = String::new();
+        if !self.is_record {
+            out.push('[')
+        }
+        for e in a..b {
+            if e > a {
+                out.push(',')
+            }
+            out.push('{');
+            for (k, &c) in self.shapes[self.shape_of.get(e) as usize]
+                .iter()
+                .enumerate()
+            {
+                if k > 0 {
+                    out.push(',')
+                }
+                out.push_str(&self.keys_json[c as usize]);
+                out.push_str(&to_text(&self.cols[c as usize].get(e)))
+            }
+            out.push('}')
+        }
+        if !self.is_record {
+            out.push(']')
+        }
+        out
+    }
+    fn emit<V: RowVisitor>(&self, i: usize, ci: usize, seg: usize, v: &mut V, buf: &mut Vec<u8>) {
+        let (a, b) = self.range(i);
+        if !v.nested_begin(ci, self.is_record, b - a) {
+            return v.other(ci, &Cell::Json(self.text(i)));
+        }
+        for e in a..b {
+            v.nested_elem_begin();
+            for &c in &self.shapes[self.shape_of.get(e) as usize] {
+                v.nested_key(c as usize, &self.names[c as usize]);
+                self.cols[c as usize].emit(e, c as usize, seg, v, buf)
+            }
+            v.nested_elem_end()
+        }
+        v.nested_end(ci)
+    }
+    fn write(&self, w: &mut W) {
+        w.bool(self.is_record);
+        w.v_u32(&self.offs);
+        w.u64(self.shapes.len() as u64);
+        for s in &self.shapes {
+            w.v_u16(s)
+        }
+        self.shape_of.write(w);
+        w.u64(self.names.len() as u64);
+        for (name, col) in self.names.iter().zip(&self.cols) {
+            w.bytes(name.as_bytes());
+            col.write(w)
+        }
+    }
+    fn read(r: &mut R) -> Res<ListCol> {
+        let is_record = r.get_bool()?;
+        let offs = r.get_v_u32()?;
+        if offs.first() != Some(&0) || offs.windows(2).any(|p| p[0] > p[1]) {
+            return bad("list offsets");
+        }
+        let elems = *offs.last().unwrap() as usize;
+        let mut shapes = Vec::new();
+        for _ in 0..r.len(8)? {
+            shapes.push(r.get_v_u16()?.to_vec())
+        }
+        let shape_of = PackedInts::read(r)?;
+        let (mut names, mut cols) = (Vec::new(), Vec::new());
+        for _ in 0..r.len(8)? {
+            names.push(r.get_string()?);
+            let col = Chunk::read_max(r, u32::MAX as usize)?;
+            if col.len as usize != elems {
+                return bad("sub-column length");
+            }
+            cols.push(col)
+        }
+        if shape_of.len() != elems
+            || shapes.is_empty()
+            || shapes.iter().flatten().any(|&c| c as usize >= names.len())
+        {
+            return bad("record shapes");
+        }
+        let keys_json = names
+            .iter()
+            .map(|k| format!("{}:", serde_json::to_string(k).unwrap()))
+            .collect();
+        Ok(ListCol {
+            is_record,
+            offs,
+            names,
+            keys_json,
+            shapes,
+            shape_of,
+            cols,
+        })
+    }
+    fn bytes(&self) -> usize {
+        self.offs.len() * 4
+            + self.shape_of.bytes()
+            + self.shapes.iter().map(|s| s.len() * 2 + 24).sum::<usize>()
+            + self.names.iter().map(|n| n.len() * 2 + 48).sum::<usize>()
+            + self.cols.iter().map(|c| c.bytes()).sum::<usize>()
+    }
+    fn describe(&self) -> String {
+        let fields: Vec<String> = self
+            .names
+            .iter()
+            .zip(&self.cols)
+            .map(|(n, c)| format!("{n}: {}", c.describe()))
+            .collect();
+        format!(
+            "{}<{}>",
+            if self.is_record { "record" } else { "list" },
+            fields.join(", ")
+        )
+    }
 }
 const POW10: [f64; 7] = [1.0, 10.0, 100.0, 1e3, 1e4, 1e5, 1e6];
 
@@ -376,6 +809,10 @@ impl Chunk {
         Chunk::seal(&t, hint)
     }
     fn seal(t: &Tail, hint: Hint) -> Chunk {
+        Chunk::seal_at(t, hint, 0)
+    }
+    /// `depth` counts how many nested lists this column is inside; sub-columns are not split further beyond two levels.
+    fn seal_at(t: &Tail, hint: Hint, depth: usize) -> Chunk {
         let n = t.len();
         let mut cnt = [0usize; 7];
         for &g in &t.tags {
@@ -483,6 +920,11 @@ impl Chunk {
                 .collect();
             return mk(Data::Str(PackedStrs::encode(&v, hint)), 0, true);
         }
+        if vals > 0 && cnt[T_JSON as usize] == vals && depth < 2 {
+            if let Some(list) = ListCol::shred(t, hint, depth) {
+                return mk(Data::List(Box::new(list)), 0, true);
+            }
+        }
         let v: Vec<String> = t.cells().map(|c| to_text(&c)).collect();
         Chunk {
             data: Data::Mixed(PackedStrs::encode(&v, hint)),
@@ -518,6 +960,7 @@ impl Chunk {
             Data::Dec { scale, p } => Cell::Float(p.get(i) as f64 / POW10[*scale as usize]),
             Data::F64(v) => Cell::Float(v[i]),
             Data::Str(p) => Cell::Str(p.get_string(i)),
+            Data::List(l) => Cell::Json(l.text(i)),
             Data::Mixed(_) => unreachable!(),
         }
     }
@@ -566,6 +1009,7 @@ impl Chunk {
                         Some((code, n)) => v.dict_str(ci, seg, code, n, &mut || p.dict_value(code)),
                         None => v.str(ci, &String::from_utf8_lossy(p.get(o, buf))),
                     },
+                    Data::List(l) => l.emit(o, ci, seg, v, buf),
                     Data::Absent | Data::Mixed(_) => unreachable!(),
                 }
             }
@@ -573,6 +1017,52 @@ impl Chunk {
     }
     fn clean(&self) -> bool {
         self.patches.is_empty()
+    }
+    /// Is row `i` present and not null?
+    fn has_value(&self, i: usize, buf: &mut Vec<u8>) -> bool {
+        if !self.patches.is_empty() {
+            if let Some(c) = self.patches.get(&(i as u32)) {
+                return !matches!(c, Cell::Missing | Cell::Null);
+            }
+        }
+        match &self.data {
+            Data::Absent => false,
+            Data::Mixed(p) => !matches!(p.get(i, buf), b"" | b"null"),
+            _ => !self.hole(i),
+        }
+    }
+    /// A measure of every row's string value; rows that are not strings count as zero.
+    fn str_measures(&self, measure: StrMeasure, buf: &mut Vec<u8>) -> Vec<i64> {
+        let n = self.len as usize;
+        match (&self.data, self.clean()) {
+            (Data::Str(p), true) => {
+                // a dictionary column is measured once per distinct value
+                let mut memo: Vec<Option<i64>> = Vec::new();
+                (0..n)
+                    .map(|i| {
+                        if self.holes > 0 && self.hole(i) {
+                            return 0;
+                        }
+                        match p.dict_code(i) {
+                            Some((code, len)) => {
+                                if memo.is_empty() {
+                                    memo.resize(len, None)
+                                }
+                                *memo[code as usize]
+                                    .get_or_insert_with(|| measure.of(&p.dict_value(code)))
+                            }
+                            None => measure.of(&String::from_utf8_lossy(p.get(i, buf))),
+                        }
+                    })
+                    .collect()
+            }
+            _ => (0..n)
+                .map(|i| match self.get(i) {
+                    Cell::Str(s) => measure.of(&s),
+                    _ => 0,
+                })
+                .collect(),
+        }
     }
     fn hole(&self, i: usize) -> bool {
         bit(&self.missing, i) || bit(&self.nulls, i)
@@ -583,6 +1073,7 @@ impl Chunk {
             Data::Int { p, .. } | Data::Dec { p, .. } => p.bytes(),
             Data::F64(v) => v.len() * 8,
             Data::Str(p) | Data::Mixed(p) => p.bytes(),
+            Data::List(l) => l.bytes(),
         }) + self.nulls.as_ref().map_or(0, |b| b.len() * 8)
             + self.missing.as_ref().map_or(0, |b| b.len() * 8)
             + self
@@ -607,6 +1098,7 @@ impl Chunk {
             Data::F64(_) => "f64".into(),
             Data::Str(p) => format!("str:{}", p.describe()),
             Data::Mixed(p) => format!("mixed:{}", p.describe()),
+            Data::List(l) => l.describe(),
         }
     }
     fn select(&self, pred: &Pred, base: u32, out: &mut Vec<u32>) {
@@ -981,6 +1473,7 @@ impl DynTable {
             self.seal_threads = 0;
             self.compact();
             self.spare_tails = Vec::new();
+            release_spare_tails();
             for c in &mut self.cols {
                 if c.tail.len() == 0 {
                     c.tail = Tail::default()
@@ -1385,6 +1878,69 @@ impl DynTable {
             self.set_bulk(false)
         }
     }
+    /// For every row: does it have a value for this column (the key is present and not null)?
+    pub fn notna(&self, col: usize) -> Vec<bool> {
+        let c = &self.cols[col];
+        let mut out = Vec::with_capacity(self.len);
+        let mut buf = Vec::new();
+        for ch in c.sealed() {
+            for i in 0..ch.len as usize {
+                out.push(ch.has_value(i, &mut buf))
+            }
+        }
+        out.extend(c.tail.tags.iter().map(|&t| t != T_MISSING && t != T_NULL));
+        out
+    }
+    /// For every row: the number of elements in its list value, or `None` when the value is not a list.
+    pub fn list_len(&self, col: usize) -> Vec<Option<u32>> {
+        let c = &self.cols[col];
+        let mut out = Vec::with_capacity(self.len);
+        for ch in c.sealed() {
+            match (&ch.data, ch.clean()) {
+                (Data::List(l), true) if !l.is_record => {
+                    for i in 0..ch.len as usize {
+                        out.push((!ch.hole(i)).then(|| l.offs[i + 1] - l.offs[i]))
+                    }
+                }
+                _ => out.extend((0..ch.len as usize).map(|i| json_list_len(&ch.get(i)))),
+            }
+        }
+        out.extend(c.tail.cells().map(|cell| json_list_len(&cell)));
+        out
+    }
+    /// For every row: the sum, over the records in its list value, of a measure of one string field (`Words` counts
+    /// whitespace-separated words as Python's `str.split()` does). `None` when the value is not a list of records.
+    pub fn list_str_sum(&self, col: usize, field: &str, measure: StrMeasure) -> Vec<Option<i64>> {
+        let c = &self.cols[col];
+        let mut out = Vec::with_capacity(self.len);
+        let mut buf = Vec::new();
+        for ch in c.sealed() {
+            match (&ch.data, ch.clean()) {
+                (Data::List(l), true) if !l.is_record => {
+                    let per_elem = l
+                        .names
+                        .iter()
+                        .position(|n| n == field)
+                        .map(|f| l.cols[f].str_measures(measure, &mut buf));
+                    for i in 0..ch.len as usize {
+                        out.push((!ch.hole(i)).then(|| {
+                            let (a, b) = l.range(i);
+                            per_elem.as_ref().map_or(0, |m| m[a..b].iter().sum())
+                        }))
+                    }
+                }
+                _ => out.extend(
+                    (0..ch.len as usize).map(|i| json_list_str_sum(&ch.get(i), field, measure)),
+                ),
+            }
+        }
+        out.extend(
+            c.tail
+                .cells()
+                .map(|cell| json_list_str_sum(&cell, field, measure)),
+        );
+        out
+    }
     /// Rows currently held uncompressed.
     pub fn tail_rows(&self) -> usize {
         self.tail_len()
@@ -1480,6 +2036,10 @@ impl Chunk {
                 w.u8(5);
                 p.write(w)
             }
+            Data::List(l) => {
+                w.u8(6);
+                l.write(w)
+            }
         }
         w.u32(self.len);
         w.u32(self.holes);
@@ -1494,6 +2054,10 @@ impl Chunk {
         }
     }
     fn read(r: &mut R) -> Res<Chunk> {
+        Chunk::read_max(r, CHUNK)
+    }
+    /// `max` is the most rows the chunk may hold: a table chunk is bounded, a sub-column holds every element of one.
+    fn read_max(r: &mut R, max: usize) -> Res<Chunk> {
         let data = match r.get_u8()? {
             0 => Data::Absent,
             1 => {
@@ -1516,6 +2080,7 @@ impl Chunk {
             3 => Data::F64(r.get_v_f64()?),
             4 => Data::Str(PackedStrs::read(r)?),
             5 => Data::Mixed(PackedStrs::read(r)?),
+            6 => Data::List(Box::new(ListCol::read(r)?)),
             _ => return bad("column kind"),
         };
         let (len, holes, fill, safe_sum) =
@@ -1526,8 +2091,9 @@ impl Chunk {
             Data::Int { p, .. } | Data::Dec { p, .. } => p.len(),
             Data::F64(v) => v.len(),
             Data::Str(p) | Data::Mixed(p) => p.len(),
+            Data::List(l) => l.offs.len() - 1,
         };
-        if n > CHUNK || stored != n || holes > len {
+        if n > max || stored != n || holes > len {
             return bad("chunk length");
         }
         let (nulls, missing) = (read_bits(r, n)?, read_bits(r, n)?);

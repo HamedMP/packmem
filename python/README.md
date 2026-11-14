@@ -122,6 +122,22 @@ its owner and is removed when the table is unshared or garbage-collected, and `p
 crashed process. The file is the size of the packed table and goes to `/dev/shm` on Linux (memory) and to the temp
 directory elsewhere (disk, on macOS and Windows); pass `share(dir=...)` to choose.
 
+## Lists of records inside a record
+
+A field that holds a list of small records, such as the turns of a conversation, is stored as its own packed
+columns, so rows are rebuilt without parsing JSON and per-record figures can be computed without a Python loop:
+
+```python
+turns = rows.col("conversations")
+turns.list.len()                                              # turns per record
+turns.list.field("value").str.split().list.len().list.sum()   # words per record, as str.split() counts them
+turns.list.field("value").str.len().list.sum()                # characters per record
+rows.col("image").notna()                                     # which records have the key
+```
+
+The names follow pandas (`notna`, `.str`, `.list`). Each returns one value per record as a list, with
+`.to_numpy()` and `.to_arrow()` when those libraries are installed.
+
 ## Saving and reopening
 
 ```python

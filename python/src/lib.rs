@@ -1,7 +1,7 @@
 //! Python bindings for packmem: a list-of-dicts replacement backed by packed, mutable columns.
 use packmem::csv::{ColType, CsvLoader, CsvOptions};
 use packmem::dynamic::{from_text, to_text, RowVisitor};
-use packmem::{Cell, DynTable, Hint, Num, Pred};
+use packmem::{Cell, DynTable, Hint, Num, Pred, StrMeasure};
 use pyo3::exceptions::{PyIndexError, PyKeyError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyBytes, PyDict, PyFloat, PyInt, PyList, PyString, PyTuple};
@@ -350,6 +350,18 @@ struct DictSink<'a, 'py> {
     use_cache: bool,
     cache: Vec<(usize, Vec<Option<Py<PyString>>>)>,
     err: Option<PyErr>,
+    /// The nested value being built, when a column stored as sub-columns is being read.
+    nest: Option<Nest<'py>>,
+    /// Key strings for nested fields, by (column, field index); checked against the name, since field numbering
+    /// can differ from chunk to chunk.
+    nkeys: Vec<Vec<Option<(String, Py<PyString>)>>>,
+}
+struct Nest<'py> {
+    is_record: bool,
+    list: Bound<'py, PyList>,
+    cur: Option<Bound<'py, PyDict>>,
+    key: Option<Py<PyString>>,
+    col: usize,
 }
 impl<'a, 'py> DictSink<'a, 'py> {
     fn new(
@@ -371,10 +383,21 @@ impl<'a, 'py> DictSink<'a, 'py> {
             use_cache,
             cache: vec![],
             err: None,
+            nest: None,
+            nkeys: vec![],
         }
     }
     #[inline]
     fn put(&mut self, col: usize, v: PyResult<Bound<'py, PyAny>>) {
+        if let Some(n) = &self.nest {
+            // inside a nested record: the value belongs to the field named by the last `nested_key`
+            if let (Some(d), Some(k)) = (&n.cur, &n.key) {
+                if let Err(e) = v.and_then(|v| d.set_item(k.bind(self.py), v)) {
+                    self.err.get_or_insert(e);
+                }
+            }
+            return;
+        }
         self.seen += 1;
         self.mark[col] = self.stamp;
         if let Some(d) = &self.cur {
@@ -419,8 +442,71 @@ impl<'a, 'py> RowVisitor for DictSink<'a, 'py> {
     }
     #[inline]
     fn null(&mut self, col: usize) {
+        if self.nest.is_some() {
+            let none = self.py.None().into_bound(self.py);
+            return self.put(col, Ok(none));
+        }
         self.seen += 1;
         self.mark[col] = self.stamp
+    }
+    fn nested_begin(&mut self, col: usize, is_record: bool, len: usize) -> bool {
+        if self.nest.is_some() {
+            return false; // a list inside a list arrives as JSON text
+        }
+        let _ = len;
+        self.nest = Some(Nest {
+            is_record,
+            list: PyList::empty(self.py),
+            cur: None,
+            key: None,
+            col,
+        });
+        true
+    }
+    fn nested_elem_begin(&mut self) {
+        if let Some(n) = &mut self.nest {
+            n.cur = Some(PyDict::new(self.py))
+        }
+    }
+    fn nested_key(&mut self, field: usize, name: &str) {
+        let Some(n) = &mut self.nest else { return };
+        if self.nkeys.len() <= n.col {
+            self.nkeys.resize_with(n.col + 1, Vec::new)
+        }
+        let slots = &mut self.nkeys[n.col];
+        if slots.len() <= field {
+            slots.resize_with(field + 1, || None)
+        }
+        let py = self.py;
+        match &slots[field] {
+            Some((cached, key)) if cached == name => n.key = Some(key.clone_ref(py)),
+            _ => {
+                let key = PyString::intern(py, name).unbind();
+                n.key = Some(key.clone_ref(py));
+                slots[field] = Some((name.to_string(), key))
+            }
+        }
+    }
+    fn nested_elem_end(&mut self) {
+        if let Some(n) = &mut self.nest {
+            if !n.is_record {
+                if let Some(d) = n.cur.take() {
+                    if let Err(e) = n.list.append(d) {
+                        self.err.get_or_insert(e);
+                    }
+                }
+            }
+        }
+    }
+    fn nested_end(&mut self, col: usize) {
+        if let Some(n) = self.nest.take() {
+            let value = match (n.is_record, n.cur) {
+                (true, Some(d)) => d.into_any(),
+                (true, None) => PyDict::new(self.py).into_any(),
+                (false, _) => n.list.into_any(),
+            };
+            self.put(col, Ok(value))
+        }
     }
     #[inline]
     fn boolean(&mut self, col: usize, v: bool) {
@@ -453,6 +539,11 @@ impl<'a, 'py> RowVisitor for DictSink<'a, 'py> {
         dict_len: usize,
         value: &mut dyn FnMut() -> String,
     ) {
+        if self.nest.is_some() {
+            // a dictionary-coded field of a nested record: few distinct values, so intern them
+            let o = PyString::intern(self.py, &value()).into_any();
+            return self.put(col, Ok(o));
+        }
         if !self.use_cache {
             let o = PyString::new(self.py, &value()).into_any();
             return self.put(col, Ok(o));
@@ -1052,6 +1143,37 @@ impl PyTable {
             }
         }
         Ok(l)
+    }
+    /// Per row: is the key present and not null? A column that does not exist gives all False.
+    fn notna(&self, name: &str) -> Vec<bool> {
+        match self.t.col_index(name) {
+            Some(c) => self.t.notna(c),
+            None => vec![false; self.t.len()],
+        }
+    }
+    /// Per row: the length of its list value, or None when it is not a list.
+    fn list_len(&self, name: &str) -> Vec<Option<u32>> {
+        match self.t.col_index(name) {
+            Some(c) => self.t.list_len(c),
+            None => vec![None; self.t.len()],
+        }
+    }
+    /// Per row: the sum over the records of its list value of a measure ("words", "chars" or "bytes") of a string field.
+    fn list_str_sum(&self, name: &str, field: &str, measure: &str) -> PyResult<Vec<Option<i64>>> {
+        let m = match measure {
+            "words" => StrMeasure::Words,
+            "chars" => StrMeasure::Chars,
+            "bytes" => StrMeasure::Bytes,
+            _ => {
+                return Err(PyValueError::new_err(
+                    "measure must be 'words', 'chars' or 'bytes'",
+                ))
+            }
+        };
+        Ok(match self.t.col_index(name) {
+            Some(c) => self.t.list_str_sum(c, field, m),
+            None => vec![None; self.t.len()],
+        })
     }
     /// The rows at the given positions, in that order, as dicts: one call for a whole batch.
     fn rows_at<'py>(&self, py: Python<'py>, ids: Vec<usize>) -> PyResult<Bound<'py, PyList>> {

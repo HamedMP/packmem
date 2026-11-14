@@ -4,6 +4,19 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## Unreleased
 
+### Added
+- Columns whose values are lists of records (the turns of a conversation), or single records, are stored as
+  sub-columns: one offset per row and one packed column per field, the layout Arrow uses for a list of structs.
+  Rows read back as before, without parsing JSON.
+- Python: `Table.col(name)` with pandas-style operations computed on the packed data: `notna()`, `isna()`,
+  `.list.len()`, and for lists of records `.list.field(name).str.len().list.sum()` and
+  `.str.split().list.len().list.sum()` (word counts as `str.split()` gives them).
+
+### Changed
+- `to_json()` writes nested values stored as sub-columns in a canonical form (as `json.dumps` would), not as
+  they were written in the source. Values are unchanged.
+- Files written by this version that contain sub-columns cannot be read by 0.2.0. Files from 0.2.0 still open.
+
 ## 0.2.0 - 2026-11-14
 
 The byte form changes in this release: pickles, shared files and `to_bytes` output from 0.1.x cannot be read

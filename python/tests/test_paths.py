@@ -281,6 +281,74 @@ def test_text_heavy_load_uses_background_packing():
     assert blobs[0] == blobs[1] == blobs[2]                # byte-identical packed form with or without threads
 
 
+def test_nested_lists_of_records():
+    import pickle, tempfile
+    r = random.Random(8); words = ["alpha", "beta", "é", "日本", "x\u2003y", "a\x1cb", " lead", "trail ", ""]
+    def turns():
+        out = []
+        for k in range(r.choice([0, 1, 2, 2, 4, 6])):
+            t = {"from": "human" if k % 2 == 0 else "gpt", "value": (" " if r.random() < .2 else "").join(r.choice(words) + r.choice([" ", "\n", "\t", "  "]) for _ in range(r.randint(0, 12)))}
+            if r.random() < .1: t["score"] = r.choice([1, 2.5, None, True])
+            if r.random() < .05: t = {"value": t["value"], "from": t["from"]}        # another key order
+            if r.random() < .03: del t["value"]
+            out.append(t)
+        return out
+    m = []
+    for i in range(40_000):
+        row = {"id": i, "conversations": turns(), "meta": {"split": "train" if i % 3 else "val", "n": i % 7}}
+        if i % 4 == 0: row["image"] = "img/%06d.jpg" % i
+        if i % 97 == 0: row["conversations"] = None
+        if i % 211 == 0: del row["conversations"]
+        m.append(row)
+    t = packmem.Table(m)
+    kinds = dict((n, e) for n, e, _ in t.describe())
+    assert "list<" in kinds["conversations"] and "record<" in kinds["meta"], kinds
+    assert list(t) == m and [t[i] for i in (0, 1, 97, 211, 20_000, len(m) - 1)] == [m[i] for i in (0, 1, 97, 211, 20_000, len(m) - 1)]
+    assert [x.to_dict() for x in t.lazy()][:300] == m[:300] and t.__getitems__([5, 4, 3]) == [m[5], m[4], m[3]]
+    assert json.loads(t.to_json()) == m
+    conv = [x.get("conversations") for x in m]
+    assert t.col("image").notna() == [x.get("image") is not None for x in m] and t.col("conversations").isna() == [c is None for c in conv]
+    assert t.col("nope").notna() == [False] * len(m)
+    assert t.col("conversations").list.len() == [len(c) if c is not None else None for c in conv]
+    assert t.col("id").list.len() == [None] * len(m) and t.col("meta").list.len() == [None] * len(m)
+    val = t.col("conversations").list.field("value")
+    want_words = [sum(len(e["value"].split()) for e in c if "value" in e) if c is not None else None for c in conv]
+    want_chars = [sum(len(e["value"]) for e in c if "value" in e) if c is not None else None for c in conv]
+    assert val.str.split().list.len().list.sum() == want_words and val.str.len().list.sum() == want_chars
+    assert val.to_list()[:50] == [[e.get("value") for e in c] if c is not None else None for c in conv[:50]]
+    assert val.str.len().to_list()[:50] == [[len(e["value"]) if "value" in e else None for e in c] if c is not None else None for c in conv[:50]]
+    assert t.col("conversations").list.field("missing").str.len().list.sum() == [0 if c is not None else None for c in conv]
+    assert t.col("image").str.len()[:8] == [len(x["image"]) if "image" in x else None for x in m[:8]]
+    assert t.col("conversations").list.len().sum() == sum(len(c) for c in conv if c is not None)
+    for bad in (lambda: val.str.sum(), lambda: val.str.split().list.sum(), lambda: val.str.len().len()):
+        try: bad(); raise AssertionError("expected TypeError")
+        except TypeError: pass
+    # the same answers after edits (patched chunks), after appends (uncompressed rows) and from text-stored chunks
+    t.update(5, conversations=[{"from": "human", "value": "one two  three"}]); m[5]["conversations"] = [{"from": "human", "value": "one two  three"}]
+    extra = [{"id": -1, "conversations": [{"from": "gpt", "value": "a b"}, {"from": "human", "value": "c"}]}, {"id": -2, "conversations": [1, 2]}, {"id": -3, "conversations": "text"}]
+    t.extend(extra); m.extend(extra)
+    conv = [x.get("conversations") for x in m]
+    is_recs = lambda c: isinstance(c, list) and all(isinstance(e, dict) for e in c)
+    assert list(t) == m and t.col("conversations").list.len() == [len(c) if isinstance(c, list) else None for c in conv]
+    assert t.col("conversations").list.field("value").str.split().list.len().list.sum() == [sum(len(e["value"].split()) for e in c if isinstance(e.get("value"), str)) if is_recs(c) else None for c in conv]
+    # sub-columns survive pickling, saving, taking and sorting
+    u = pickle.loads(pickle.dumps(t)); assert list(u) == m and "list<" in dict((n, e) for n, e, _ in u.describe())["conversations"]
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "n.pkm"); t.save(p); o = packmem.open(p)
+        assert list(o) == m and o.col("conversations").list.len() == t.col("conversations").list.len()
+        del o; gc_collect()
+    assert list(t.take(range(len(m) - 1, -1, -1))) == m[::-1]
+    mixed = packmem.Table([{"v": [{"a": 1}]}, {"v": {"a": 1}}, {"v": [1]}] * 6000)       # not uniform: stays text, still exact
+    assert list(mixed) == [{"v": [{"a": 1}]}, {"v": {"a": 1}}, {"v": [1]}] * 6000 and "mixed" in mixed.describe()[0][1]
+    deep = [{"v": [{"a": [{"b": [{"c": i}]}], "k": {"z": i}}]} for i in range(20_000)]
+    assert list(packmem.Table(deep)) == deep
+
+
+def gc_collect():
+    import gc
+    gc.collect()
+
+
 def _worker_reads(t):
     return (len(t), t.sum("id"), t.count(g="x"), t.shared)
 
