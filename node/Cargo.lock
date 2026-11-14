@@ -300,6 +300,7 @@ version = "0.2.0"
 dependencies = [
  "fsst-rs",
  "lz4_flex",
+ "serde",
  "serde_json",
  "zstd",
 ]
