@@ -1,8 +1,10 @@
 # Where packmem's bytes go, and what would make them smaller
 
-Measured 2026-11-14 on the packmem source at main c3f435f (format 3, "PKMT"). Every number below comes from
-`results/sizes.jsonl` (one line per dataset, row count and variant, with bytes per section) and the tables derived
-from it in `results/tables.md` and `results/vs_json_br11.md`.
+Two parts. **"What 0.3.0 writes"** is the released form, measured with packmem 0.3.0 from npm
+(`results/sizes-0.3.0.jsonl`); quote those numbers for the release. Everything from **"Method"** on is the study that
+led to it, measured 2026-11-14 on main c3f435f (format 3, before the change), with the writer variants that were
+tried: `results/sizes.jsonl` (one line per dataset, row count and variant, with bytes per section) and the tables
+derived from it in `results/tables.md` and `results/vs_json_br11.md`. Its "today's form" means format 3, not 0.3.0.
 
 ## What 0.3.0 writes
 
