@@ -6,7 +6,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 Checked against 0.2.0 on Linux with the Qwen3-VL and LLaVA-NeXT dataset builds
 (`benchmarks/ml_swaps/sub-columns-gate/`): peak memory during the build is 6 to 7% lower and memory afterwards
-about 6% lower. On one thread (`PACKMEM_THREADS=1`) building the table takes 4 to 8% longer than 0.2.0, and the
+6 to 14% lower. On one thread (`PACKMEM_THREADS=1`) building the table takes 4 to 8% longer than 0.2.0, and the
 per-record length passes those trainers run next take 25 to 34% less; with the default threads the build is 1.4
 to 4 times faster.
 
