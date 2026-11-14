@@ -110,7 +110,7 @@ function DataLoaderPost() {
         packmem keeps records as packed columns and reads them without unpacking. In 0.2.0, a table saved with <C>save()</C> is
         memory-mapped by <C>packmem.open()</C>, which takes milliseconds whatever its size. Each worker receives a handle of{" "}
         {f.open.sentBytes} bytes instead of a pickle, and the parent and every worker read the same pages. Reading a row builds a dict
-        on demand, so there are no long-lived Python objects to copy. The change is in the datasetThe change to the dataset is two lines:apos;s constructor:
+        on demand, so there are no long-lived Python objects to copy. The change is in the dataset&apos;s constructor:
       </P>
       <Code install="pip install packmem" lang="python">
         {LOADER}
@@ -235,8 +235,8 @@ export const posts: Post[] = [
     title: "Why every DataLoader worker holds a copy of your dataset",
     date: "2026-11-14",
     summary: hl
-      ? `PyTorch issue #13246, open since 2018, and a two-line fix: ${size(hl.forkserver.list.machineMb)} to ${mb(hl.forkserver.open.machineMb)} for ${hl.workers} workers over 665k fine-tuning records.`
-      : "PyTorch issue #13246, open since 2018, and a two-line fix.",
+      ? `PyTorch issue #13246, open since 2018, and the fix: ${size(hl.forkserver.list.machineMb)} to ${mb(hl.forkserver.open.machineMb)} for ${hl.workers} workers over 665k fine-tuning records.`
+      : "PyTorch issue #13246, open since 2018, and the fix.",
     Body: DataLoaderPost,
   },
   {
