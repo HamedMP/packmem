@@ -1,5 +1,9 @@
 # packmem demos: the same API on Express, Next.js and FastAPI
 
+For the browser side, see [`log-viewer/`](log-viewer/): a Next.js app that sends 1,000,000 log records to the
+page with `packmem/http`, opens them with `useTable` and scrolls them with `useRows`, next to the same rows loaded as
+JSON.
+
 Each demo serves 336,776 flight records (`data/flights.jsonl`, nycflights13, 104 MB) from memory. One
 environment variable switches how the data is held:
 
