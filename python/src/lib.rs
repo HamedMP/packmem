@@ -292,6 +292,52 @@ impl Piece<'_> {
         self.records(|r| std::str::from_utf8(r).is_ok_and(|r| push_line(t, r, only).is_ok()))
     }
 }
+impl Piece<'_> {
+    /// The bytes of the file this piece covers.
+    fn span(&self) -> &[u8] {
+        match self {
+            Piece::Lines(text) | Piece::Csv(text, _) => text,
+            Piece::Items(data, items) => match (items.first(), items.last()) {
+                (Some(a), Some(b)) => &data[a.0..b.1],
+                _ => &[],
+            },
+        }
+    }
+}
+/// Tell the system that a part of a mapped file has been loaded. Its pages then stop counting as this process's
+/// memory while the rest loads; they stay in the page cache, as after reading the file the ordinary way.
+fn forget(map: &memmap2::Mmap, part: &[u8]) {
+    #[cfg(unix)]
+    {
+        const ALIGN: usize = 64 << 10; // a multiple of every page size in use
+        let at = part.as_ptr() as usize - map.as_ptr() as usize;
+        let (a, b) = (
+            at.next_multiple_of(ALIGN),
+            (at + part.len()) / ALIGN * ALIGN,
+        );
+        if a < b {
+            // SAFETY: the mapping is read-only and backed by the file, so dropping pages loses nothing: a later
+            // read brings them back from the file.
+            let _ =
+                unsafe { map.unchecked_advise_range(memmap2::UncheckedAdvice::DontNeed, a, b - a) };
+        }
+    }
+    #[cfg(not(unix))]
+    let _ = (map, part);
+}
+/// Hand freed memory back to the operating system where the allocator has to be asked (glibc).
+fn trim_heap() {
+    #[cfg(all(target_os = "linux", target_env = "gnu"))]
+    {
+        unsafe extern "C" {
+            fn malloc_trim(pad: usize) -> i32;
+        }
+        // SAFETY: malloc_trim takes no pointers and only returns free heap pages to the system.
+        unsafe {
+            malloc_trim(0);
+        }
+    }
+}
 fn blank(l: &[u8]) -> bool {
     l.iter().all(u8::is_ascii_whitespace)
 }
@@ -797,6 +843,7 @@ impl PyTable {
         &mut self,
         py: Python<'_>,
         threads: usize,
+        map: &memmap2::Mmap,
         mut next_piece: impl FnMut(usize) -> Result<Option<Piece<'a>>, Redo>,
     ) -> PyResult<Result<usize, Redo>> {
         use std::sync::mpsc;
@@ -806,7 +853,7 @@ impl PyTable {
         let (work_tx, work_rx) = mpsc::sync_channel::<(usize, Piece<'a>)>(1);
         let work_rx = std::sync::Mutex::new(work_rx);
         let (done_tx, done_rx) = mpsc::channel::<(usize, Piece<'a>, Option<DynTable>)>();
-        std::thread::scope(|sc| {
+        let r = std::thread::scope(|sc| {
             for _ in 0..threads {
                 let (work_rx, done_tx, only) = (&work_rx, done_tx.clone(), &only);
                 sc.spawn(move || {
@@ -864,6 +911,7 @@ impl PyTable {
                         if let Some(t) = t {
                             n += t.len();
                             self.t.append_table(t);
+                            forget(map, piece.span());
                             continue;
                         }
                         let Piece::Lines(text) = piece else {
@@ -881,7 +929,10 @@ impl PyTable {
             })();
             drop(work_tx);
             r
-        })
+        });
+        // the workers are gone; glibc keeps what they freed until asked
+        trim_heap();
+        r
     }
     fn load_jsonl_threads(
         &mut self,
@@ -893,7 +944,7 @@ impl PyTable {
         // truncated while it is being loaded.
         let map = unsafe { memmap2::Mmap::map(f)? };
         let (data, mut pos): (&[u8], usize) = (&map, 0);
-        let r = self.load_pieces(py, threads, |want| {
+        let r = self.load_pieces(py, threads, &map, |want| {
             let (start, mut rows) = (pos, 0);
             while rows < want && pos < data.len() {
                 let end = data[pos..]
@@ -949,8 +1000,9 @@ impl PyTable {
         };
         let data = &data[body..];
         let cuts = packmem::csv::record_pieces(data, opts.delimiter, packmem::dynamic::CHUNK);
+        forget(&map, data); // finding the cuts read the whole file
         let mut k = 0;
-        self.load_pieces(py, threads, |_| {
+        self.load_pieces(py, threads, &map, |_| {
             let Some(&(a, _)) = cuts.get(k) else {
                 return Ok(None);
             };
@@ -983,7 +1035,7 @@ impl PyTable {
         }
         pos = skip(pos + 1);
         let mut closed = false;
-        self.load_pieces(py, threads, |want| {
+        self.load_pieces(py, threads, &map, |want| {
             let mut items = Vec::with_capacity(want);
             while items.len() < want && !closed {
                 match data.get(pos) {
@@ -1836,16 +1888,7 @@ impl PyTable {
     /// counted against the process, and forked workers inherit it.
     #[staticmethod]
     fn release_freed_memory() {
-        #[cfg(all(target_os = "linux", target_env = "gnu"))]
-        {
-            unsafe extern "C" {
-                fn malloc_trim(pad: usize) -> i32;
-            }
-            // SAFETY: malloc_trim takes no pointers and only returns free heap pages to the system.
-            unsafe {
-                malloc_trim(0);
-            }
-        }
+        trim_heap()
     }
     fn set_frozen(&mut self, on: bool) {
         self.frozen = on
