@@ -13,6 +13,13 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - Demos: `demos/log-viewer`, a Next.js app that sends 1,000,000 generated log records to the browser with
   `useTable` and `useRows`, next to the same rows loaded as JSON.
 
+### Changed
+- Node: `respond` and `send` from `packmem/http` gzip bytes over 1 KB inside the payload when the client's Accept
+  asks for `application/vnd.packmem; enc=gzip`, and mark the response with that media type. `fetchTable` asks for
+  it and unzips with `DecompressionStream`. Hosts compress only the types they know: Next.js gzips JSON but not
+  packmem bytes, and drops a route's own Content-Encoding. `{ gzip: false }` turns it off. `send` now returns a
+  Promise. Clients on 0.3.x do not ask for gzip, so they keep getting plain bytes.
+
 ## 0.3.1 - 2026-11-14
 
 This version writes byte format 5, which 0.3.0 cannot read: upgrade readers before, or together with, writers.
