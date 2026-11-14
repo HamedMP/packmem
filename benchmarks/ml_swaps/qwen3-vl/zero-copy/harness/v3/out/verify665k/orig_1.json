@@ -1,0 +1,12 @@
+{
+ "tree": "$WORK/orig",
+ "mode": "verify",
+ "datasets": "llava665k",
+ "pid": 27489,
+ "build_s": 2.998287166999944,
+ "n": 665298,
+ "rss_after_build_mb": 5187.190784,
+ "footprint_after_build_mb": 5204.054264,
+ "rows_sha256": "7357e4d6fdc54be370242527d5eb4fde3d950272f593146b4c8e624607ff77e7",
+ "verify_s": 3.929069417001301
+}

@@ -1,0 +1,104 @@
+{"phase":"prep","t":"2026-11-14T00:30:12+01:00"}
+{"run":"prep_ids","venv":"venv","rc":0,"load_start":29.52,"load_end":28.89,"avail_gb":98,"wall_s":31.360290103,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"conv_B1","venv":"venv","rc":0,"load_start":28.89,"load_end":29.96,"avail_gb":102,"wall_s":17.920994654,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"hash_B1","venv":"venv","rc":0,"load_start":29.96,"load_end":31.80,"avail_gb":102,"wall_s":26.563848119,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"prep_v2save","venv":"venv2","rc":0,"load_start":31.80,"load_end":33.96,"avail_gb":96,"wall_s":40.321230657,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"hash_C_v2","venv":"venv2","rc":0,"load_start":33.96,"load_end":33.89,"avail_gb":95,"wall_s":42.921817412,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"hash_V2O","venv":"venv2","rc":0,"load_start":33.89,"load_end":33.49,"avail_gb":93,"wall_s":31.344878212,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"hash_C","venv":"venv","rc":0,"load_start":33.49,"load_end":36.39,"avail_gb":100,"wall_s":42.814537962,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"smoke_V2S_forkserver","venv":"venv2","rc":0,"load_start":35.40,"load_end":33.71,"avail_gb":103,"wall_s":15.195330951,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"phase":"dl","t":"2026-11-14T00:34:43+01:00"}
+{"run":"dl_A_fork_1","venv":"venv","rc":0,"load_start":32.54,"load_end":33.35,"avail_gb":101,"wall_s":22.823730220,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"dl_B1_fork_1","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"dl_B1_fork_1","venv":"venv","rc":0,"load_start":33.35,"load_end":32.76,"avail_gb":100,"wall_s":5.456230355,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_C_fork_1","venv":"venv","rc":0,"load_start":32.76,"load_end":31.12,"avail_gb":101,"wall_s":14.835648740,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E_fork_1","venv":"venv","rc":0,"load_start":31.12,"load_end":69.39,"avail_gb":102,"wall_s":4.236220643,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_V2S_fork_1","venv":"venv2","rc":0,"load_start":69.39,"load_end":61.47,"avail_gb":102,"wall_s":13.764129838,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_V2D_fork_1","venv":"venv2","rc":0,"load_start":61.47,"load_end":52.67,"avail_gb":101,"wall_s":13.335019320,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"dl_V2O_fork_1","r":{"op": "warm", "resident_bytes": 308682752, "size_bytes": 308680442, "resident_frac": 1.0}}
+{"run":"dl_V2O_fork_1","venv":"venv2","rc":0,"load_start":52.67,"load_end":52.67,"avail_gb":98,"wall_s":3.435391075,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E2_fork_1","venv":"venv2","rc":0,"load_start":52.67,"load_end":51.26,"avail_gb":97,"wall_s":4.219177423,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_A_forkserver_1","venv":"venv","rc":0,"load_start":51.26,"load_end":32.28,"avail_gb":99,"wall_s":92.590755034,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"dl_B1_forkserver_1","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"dl_B1_forkserver_1","venv":"venv","rc":0,"load_start":32.28,"load_end":31.78,"avail_gb":101,"wall_s":6.706349062,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_C_forkserver_1","venv":"venv","rc":0,"load_start":31.78,"load_end":29.10,"avail_gb":101,"wall_s":24.635598032,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E_forkserver_1","venv":"venv","rc":0,"load_start":29.10,"load_end":28.61,"avail_gb":102,"wall_s":5.403751179,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_V2S_forkserver_1","venv":"venv2","rc":0,"load_start":28.61,"load_end":27.28,"avail_gb":100,"wall_s":12.328300535,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_V2D_forkserver_1","venv":"venv2","rc":0,"load_start":27.28,"load_end":26.70,"avail_gb":96,"wall_s":15.280261646,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"dl_V2O_forkserver_1","r":{"op": "warm", "resident_bytes": 308682752, "size_bytes": 308680442, "resident_frac": 1.0}}
+{"run":"dl_V2O_forkserver_1","venv":"venv2","rc":0,"load_start":26.70,"load_end":26.88,"avail_gb":102,"wall_s":5.553035934,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E2_forkserver_1","venv":"venv2","rc":0,"load_start":26.88,"load_end":26.25,"avail_gb":101,"wall_s":6.288617536,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_A_fork_2","venv":"venv","rc":0,"load_start":26.25,"load_end":28.00,"avail_gb":99,"wall_s":22.502711116,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"dl_B1_fork_2","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"dl_B1_fork_2","venv":"venv","rc":0,"load_start":28.00,"load_end":28.24,"avail_gb":93,"wall_s":5.771473295,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_C_fork_2","venv":"venv","rc":0,"load_start":28.24,"load_end":26.98,"avail_gb":98,"wall_s":15.819221388,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E_fork_2","venv":"venv","rc":0,"load_start":26.98,"load_end":26.90,"avail_gb":100,"wall_s":4.596151816,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_V2S_fork_2","venv":"venv2","rc":0,"load_start":26.90,"load_end":26.60,"avail_gb":97,"wall_s":13.385612079,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_V2D_fork_2","venv":"venv2","rc":0,"load_start":26.60,"load_end":28.87,"avail_gb":102,"wall_s":14.697119090,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"dl_V2O_fork_2","r":{"op": "warm", "resident_bytes": 308682752, "size_bytes": 308680442, "resident_frac": 1.0}}
+{"run":"dl_V2O_fork_2","venv":"venv2","rc":0,"load_start":28.87,"load_end":27.36,"avail_gb":105,"wall_s":3.117519712,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E2_fork_2","venv":"venv2","rc":0,"load_start":27.36,"load_end":26.69,"avail_gb":104,"wall_s":4.057560662,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_A_forkserver_2","venv":"venv","rc":0,"load_start":26.69,"load_end":31.60,"avail_gb":105,"wall_s":117.596855709,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"dl_B1_forkserver_2","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"dl_B1_forkserver_2","venv":"venv","rc":0,"load_start":31.60,"load_end":32.90,"avail_gb":101,"wall_s":8.230368922,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_C_forkserver_2","venv":"venv","rc":0,"load_start":32.90,"load_end":29.91,"avail_gb":100,"wall_s":27.941471509,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E_forkserver_2","venv":"venv","rc":0,"load_start":29.91,"load_end":30.24,"avail_gb":100,"wall_s":5.894824268,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_V2S_forkserver_2","venv":"venv2","rc":0,"load_start":30.24,"load_end":29.63,"avail_gb":101,"wall_s":17.177292650,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_V2D_forkserver_2","venv":"venv2","rc":0,"load_start":29.63,"load_end":28.73,"avail_gb":104,"wall_s":15.695963281,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"dl_V2O_forkserver_2","r":{"op": "warm", "resident_bytes": 308682752, "size_bytes": 308680442, "resident_frac": 1.0}}
+{"run":"dl_V2O_forkserver_2","venv":"venv2","rc":0,"load_start":28.73,"load_end":29.79,"avail_gb":104,"wall_s":5.686960909,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E2_forkserver_2","venv":"venv2","rc":0,"load_start":29.79,"load_end":30.85,"avail_gb":101,"wall_s":7.172942450,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_A_fork_3","venv":"venv","rc":0,"load_start":30.85,"load_end":30.81,"avail_gb":96,"wall_s":25.902064771,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"dl_B1_fork_3","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"dl_B1_fork_3","venv":"venv","rc":0,"load_start":30.81,"load_end":32.33,"avail_gb":99,"wall_s":7.543939751,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_C_fork_3","venv":"venv","rc":0,"load_start":32.33,"load_end":35.95,"avail_gb":96,"wall_s":20.809488077,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E_fork_3","venv":"venv","rc":0,"load_start":35.95,"load_end":36.11,"avail_gb":99,"wall_s":6.375017631,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_V2S_fork_3","venv":"venv2","rc":0,"load_start":36.11,"load_end":39.43,"avail_gb":95,"wall_s":18.303444568,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_V2D_fork_3","venv":"venv2","rc":0,"load_start":39.43,"load_end":38.24,"avail_gb":98,"wall_s":17.945093196,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"dl_V2O_fork_3","r":{"op": "warm", "resident_bytes": 308682752, "size_bytes": 308680442, "resident_frac": 1.0}}
+{"run":"dl_V2O_fork_3","venv":"venv2","rc":0,"load_start":37.42,"load_end":37.42,"avail_gb":100,"wall_s":4.647290170,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E2_fork_3","venv":"venv2","rc":0,"load_start":37.42,"load_end":37.04,"avail_gb":101,"wall_s":5.368037351,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_A_forkserver_3","venv":"venv","rc":0,"load_start":37.04,"load_end":33.79,"avail_gb":97,"wall_s":122.603586459,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"dl_B1_forkserver_3","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"dl_B1_forkserver_3","venv":"venv","rc":0,"load_start":33.79,"load_end":34.53,"avail_gb":96,"wall_s":9.188153311,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_C_forkserver_3","venv":"venv","rc":0,"load_start":34.53,"load_end":34.82,"avail_gb":98,"wall_s":28.022621990,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E_forkserver_3","venv":"venv","rc":0,"load_start":34.82,"load_end":35.00,"avail_gb":103,"wall_s":6.047938137,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_V2S_forkserver_3","venv":"venv2","rc":0,"load_start":35.00,"load_end":34.63,"avail_gb":100,"wall_s":16.764662469,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_V2D_forkserver_3","venv":"venv2","rc":0,"load_start":34.63,"load_end":36.18,"avail_gb":101,"wall_s":17.378744366,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"dl_V2O_forkserver_3","r":{"op": "warm", "resident_bytes": 308682752, "size_bytes": 308680442, "resident_frac": 1.0}}
+{"run":"dl_V2O_forkserver_3","venv":"venv2","rc":0,"load_start":36.18,"load_end":35.77,"avail_gb":99,"wall_s":5.648612685,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E2_forkserver_3","venv":"venv2","rc":0,"load_start":35.77,"load_end":35.06,"avail_gb":101,"wall_s":6.429858539,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"phase":"floor0","t":"2026-11-14T00:49:57+01:00"}
+{"run":"dl_E0_fork_1","venv":"venv","rc":0,"load_start":34.11,"load_end":34.50,"avail_gb":100,"wall_s":4.293196753,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E0v2_fork_1","venv":"venv2","rc":0,"load_start":34.50,"load_end":35.10,"avail_gb":94,"wall_s":4.285741716,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E0_forkserver_1","venv":"venv","rc":0,"load_start":35.10,"load_end":34.85,"avail_gb":98,"wall_s":5.733998446,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E0v2_forkserver_1","venv":"venv2","rc":0,"load_start":34.85,"load_end":33.90,"avail_gb":100,"wall_s":5.775854698,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E0_fork_2","venv":"venv","rc":0,"load_start":33.90,"load_end":33.27,"avail_gb":100,"wall_s":4.209592215,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E0v2_fork_2","venv":"venv2","rc":0,"load_start":33.27,"load_end":34.45,"avail_gb":100,"wall_s":3.663727644,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E0_forkserver_2","venv":"venv","rc":0,"load_start":34.45,"load_end":34.17,"avail_gb":99,"wall_s":5.526464434,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E0v2_forkserver_2","venv":"venv2","rc":0,"load_start":34.17,"load_end":33.44,"avail_gb":97,"wall_s":4.999639706,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E0_fork_3","venv":"venv","rc":0,"load_start":33.44,"load_end":33.56,"avail_gb":100,"wall_s":3.541168936,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E0v2_fork_3","venv":"venv2","rc":0,"load_start":33.56,"load_end":33.56,"avail_gb":98,"wall_s":3.533652854,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E0_forkserver_3","venv":"venv","rc":0,"load_start":33.56,"load_end":32.24,"avail_gb":100,"wall_s":4.924407703,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E0v2_forkserver_3","venv":"venv2","rc":0,"load_start":32.24,"load_end":31.90,"avail_gb":98,"wall_s":5.168380459,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"phase_done":"floor0","t":"2026-11-14T00:50:53+01:00"}
+{"phase":"access","t":"2026-11-14T00:50:53+01:00"}
+{"pcache":"warm","before":"full_B1warm_1","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B1warm_1","venv":"venv","rc":0,"load_start":31.51,"load_end":31.92,"avail_gb":99,"wall_s":28.004054071,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"full_C_1","r":{"op": "warm", "resident_bytes": 1029890048, "size_bytes": 1029887963, "resident_frac": 1.0}}
+{"run":"full_C_1","venv":"venv","rc":0,"load_start":31.92,"load_end":31.19,"avail_gb":101,"wall_s":30.613354412,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"full_V2O_1","r":{"op": "warm", "resident_bytes": 308682752, "size_bytes": 308680442, "resident_frac": 1.0}}
+{"run":"full_V2O_1","venv":"venv2","rc":0,"load_start":31.19,"load_end":33.47,"avail_gb":102,"wall_s":16.554904944,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"full_B1warm_2","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B1warm_2","venv":"venv","rc":0,"load_start":33.47,"load_end":34.52,"avail_gb":96,"wall_s":23.957314106,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"full_C_2","r":{"op": "warm", "resident_bytes": 1029890048, "size_bytes": 1029887963, "resident_frac": 1.0}}
+{"run":"full_C_2","venv":"venv","rc":0,"load_start":34.52,"load_end":35.31,"avail_gb":98,"wall_s":27.026295397,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"full_V2O_2","r":{"op": "warm", "resident_bytes": 308682752, "size_bytes": 308680442, "resident_frac": 1.0}}
+{"run":"full_V2O_2","venv":"venv2","rc":0,"load_start":35.31,"load_end":36.21,"avail_gb":98,"wall_s":15.317821356,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"full_B1warm_3","r":{"op": "warm", "resident_bytes": 785117184, "size_bytes": 785116248, "resident_frac": 1.0}}
+{"run":"full_B1warm_3","venv":"venv","rc":0,"load_start":36.21,"load_end":37.72,"avail_gb":94,"wall_s":27.049228394,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"full_C_3","r":{"op": "warm", "resident_bytes": 1029890048, "size_bytes": 1029887963, "resident_frac": 1.0}}
+{"run":"full_C_3","venv":"venv","rc":0,"load_start":37.72,"load_end":36.88,"avail_gb":97,"wall_s":30.558640333,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"full_V2O_3","r":{"op": "warm", "resident_bytes": 308682752, "size_bytes": 308680442, "resident_frac": 1.0}}
+{"run":"full_V2O_3","venv":"venv2","rc":0,"load_start":36.88,"load_end":33.93,"avail_gb":99,"wall_s":13.982491321,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"phase_done":"access","t":"2026-11-14T00:54:28+01:00"}

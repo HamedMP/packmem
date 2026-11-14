@@ -1,0 +1,73 @@
+{
+ "packmem": "0.1.1",
+ "start": {
+  "footprint_mb": 14.2,
+  "peak_mb": 14.2,
+  "malloc_in_use_mb": 4.0,
+  "malloc_allocated_mb": 37.7
+ },
+ "load_665k": {
+  "footprint_mb": 455.8,
+  "peak_mb": 455.8,
+  "malloc_in_use_mb": 317.8,
+  "malloc_allocated_mb": 496.1,
+  "rows": 665298,
+  "nbytes_mb": 307.6,
+  "chunks": null
+ },
+ "take_50pct": {
+  "footprint_mb": 666.3,
+  "peak_mb": 686.6,
+  "malloc_in_use_mb": 179.5,
+  "malloc_allocated_mb": 378.9,
+  "rows": 332649,
+  "nbytes_mb": 173.1,
+  "chunks": null
+ },
+ "set_column_a": {
+  "footprint_mb": 666.3,
+  "peak_mb": 686.6,
+  "malloc_in_use_mb": 179.6,
+  "malloc_allocated_mb": 378.9,
+  "rows": 332649,
+  "nbytes_mb": 173.1,
+  "chunks": null
+ },
+ "load_150k": {
+  "footprint_mb": 659.5,
+  "peak_mb": 686.6,
+  "malloc_in_use_mb": 271.0,
+  "malloc_allocated_mb": 464.9,
+  "rows": 150000,
+  "nbytes_mb": 90.6,
+  "chunks": null
+ },
+ "extend": {
+  "footprint_mb": 709.4,
+  "peak_mb": 713.9,
+  "malloc_in_use_mb": 270.8,
+  "malloc_allocated_mb": 466.0,
+  "rows": 482649,
+  "nbytes_mb": 263.7,
+  "chunks": null
+ },
+ "repacked_from_dicts": {
+  "footprint_mb": 855.6,
+  "peak_mb": 2874.0,
+  "malloc_in_use_mb": 537.0,
+  "malloc_allocated_mb": 1045.1,
+  "rows": 482649,
+  "nbytes_mb": 263.5,
+  "chunks": null
+ },
+ "repacked_equal": true,
+ "copy_of_final": {
+  "footprint_mb": 695.1,
+  "peak_mb": 2874.0,
+  "malloc_in_use_mb": 537.2,
+  "malloc_allocated_mb": 1053.7,
+  "rows": 482649,
+  "nbytes_mb": 263.7,
+  "chunks": null
+ }
+}

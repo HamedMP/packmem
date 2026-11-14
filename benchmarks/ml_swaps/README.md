@@ -114,3 +114,11 @@ A three-way comparison (list, memory-mapped `datasets`, packmem) on the same rec
 `qwen3-vl/share/RESULT.md`: four spawn workers on the full set, list against packmem against packmem with
 `share()`. Parent plus workers peak at 22,687 / 4,535 / 2,715 MB, and the first batch arrives in
 24.6 / 4.06 / 1.17 s. The pickled dataset is 690 MB, 308 MB and 913 bytes.
+
+## Zero-copy sharing (pre-release measurements)
+
+Measured on the development branch before 0.2.0 was published (commits 3fa7264 and 7de0b93), not on the released
+package: `qwen3-vl/zero-copy/RESULT.md` (Mac, Qwen3-VL loader, spawn and forkserver, cold and warm) and
+`hf-datasets/zero-copy/RESULT_v2.md` (Linux, against memory-mapped `datasets`). A run on the published 0.2.0
+packages is in `demos/finetune-loader`; a Linux run on 0.2.0 is still to come. The Qwen figures are for one
+training process's data loader with 4 workers, annotations only, with no model and no GPU.

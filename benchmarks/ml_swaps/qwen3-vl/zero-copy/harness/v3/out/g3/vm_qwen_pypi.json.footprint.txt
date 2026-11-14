@@ -1,0 +1,35 @@
+======================================================================
+Python [56082]: 64-bit    Footprint: 598 MB (16384 bytes per page)
+======================================================================
+
+  Dirty      Clean  Reclaimable    Regions    Category
+    ---        ---          ---        ---    ---
+ 343 MB        0 B          0 B         47    MALLOC_LARGE
+ 178 MB        0 B        75 MB         71    MALLOC_SMALL
+  65 MB        0 B          0 B         71    untagged (VM_ALLOCATE)
+4976 KB      80 KB          0 B        405    __DATA_CONST
+3162 KB        0 B          0 B        364    __DATA
+2128 KB        0 B        16 KB         11    MALLOC metadata
+ 817 KB        0 B          0 B          1    page table
+ 372 KB        0 B          0 B        292    __DATA_DIRTY
+ 256 KB        0 B          0 B          1    MALLOC_TINY
+ 112 KB        0 B          0 B          2    __TPRO_CONST
+  96 KB        0 B          0 B          1    tag 22
+  81 KB        0 B          0 B        878    unused dyld shared cache area
+  80 KB        0 B          0 B          2    stack
+  16 KB        0 B          0 B        155    __AUTH
+  16 KB        0 B          0 B          1    os_alloc_once
+  16 KB        0 B          0 B          1    MALLOC_NANO
+    0 B      41 MB          0 B        416    __TEXT
+    0 B    3872 KB          0 B         61    __LINKEDIT
+    0 B        0 B          0 B          1    __CTF
+    0 B        0 B          0 B          1    mapped file
+    0 B        0 B          0 B        350    __AUTH_CONST
+    0 B        0 B          0 B          1    __FONT_DATA
+    ---        ---          ---        ---    ---
+ 598 MB      45 MB        75 MB       3135    TOTAL
+
+Auxiliary data:
+    phys_footprint: 598 MB
+    phys_footprint_peak: 598 MB
+

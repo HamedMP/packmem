@@ -1,0 +1,26 @@
+{"phase":"prep","t":"2026-11-14T01:06:46+01:00"}
+{"run":"prep_v2save","venv":"venv2b","rc":0,"load_start":35.78,"load_end":36.92,"avail_gb":96,"wall_s":42.722270502,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"hash_V2O","venv":"venv2b","rc":0,"load_start":36.92,"load_end":32.22,"avail_gb":98,"wall_s":22.401155109,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"hash_V2S","venv":"venv2b","rc":0,"load_start":32.22,"load_end":27.68,"avail_gb":97,"wall_s":27.109485339,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"phase":"dl","t":"2026-11-14T01:08:18+01:00"}
+{"run":"dl_V2S_fork_1","venv":"venv2b","rc":0,"load_start":27.68,"load_end":26.39,"avail_gb":103,"wall_s":12.253108665,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E0v2_fork_1","venv":"venv2b","rc":0,"load_start":26.39,"load_end":26.12,"avail_gb":103,"wall_s":3.064297927,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_V2S_forkserver_1","venv":"venv2b","rc":0,"load_start":26.12,"load_end":25.87,"avail_gb":105,"wall_s":13.926274705,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"dl_V2O_forkserver_1","r":{"op": "warm", "resident_bytes": 308682752, "size_bytes": 308680442, "resident_frac": 1.0}}
+{"run":"dl_V2O_forkserver_1","venv":"venv2b","rc":0,"load_start":25.87,"load_end":25.80,"avail_gb":102,"wall_s":4.504989018,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E0v2_forkserver_1","venv":"venv2b","rc":0,"load_start":25.80,"load_end":25.18,"avail_gb":102,"wall_s":3.976918150,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_V2S_fork_2","venv":"venv2b","rc":0,"load_start":25.18,"load_end":23.92,"avail_gb":102,"wall_s":10.973622611,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E0v2_fork_2","venv":"venv2b","rc":0,"load_start":23.92,"load_end":24.17,"avail_gb":105,"wall_s":3.078037955,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_V2S_forkserver_2","venv":"venv2b","rc":0,"load_start":24.17,"load_end":23.43,"avail_gb":107,"wall_s":13.178825262,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"dl_V2O_forkserver_2","r":{"op": "warm", "resident_bytes": 308682752, "size_bytes": 308680442, "resident_frac": 1.0}}
+{"run":"dl_V2O_forkserver_2","venv":"venv2b","rc":0,"load_start":23.43,"load_end":23.43,"avail_gb":104,"wall_s":4.427539575,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E0v2_forkserver_2","venv":"venv2b","rc":0,"load_start":23.43,"load_end":23.24,"avail_gb":104,"wall_s":3.784407459,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_V2S_fork_3","venv":"venv2b","rc":0,"load_start":23.24,"load_end":22.18,"avail_gb":103,"wall_s":10.740769764,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E0v2_fork_3","venv":"venv2b","rc":0,"load_start":22.18,"load_end":21.85,"avail_gb":107,"wall_s":2.347889411,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_V2S_forkserver_3","venv":"venv2b","rc":0,"load_start":21.85,"load_end":21.56,"avail_gb":107,"wall_s":11.649622272,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"pcache":"warm","before":"dl_V2O_forkserver_3","r":{"op": "warm", "resident_bytes": 308682752, "size_bytes": 308680442, "resident_frac": 1.0}}
+{"run":"dl_V2O_forkserver_3","venv":"venv2b","rc":0,"load_start":21.56,"load_end":21.11,"avail_gb":109,"wall_s":3.512762252,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"dl_E0v2_forkserver_3","venv":"venv2b","rc":0,"load_start":21.11,"load_end":20.54,"avail_gb":108,"wall_s":3.563612093,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"phase_done":"v2b","t":"2026-11-14T01:10:04+01:00"}
+{"run":"diag_share_norm","venv":"venv2b","rc":0,"load_start":20.78,"load_end":23.47,"avail_gb":101,"wall_s":10.734096858,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"diag_share_nonorm","venv":"venv2b","rc":0,"load_start":23.47,"load_end":26.96,"avail_gb":98,"wall_s":9.732780321,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}

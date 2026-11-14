@@ -1,0 +1,15 @@
+--- repo/qwen-vl-finetune/qwenvl/data/data_processor.py	2026-11-13 20:56:06
++++ repo-open/qwen-vl-finetune/qwenvl/data/data_processor.py	2026-11-14 00:43:13
+@@ -315,6 +315,12 @@
+         self.tokenizer = processor.tokenizer
+         self.data_args = data_args
+         self.merge_size = getattr(processor.image_processor, "merge_size", 2)
++        # Save the packed table once and keep the memory-mapped file instead: workers receive its path.
++        if isinstance(list_data_dict, packmem.Table):
++            import os
++            path = os.environ["PACKMEM_SAVE_PATH"]
++            list_data_dict.save(path)
++            list_data_dict = packmem.open(path)
+         self.list_data_dict = list_data_dict
+ 
+         if data_args.data_packing:

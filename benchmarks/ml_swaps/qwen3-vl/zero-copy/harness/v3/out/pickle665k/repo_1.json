@@ -1,0 +1,22 @@
+{
+ "tree": "$WORK/repo",
+ "mode": "pickle",
+ "datasets": "llava665k",
+ "pid": 36558,
+ "build_s": 7.723569333000341,
+ "n": 665298,
+ "rss_after_build_mb": 755.87584,
+ "footprint_after_build_mb": 621.331656,
+ "table_nbytes": 307633620,
+ "pickle_bytes": 307625915,
+ "pickle_mb": 307.625915,
+ "dumps_s": [
+  0.04,
+  0.046,
+  0.082
+ ],
+ "loads_s": 0.04116262499883305,
+ "table_pickle_bytes": 307625143,
+ "table_nbytes_mb": 307.63362,
+ "roundtrip_equal": true
+}

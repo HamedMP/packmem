@@ -1,0 +1,195 @@
+{
+ "tree": "$WORK/repo-share",
+ "mode": "loader",
+ "datasets": "llava665k",
+ "pid": 75172,
+ "build_s": 7.450769167000544,
+ "n": 665298,
+ "rss_after_build_mb": 780.009472,
+ "footprint_after_build_mb": 647.759072,
+ "pkm_path": "$TMPDIR/packmem-75172-38ebf653a87cfdd8.pkm",
+ "pkm_dir": "$TMPDIR",
+ "pkm_bytes": 307625077,
+ "pkm_size_field": 307625077,
+ "pkm_mode": "-rw-------",
+ "table_shared": true,
+ "table_nbytes": 307633620,
+ "lengths_s": 4.679222499995376,
+ "modality_lengths_s": 4.721162709000055,
+ "lengths_sha256": "348d788a1eda0c285aa7984187337dcc5aad8ef059bc37a887ca1cb0fb4794e8",
+ "mp_ctx": "forkserver",
+ "pkm_resident_after_build": 1.0,
+ "pkm_resident_before_iter": 1.0,
+ "iter_to_first_batch_s": 0.9461585839962936,
+ "worker_footprint_checkpoints_mb": [
+  [
+   0.1,
+   [
+    359,
+    358,
+    359,
+    358
+   ]
+  ],
+  [
+   0.5,
+   [
+    364,
+    364,
+    364,
+    364
+   ]
+  ]
+ ],
+ "children_at_50pct": [
+  {
+   "pid": 75410,
+   "ppid": 75172,
+   "cmd": ".app/Contents/MacOS/Python -I -c from multiprocessing.resource_tracker import main;main(6)",
+   "footprint_mb": 9,
+   "rss_mb": 18
+  },
+  {
+   "pid": 75411,
+   "ppid": 75172,
+   "cmd": "418c-9597-120ef68f07d4/scratchpad/share-bench/harness/v3/out/Z_fork/repo-share@f34d_3.json",
+   "footprint_mb": 183,
+   "rss_mb": 235
+  },
+  {
+   "pid": 75415,
+   "ppid": 75411,
+   "cmd": "418c-9597-120ef68f07d4/scratchpad/share-bench/harness/v3/out/Z_fork/repo-share@f34d_3.json",
+   "footprint_mb": 364,
+   "rss_mb": 377
+  },
+  {
+   "pid": 75416,
+   "ppid": 75411,
+   "cmd": "418c-9597-120ef68f07d4/scratchpad/share-bench/harness/v3/out/Z_fork/repo-share@f34d_3.json",
+   "footprint_mb": 364,
+   "rss_mb": 378
+  },
+  {
+   "pid": 75417,
+   "ppid": 75411,
+   "cmd": "418c-9597-120ef68f07d4/scratchpad/share-bench/harness/v3/out/Z_fork/repo-share@f34d_3.json",
+   "footprint_mb": 364,
+   "rss_mb": 378
+  },
+  {
+   "pid": 75418,
+   "ppid": 75411,
+   "cmd": "418c-9597-120ef68f07d4/scratchpad/share-bench/harness/v3/out/Z_fork/repo-share@f34d_3.json",
+   "footprint_mb": 364,
+   "rss_mb": 378
+  },
+  {
+   "pid": 75422,
+   "ppid": 75418,
+   "cmd": "torch_shm_manager",
+   "footprint_mb": 55,
+   "rss_mb": 86
+  },
+  {
+   "pid": 75421,
+   "ppid": 75417,
+   "cmd": "torch_shm_manager",
+   "footprint_mb": 55,
+   "rss_mb": 86
+  },
+  {
+   "pid": 75419,
+   "ppid": 75416,
+   "cmd": "torch_shm_manager",
+   "footprint_mb": 55,
+   "rss_mb": 86
+  },
+  {
+   "pid": 75420,
+   "ppid": 75415,
+   "cmd": "torch_shm_manager",
+   "footprint_mb": 56,
+   "rss_mb": 86
+  }
+ ],
+ "worker_footprint_mb": [
+  366.789472,
+  373.506912,
+  366.478176,
+  366.49456
+ ],
+ "worker_rss_mb": [
+  380.485632,
+  387.23584,
+  380.207104,
+  380.223488
+ ],
+ "main_footprint_at_90pct_mb": 700.695872,
+ "main_rss_at_90pct_mb": 833.994752,
+ "total_footprint_mb": 2173.964992,
+ "loader_s": 2.7414677089982433,
+ "iter_to_last_batch_s": 2.730971042001329,
+ "pkm_exists_after_epoch": true,
+ "pkm_resident_after_epoch": 1.0,
+ "worker_peak_mb": [
+  351.1,
+  356.6,
+  350.0,
+  350.1
+ ],
+ "worker_peak_sum_mb": 1407.9,
+ "worker_last_mb": [
+  350.9,
+  356.5,
+  349.9,
+  350.1
+ ],
+ "worker_init_mb": [
+  327.2,
+  327.4,
+  327.3,
+  327.1
+ ],
+ "worker_init_peak_mb": [
+  327.2,
+  327.4,
+  327.3,
+  327.1
+ ],
+ "worker_init_rss_mb": [
+  335.6,
+  335.9,
+  335.8,
+  335.6
+ ],
+ "worker_start_to_first_batch_s": [
+  0.079,
+  0.073,
+  0.072,
+  0.07
+ ],
+ "worker_iter_to_first_batch_s": [
+  0.874,
+  0.874,
+  0.874,
+  0.874
+ ],
+ "worker_iter_to_init_s": [
+  0.871,
+  0.871,
+  0.872,
+  0.871
+ ],
+ "worker_iter_to_create_s": [
+  0.794,
+  0.801,
+  0.802,
+  0.804
+ ],
+ "main_lifetime_peak_mib": 691.7512359619141,
+ "max_concurrent_total_mib": 2075.5045776367188,
+ "main_peak_plus_worker_peaks_mib": 2099.651235961914,
+ "n_samples": 20000,
+ "batches_sha256": "3c98d761142c9abb7ea7a169f03160b374b3e4cfa180c2c45c1ad6eba47f003a"
+}

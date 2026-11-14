@@ -1,0 +1,8 @@
+{"run":"prep_ids","venv":"venv","rc":0,"load_start":29.52,"load_end":28.89,"avail_gb":98,"wall_s":31.360290103,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"conv_B1","venv":"venv","rc":0,"load_start":28.89,"load_end":29.96,"avail_gb":102,"wall_s":17.920994654,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"hash_B1","venv":"venv","rc":0,"load_start":29.96,"load_end":31.80,"avail_gb":102,"wall_s":26.563848119,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"prep_v2save","venv":"venv2","rc":0,"load_start":31.80,"load_end":33.96,"avail_gb":96,"wall_s":40.321230657,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"hash_C_v2","venv":"venv2","rc":0,"load_start":33.96,"load_end":33.89,"avail_gb":95,"wall_s":42.921817412,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"hash_V2O","venv":"venv2","rc":0,"load_start":33.89,"load_end":33.49,"avail_gb":93,"wall_s":31.344878212,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+{"run":"hash_C","venv":"venv","rc":0,"load_start":33.49,"load_end":36.39,"avail_gb":100,"wall_s":42.814537962,"shm_pkm_before":0,"shm_pkm_after":0,"disk_share_pkm_after":0}
+PREP_DONE

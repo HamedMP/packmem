@@ -1,0 +1,120 @@
+{
+ "tree": "$WORK/repo-share",
+ "mode": "loader",
+ "datasets": "llava665k",
+ "pid": 40152,
+ "build_s": 7.852000625000073,
+ "n": 665298,
+ "rss_after_build_mb": 780.075008,
+ "footprint_after_build_mb": 644.744416,
+ "pkm_path": "$TMPDIR/packmem-40152-93c371585dc8fe2e.pkm",
+ "pkm_dir": "$TMPDIR",
+ "pkm_bytes": 307625077,
+ "pkm_size_field": 307625077,
+ "pkm_mode": "-rw-------",
+ "table_shared": true,
+ "table_nbytes": 307633620,
+ "lengths_s": 5.112480541996774,
+ "modality_lengths_s": 5.122223374997702,
+ "lengths_sha256": "348d788a1eda0c285aa7984187337dcc5aad8ef059bc37a887ca1cb0fb4794e8",
+ "mp_ctx": "spawn",
+ "iter_to_first_batch_s": 1.183238916000846,
+ "worker_footprint_checkpoints_mb": [
+  [
+   0.1,
+   [
+    496,
+    496,
+    496,
+    496
+   ]
+  ],
+  [
+   0.5,
+   [
+    496,
+    497,
+    497,
+    497
+   ]
+  ]
+ ],
+ "worker_footprint_mb": [
+  496.518128,
+  497.566704,
+  497.091592,
+  497.091592
+ ],
+ "worker_rss_mb": [
+  551.682048,
+  552.697856,
+  552.239104,
+  552.239104
+ ],
+ "main_footprint_at_90pct_mb": 699.483456,
+ "main_rss_at_90pct_mb": 835.878912,
+ "total_footprint_mb": 2687.751472,
+ "loader_s": 23.176591166000435,
+ "iter_to_last_batch_s": 3.171434625000984,
+ "pkm_exists_after_epoch": true,
+ "worker_peak_mb": [
+  474.6,
+  474.7,
+  474.3,
+  474.3
+ ],
+ "worker_peak_sum_mb": 1898.0,
+ "worker_last_mb": [
+  474.3,
+  474.5,
+  474.1,
+  474.1
+ ],
+ "worker_init_mb": [
+  470.5,
+  470.8,
+  470.9,
+  470.6
+ ],
+ "worker_init_peak_mb": [
+  471.1,
+  471.5,
+  471.5,
+  471.2
+ ],
+ "worker_init_rss_mb": [
+  520.4,
+  520.7,
+  520.8,
+  520.4
+ ],
+ "worker_start_to_first_batch_s": [
+  1.084,
+  1.078,
+  1.072,
+  1.065
+ ],
+ "worker_iter_to_first_batch_s": [
+  1.1,
+  1.1,
+  1.1,
+  1.101
+ ],
+ "worker_iter_to_init_s": [
+  1.098,
+  1.098,
+  1.098,
+  1.098
+ ],
+ "worker_iter_to_create_s": [
+  0.015,
+  0.022,
+  0.028,
+  0.035
+ ],
+ "main_lifetime_peak_mib": 691.5793609619141,
+ "max_concurrent_total_mib": 2564.052047729492,
+ "main_peak_plus_worker_peaks_mib": 2589.579360961914,
+ "n_samples": 20000,
+ "batches_sha256": "3c98d761142c9abb7ea7a169f03160b374b3e4cfa180c2c45c1ad6eba47f003a"
+}

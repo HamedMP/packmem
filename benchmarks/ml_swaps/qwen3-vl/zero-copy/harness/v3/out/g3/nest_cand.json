@@ -1,0 +1,54 @@
+{
+ "packmem": "0.1.1",
+ "threads": null,
+ "files": {
+  "share-bench/llava_v1_5_mix665k.json": {
+   "n": 665298,
+   "load_s": 5.71,
+   "nbytes": 308300201,
+   "rows_sha": "42eb499c73db95183a55b49b5c41be2433e67784549b703ba93e92ff77bd5248",
+   "to_json_sha": "f618d64fdcd9ba5d8f319399dc15bfe9125489b7289c09a368e8e54fbc3633a8",
+   "to_json_bytes": 776385527,
+   "src_u_escapes": 3851037,
+   "to_json_u_escapes": 3851037,
+   "src_slash_escapes": 225,
+   "to_json_slash_escapes": 225
+  },
+  "llava-next/llava_v1_5_mix665k.json": {
+   "n": 665000,
+   "load_s": 5.11,
+   "nbytes": 341676317,
+   "rows_sha": "cd7fe7832ccd1c8608c6f31b6d019563e3b2585350770da93b4fd6353f249ddb",
+   "to_json_sha": "710e310de6be87b3bc01240baf62e44708829330e8179ea2bea69983b04bffbc",
+   "to_json_bytes": 737541062,
+   "src_u_escapes": 0,
+   "to_json_u_escapes": 0,
+   "src_slash_escapes": 0,
+   "to_json_slash_escapes": 0
+  },
+  "llava-next/si_mix.json": {
+   "n": 300000,
+   "load_s": 1.86,
+   "nbytes": 116432002,
+   "rows_sha": "3f4cb1d48a2895846cff5fa17e70709b70e0859c7f5e6bbc6a32581c90975ed5",
+   "to_json_sha": "281b4f762e67bd59f56e0b24e0b8e871b33f41789802cc020143cf6c6173d93f",
+   "to_json_bytes": 259579582,
+   "src_u_escapes": 0,
+   "to_json_u_escapes": 0,
+   "src_slash_escapes": 0,
+   "to_json_slash_escapes": 0
+  },
+  "llava-next/text_mix.jsonl": {
+   "n": 150000,
+   "load_s": 3.7,
+   "nbytes": 370025616,
+   "rows_sha": "8c419a979ab0b8ad3e624dcc671d2d6dd1c1fd52d42b711e90ba6e85c4692845",
+   "to_json_sha": "2c73bf778a4ef74d5ea4f2237ddaf6320bda348d7e7878fd1dd8c27254095bff",
+   "to_json_bytes": 735513167,
+   "src_u_escapes": 0,
+   "to_json_u_escapes": 0,
+   "src_slash_escapes": 0,
+   "to_json_slash_escapes": 0
+  }
+ }
+}

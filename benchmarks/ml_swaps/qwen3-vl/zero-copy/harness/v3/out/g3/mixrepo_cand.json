@@ -1,0 +1,16 @@
+{
+ "tree": "$WORK/repo",
+ "build_s": 9.54,
+ "built": {
+  "footprint_mb": 862.8,
+  "peak_mb": 881.6,
+  "malloc_in_use_mb": 362.3,
+  "malloc_allocated_mb": 574.6,
+  "rows": 482649,
+  "nbytes_mb": 263.5,
+  "chunks": null
+ },
+ "packmem": "0.1.1",
+ "packmem_file": "$WORK/venv/lib/python3.13/site-packages/packmem/__init__.py",
+ "threads": null
+}

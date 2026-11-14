@@ -1,0 +1,190 @@
+{
+ "tree": "$WORK/repo-share",
+ "mode": "loader",
+ "datasets": "llava665k",
+ "pid": 81607,
+ "build_s": 5.696669416996883,
+ "n": 665298,
+ "rss_after_build_mb": 774.586368,
+ "footprint_after_build_mb": 645.645536,
+ "pkm_path": "$TMPDIR/packmem-81607-6374cf732eff9e76.pkm",
+ "pkm_dir": "$TMPDIR",
+ "pkm_bytes": 308297418,
+ "pkm_size_field": 308297418,
+ "pkm_mode": "-rw-------",
+ "table_shared": true,
+ "table_nbytes": 308305695,
+ "lengths_s": 4.607069665995368,
+ "modality_lengths_s": 4.651037000003271,
+ "lengths_sha256": "348d788a1eda0c285aa7984187337dcc5aad8ef059bc37a887ca1cb0fb4794e8",
+ "mp_ctx": "spawn",
+ "pkm_resident_after_build": 1.0,
+ "evict_s": 0.17,
+ "pkm_mode_after_evict": "-rw-------",
+ "pkm_resident_before_iter": 0.0,
+ "iter_to_first_batch_s": 1.0780712499981746,
+ "worker_footprint_checkpoints_mb": [
+  [
+   0.1,
+   [
+    188,
+    187,
+    187,
+    189
+   ]
+  ],
+  [
+   0.5,
+   [
+    188,
+    187,
+    188,
+    189
+   ]
+  ]
+ ],
+ "children_at_50pct": [
+  {
+   "pid": 81706,
+   "ppid": 81607,
+   "cmd": ".app/Contents/MacOS/Python -I -c from multiprocessing.resource_tracker import main;main(6)",
+   "footprint_mb": 10,
+   "rss_mb": 18
+  },
+  {
+   "pid": 81707,
+   "ppid": 81607,
+   "cmd": "g.spawn import spawn_main; spawn_main(tracker_fd=7, pipe_handle=21) --multiprocessing-fork",
+   "footprint_mb": 188,
+   "rss_mb": 296
+  },
+  {
+   "pid": 81708,
+   "ppid": 81607,
+   "cmd": "g.spawn import spawn_main; spawn_main(tracker_fd=7, pipe_handle=28) --multiprocessing-fork",
+   "footprint_mb": 187,
+   "rss_mb": 294
+  },
+  {
+   "pid": 81709,
+   "ppid": 81607,
+   "cmd": "g.spawn import spawn_main; spawn_main(tracker_fd=7, pipe_handle=35) --multiprocessing-fork",
+   "footprint_mb": 188,
+   "rss_mb": 295
+  },
+  {
+   "pid": 81710,
+   "ppid": 81607,
+   "cmd": "g.spawn import spawn_main; spawn_main(tracker_fd=7, pipe_handle=42) --multiprocessing-fork",
+   "footprint_mb": 189,
+   "rss_mb": 296
+  },
+  {
+   "pid": 81724,
+   "ppid": 81710,
+   "cmd": "torch_shm_manager",
+   "footprint_mb": 55,
+   "rss_mb": 86
+  },
+  {
+   "pid": 81725,
+   "ppid": 81709,
+   "cmd": "torch_shm_manager",
+   "footprint_mb": 55,
+   "rss_mb": 86
+  },
+  {
+   "pid": 81727,
+   "ppid": 81708,
+   "cmd": "torch_shm_manager",
+   "footprint_mb": 55,
+   "rss_mb": 86
+  },
+  {
+   "pid": 81726,
+   "ppid": 81707,
+   "cmd": "torch_shm_manager",
+   "footprint_mb": 55,
+   "rss_mb": 86
+  }
+ ],
+ "worker_footprint_mb": [
+  188.351472,
+  187.777984,
+  187.663296,
+  188.990424
+ ],
+ "worker_rss_mb": [
+  318.865408,
+  318.455808,
+  318.58688,
+  319.913984
+ ],
+ "main_footprint_at_90pct_mb": 709.592408,
+ "main_rss_at_90pct_mb": 839.59808,
+ "total_footprint_mb": 1462.375584,
+ "loader_s": 23.267879624996567,
+ "iter_to_last_batch_s": 3.262210166998557,
+ "pkm_exists_after_epoch": true,
+ "pkm_resident_after_epoch": 0.8168,
+ "worker_peak_mb": [
+  180.6,
+  179.4,
+  179.2,
+  180.5
+ ],
+ "worker_peak_sum_mb": 719.6,
+ "worker_last_mb": [
+  180.3,
+  179.1,
+  179.0,
+  180.3
+ ],
+ "worker_init_mb": [
+  176.9,
+  176.0,
+  176.4,
+  177.3
+ ],
+ "worker_init_peak_mb": [
+  177.7,
+  176.8,
+  177.1,
+  178.0
+ ],
+ "worker_init_rss_mb": [
+  235.9,
+  235.0,
+  235.3,
+  236.2
+ ],
+ "worker_start_to_first_batch_s": [
+  0.988,
+  0.984,
+  0.977,
+  0.971
+ ],
+ "worker_iter_to_first_batch_s": [
+  1.002,
+  1.003,
+  1.002,
+  1.002
+ ],
+ "worker_iter_to_init_s": [
+  0.997,
+  0.997,
+  0.997,
+  0.997
+ ],
+ "worker_iter_to_create_s": [
+  0.014,
+  0.019,
+  0.024,
+  0.03
+ ],
+ "main_lifetime_peak_mib": 684.4543838500977,
+ "max_concurrent_total_mib": 1395.2862854003906,
+ "main_peak_plus_worker_peaks_mib": 1404.0543838500976,
+ "n_samples": 20000,
+ "batches_sha256": "3c98d761142c9abb7ea7a169f03160b374b3e4cfa180c2c45c1ad6eba47f003a"
+}

@@ -1,0 +1,176 @@
+start 2026-11-13 21:01:40 21:01  up  8:08, 1 user, load averages: 3.47 4.30 4.96
+verify665k begin 21:01:40 { 3.47 4.30 4.96 }
+verify665k/orig_1 ok load1=3.47 waited=0s
+verify665k/repo_1 ok load1=3.47 waited=0s
+verify665k/repo-share_1 ok load1=3.90 waited=0s
+verify665k end 21:02:23 { 4.14 4.35 4.95 }
+hash20k begin 21:02:23 { 4.14 4.35 4.95 }
+hash20k/orig_1 ok load1=3.97 waited=5s
+hash20k end 21:02:41 { 3.82 4.27 4.91 }
+hashepoch begin 21:02:41 { 3.82 4.27 4.91 }
+hashepoch/orig_1 ok load1=3.82 waited=0s
+hashepoch end 21:05:56 { 6.05 5.08 5.12 }
+pickle665k begin 21:05:56 { 6.05 5.08 5.12 }
+pickle665k/orig_1 ok load1=3.85 waited=287s
+pickle665k/repo_1 ok load1=3.97 waited=80s
+pickle665k/repo-share_1 ok load1=3.99 waited=121s
+pickle665k end 21:15:09 { 4.13 4.67 4.91 }
+A available_bytes=20238286848 vm.swapusage: total = 4096.00M  used = 2961.62M  free = 1134.38M  (encrypted)
+A_spawn20k begin 21:15:09 { 4.13 4.67 4.91 }
+A_spawn20k/repo_1 ok load1=3.94 waited=15s
+A_spawn20k/repo-share_1 ok load1=3.94 waited=105s
+A_spawn20k/repo-share_2 ok load1=3.74 waited=0s
+A_spawn20k/repo_2 ok load1=3.97 waited=0s
+A_spawn20k/repo_3 ok load1=4.00 waited=55s
+A_spawn20k/repo-share_3 ok load1=3.88 waited=40s
+A_spawn20k end 21:23:11 { 4.61 4.54 4.73 }
+B available_bytes=19894599680 vm.swapusage: total = 4096.00M  used = 2961.62M  free = 1134.38M  (encrypted)
+B_epoch_spawn begin 21:23:11 { 4.61 4.54 4.73 }
+B_epoch_spawn/repo_1 ok load1=4.00 waited=81s
+B_epoch_spawn/repo-share_1 TIMEOUT load1=5.33 waited=602s
+B_epoch_spawn/repo-share_2 ok load1=3.99 waited=40s
+B_epoch_spawn/repo_2 TIMEOUT load1=5.02 waited=602s
+B_epoch_spawn/repo_3 ok load1=3.84 waited=235s
+B_epoch_spawn/repo-share_3 TIMEOUT load1=5.34 waited=602s
+B_epoch_spawn end 22:10:59 { 6.38 7.68 7.17 }
+diag_spawn20k begin 22:11:00 { 6.38 7.68 7.17 }
+diag_spawn20k/repo_1 ok load1=3.74 waited=521s
+diag_spawn20k/repo-share_1 ok load1=3.96 waited=291s
+diag_spawn20k end 22:26:06 { 3.91 4.70 5.54 }
+end 2026-11-13 22:26:07 22:26  up  9:32, 1 user, load averages: 3.91 4.70 5.54
+addon/mixcheck_f34d ok load1=3.94 waited=265s
+addon/mixcheck_single_f34d ok load1=3.99 waited=165s
+seq_build start 2026-11-13 22:36:42 22:36  up  9:43, 1 user, load averages: 4.57 4.62 5.05
+f34d69df52486e3895571667cff75f2e2fa46967b8714580ff2a8c05bfd57cbd  $WORK/wheel/packmem-0.1.1-cp310-abi3-macosx_11_0_arm64.whl
+db12cb13ac6ee12830b3d8d3f2167f2bd8ca2afaf080f49da7b89b9f9ad49f9a  $WORK/wheel-new/packmem-0.1.1-cp310-abi3-macosx_11_0_arm64.whl
+$WORK/llava-next/venv 0.1.1
+build_f34d begin 22:36:42 { 4.57 4.62 5.05 }
+wheel-new replaced with 75dbc431b9738cfe559f282e1301fcae54287aa767d35ac3529ab9ae1f58ae00  $WORK/wheel-new/packmem-0.1.1-cp310-abi3-macosx_11_0_arm64.whl at 22:39:58 (db12cb13 discarded, never installed)
+build_f34d/repo_1 ok load1=3.92 waited=196s
+build_f34d/repo_2 ok load1=3.65 waited=0s
+build_f34d/repo_3 ok load1=3.79 waited=0s
+build_f34d end 22:41:12 { 4.13 4.32 4.79 }
+$WORK/venv 0.1.1
+$WORK/llava-next/venv 0.1.1
+build_new begin 22:56:04 { 4.53 4.54 4.67 }
+build_new/orig_1 ok load1=3.90 waited=251s
+build_new/repo_1 ok load1=3.95 waited=20s
+seq_build stopped 23:11:10: 3-arm design requested; build_new (1 orig + 1 repo run) moved to out/aborted
+seq_gate start 2026-11-13 23:12:21 23:12  up 10:19, 1 user, load averages: 7.55 6.99 6.02
+75dbc431b9738cfe559f282e1301fcae54287aa767d35ac3529ab9ae1f58ae00  $WORK/wheel-new/packmem-0.1.1-cp310-abi3-macosx_11_0_arm64.whl
+e705bd7b5d2483e9743dd61cf41fb37796f9df229d1ce7869cfed1bf52e611c2  $WORK/wheel-pypi/packmem-0.1.1-cp310-abi3-macosx_11_0_arm64.whl
+gate_build begin 23:12:21 { 7.55 6.99 6.02 }
+gate_build/orig_1 TIMEOUT load1=7.06 waited=602s
+gate_build/repo@pypi_1 TIMEOUT load1=7.95 waited=602s
+gate_build/repo_1 ok load1=3.93 waited=593s
+gate_build/repo_2 ok load1=3.95 waited=91s
+gate_build/repo@pypi_2 ok load1=3.72 waited=0s
+gate_build/orig_2 ok load1=3.76 waited=5s
+gate_build/orig_3 ok load1=3.52 waited=0s
+gate_build/repo@pypi_3 ok load1=3.86 waited=50s
+gate_build/repo_3 ok load1=3.97 waited=10s
+gate_build/repo_4 ok load1=4.00 waited=10s
+gate_build/repo@pypi_4 ok load1=3.94 waited=16s
+gate_build/orig_4 ok load1=3.94 waited=25s
+gate_build/orig_5 ok load1=3.44 waited=0s
+gate_build/repo@pypi_5 ok load1=3.44 waited=0s
+gate_build/repo_5 ok load1=3.87 waited=0s
+gate_build end 23:50:51 { 3.77 4.43 5.53 }
+gate_build_t0 begin 23:50:51 { 3.77 4.43 5.53 }
+gate_build_t0/repo_1 ok load1=3.77 waited=0s
+gate_build_t0 end 23:51:14 { 3.73 4.37 5.48 }
+seq_gate stopped 2026-11-14 00:01:04: candidate replaced by 630df090 (d81ad22); 75dbc431 runs kept as superseded
+installed candidate 630df090cc42347c into venv and llava-next/venv at 00:01:17; wheel-new (75dbc431) deleted
+seq_gate3 start 2026-11-14 00:02:16  0:02  up 11:09, 1 user, load averages: 7.18 4.93 5.14
+630df090cc42347ccab82446276841fd93518c9a4bf7cf64c1b5eb1e67dbf9cc  $WORK/wheel-cand/packmem-0.1.1-cp310-abi3-macosx_11_0_arm64.whl
+e705bd7b5d2483e9743dd61cf41fb37796f9df229d1ce7869cfed1bf52e611c2  $WORK/wheel-pypi/packmem-0.1.1-cp310-abi3-macosx_11_0_arm64.whl
+g3_build begin 00:02:16 { 7.18 4.93 5.14 }
+g3_build/orig_1 ok load1=3.83 waited=146s
+g3_build/repo@pypi_1 ok load1=3.74 waited=25s
+g3_build/repo_1 ok load1=3.57 waited=0s
+g3_build/repo_2 ok load1=3.34 waited=0s
+g3_build/repo@pypi_2 ok load1=2.82 waited=0s
+g3_build/orig_2 ok load1=2.53 waited=0s
+g3_build/orig_3 ok load1=2.34 waited=0s
+g3_build/repo@pypi_3 ok load1=2.20 waited=0s
+g3_build/repo_3 ok load1=2.64 waited=0s
+g3_build/repo_4 ok load1=2.91 waited=0s
+g3_build/repo@pypi_4 ok load1=3.96 waited=20s
+g3_build/orig_4 ok load1=3.87 waited=20s
+g3_build/orig_5 ok load1=3.68 waited=0s
+g3_build/repo@pypi_5 ok load1=3.24 waited=0s
+g3_build/repo_5 ok load1=3.62 waited=0s
+g3_build end 00:10:52 { 3.89 4.08 4.69 }
+g3_build_t1 begin 00:26:32 { 3.21 3.77 4.21 }
+g3_build_t1/repo_1 ok load1=3.21 waited=0s
+g3_build_t1 end 00:26:52 { 3.22 3.73 4.19 }
+seq_gate3 timed_done 2026-11-14 00:27:30  0:27  up 11:34, 1 user, load averages: 2.78 3.56 4.11
+g3/vm_qwen_pypi ok load1=2.78 waited=0s
+g3/vm_qwen_cand ok load1=2.96 waited=0s
+g3/vm_qwen_cand_t1 ok load1=3.04 waited=0s
+g3/vm_llava_pypi ok load1=3.94 waited=66s
+g3/vm_llava_cand ok load1=3.86 waited=0s
+g3/vm_llava_cand_t1 ok load1=4.00 waited=20s
+seq_gate3 vm_done 2026-11-14 00:30:31  0:30  up 11:37, 1 user, load averages: 4.37 4.05 4.22
+g3_verify begin 00:30:31 { 4.37 4.05 4.22 }
+g3_verify/repo@pypi_1 ok load1=3.99 waited=75s
+g3_verify/repo_1 ok load1=3.62 waited=0s
+g3_verify end 00:32:15 { 4.74 4.27 4.29 }
+g3_buildmix begin 00:32:15 { 4.74 4.27 4.29 }
+g3_buildmix/orig_1 ok load1=3.79 waited=20s
+g3_buildmix/repo@pypi_1 ok load1=3.33 waited=0s
+g3_buildmix/repo_1 ok load1=3.36 waited=0s
+g3_buildmix end 00:33:38 { 2.89 3.80 4.10 }
+seq_gate3 checks_done 2026-11-14 00:38:35  0:38  up 11:45, 1 user, load averages: 2.69 2.92 3.58
+seq_gate3 end 2026-11-14 00:39:21  0:39  up 11:46, 1 user, load averages: 1.87 2.67 3.44
+deleted llava-next/{venv,venv-pypi,data} and venv-pypi at 00:41:00; kept data/ and venv/ for the queued zero-copy share v2 measurement
+seq_v2share start 2026-11-14 00:47:38  0:47  up 11:54, 1 user, load averages: 2.78 2.54 2.96
+Z_spawn begin 00:47:38 { 2.78 2.54 2.96 }
+Z_spawn/repo_1 ok load1=2.78 waited=0s
+Z_spawn/repo-share@f34d_1 ok load1=2.64 waited=0s
+Z_spawn/repo-share@v2_1 ok load1=2.56 waited=0s
+Z_spawn/repo-open@v2_1 ok load1=2.74 waited=0s
+Z_spawn/repo-open@v2_2 ok load1=3.96 waited=0s
+Z_spawn/repo-share@v2_2 ok load1=3.84 waited=25s
+Z_spawn/repo-share@f34d_2 ok load1=3.95 waited=10s
+Z_spawn/repo_2 ok load1=3.04 waited=0s
+Z_spawn/repo_3 ok load1=3.76 waited=0s
+Z_spawn/repo-share@f34d_3 ok load1=3.20 waited=0s
+Z_spawn/repo-share@v2_3 ok load1=2.67 waited=0s
+Z_spawn/repo-open@v2_3 ok load1=2.94 waited=0s
+Z_spawn end 00:56:16 { 3.52 3.28 3.17 }
+Z_fork begin 00:56:16 { 3.52 3.28 3.17 }
+Z_fork/repo_1 ok load1=3.52 waited=0s
+Z_fork/repo-share@f34d_1 ok load1=3.49 waited=0s
+Z_fork/repo-share@v2_1 ok load1=3.59 waited=0s
+Z_fork/repo-open@v2_1 ok load1=3.80 waited=0s
+Z_fork/repo-open@v2_2 ok load1=3.83 waited=5s
+Z_fork/repo-share@v2_2 ok load1=3.72 waited=0s
+Z_fork/repo-share@f34d_2 ok load1=3.53 waited=0s
+Z_fork/repo_2 ok load1=3.92 waited=30s
+Z_fork/repo_3 ok load1=3.88 waited=0s
+Z_fork/repo-share@f34d_3 ok load1=3.92 waited=0s
+Z_fork/repo-share@v2_3 ok load1=3.50 waited=0s
+Z_fork/repo-open@v2_3 ok load1=3.50 waited=0s
+Z_fork end 01:00:45 { 3.42 3.52 3.32 }
+Z_spawn_cold begin 01:00:45 { 3.42 3.52 3.32 }
+Z_spawn_cold/repo-share@f34d_1 ok load1=3.42 waited=0s
+Z_spawn_cold/repo-share@v2_1 ok load1=3.24 waited=0s
+Z_spawn_cold/repo-open@v2_1 ok load1=3.99 waited=186s
+Z_spawn_cold/repo-open@v2_2 ok load1=3.35 waited=0s
+Z_spawn_cold/repo-share@v2_2 ok load1=3.67 waited=0s
+Z_spawn_cold/repo-share@f34d_2 ok load1=3.43 waited=0s
+Z_spawn_cold/repo-share@f34d_3 ok load1=3.83 waited=0s
+Z_spawn_cold/repo-share@v2_3 ok load1=3.86 waited=0s
+Z_spawn_cold/repo-open@v2_3 ok load1=3.93 waited=191s
+Z_spawn_cold end 01:13:10 { 5.06 4.92 4.33 }
+Z_fork_cold begin 01:13:10 { 5.06 4.92 4.33 }
+Z_fork_cold/repo-share@f34d_1 ok load1=3.99 waited=95s
+Z_fork_cold/repo-share@v2_1 ok load1=3.82 waited=0s
+seq_v2share stopped 01:20:17 on request: remaining cold runs and diag skipped
+seq_v2b_short start 01:20:32 gate load<=6 max 60s
+Y_spawn begin 01:20:32 { 3.86 4.63 4.44 }
+Y_spawn/repo-share@v2b_1 ok load1=3.86 waited=0s
+Y_spawn/repo-share@v2b_2 ok load1=3.47 waited=0s
+v2b stopped 01:21:27 on request; Y_* (v2b) moved to out/aborted, not reported
+deleted data/ and venv, venv-f34d, venv-v2, venv-v2b at 01:21:40

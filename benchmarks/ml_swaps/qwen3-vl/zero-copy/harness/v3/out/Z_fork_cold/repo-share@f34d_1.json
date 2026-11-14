@@ -1,0 +1,197 @@
+{
+ "tree": "$WORK/repo-share",
+ "mode": "loader",
+ "datasets": "llava665k",
+ "pid": 88852,
+ "build_s": 7.827203540997289,
+ "n": 665298,
+ "rss_after_build_mb": 780.009472,
+ "footprint_after_build_mb": 647.693512,
+ "pkm_path": "$TMPDIR/packmem-88852-3518ea97dca2502a.pkm",
+ "pkm_dir": "$TMPDIR",
+ "pkm_bytes": 307625077,
+ "pkm_size_field": 307625077,
+ "pkm_mode": "-rw-------",
+ "table_shared": true,
+ "table_nbytes": 307633620,
+ "lengths_s": 5.072088833003363,
+ "modality_lengths_s": 5.1000293329998385,
+ "lengths_sha256": "348d788a1eda0c285aa7984187337dcc5aad8ef059bc37a887ca1cb0fb4794e8",
+ "mp_ctx": "forkserver",
+ "pkm_resident_after_build": 1.0,
+ "evict_s": 0.14,
+ "pkm_mode_after_evict": "-rw-------",
+ "pkm_resident_before_iter": 0.0,
+ "iter_to_first_batch_s": 2.093872999997984,
+ "worker_footprint_checkpoints_mb": [
+  [
+   0.1,
+   [
+    358,
+    358,
+    359,
+    358
+   ]
+  ],
+  [
+   0.5,
+   [
+    364,
+    363,
+    364,
+    364
+   ]
+  ]
+ ],
+ "children_at_50pct": [
+  {
+   "pid": 89250,
+   "ppid": 88852,
+   "cmd": ".app/Contents/MacOS/Python -I -c from multiprocessing.resource_tracker import main;main(6)",
+   "footprint_mb": 9,
+   "rss_mb": 18
+  },
+  {
+   "pid": 89251,
+   "ppid": 88852,
+   "cmd": "9597-120ef68f07d4/scratchpad/share-bench/harness/v3/out/Z_fork_cold/repo-share@f34d_1.json",
+   "footprint_mb": 184,
+   "rss_mb": 235
+  },
+  {
+   "pid": 89252,
+   "ppid": 89251,
+   "cmd": "9597-120ef68f07d4/scratchpad/share-bench/harness/v3/out/Z_fork_cold/repo-share@f34d_1.json",
+   "footprint_mb": 364,
+   "rss_mb": 378
+  },
+  {
+   "pid": 89253,
+   "ppid": 89251,
+   "cmd": "9597-120ef68f07d4/scratchpad/share-bench/harness/v3/out/Z_fork_cold/repo-share@f34d_1.json",
+   "footprint_mb": 363,
+   "rss_mb": 377
+  },
+  {
+   "pid": 89254,
+   "ppid": 89251,
+   "cmd": "9597-120ef68f07d4/scratchpad/share-bench/harness/v3/out/Z_fork_cold/repo-share@f34d_1.json",
+   "footprint_mb": 364,
+   "rss_mb": 377
+  },
+  {
+   "pid": 89255,
+   "ppid": 89251,
+   "cmd": "9597-120ef68f07d4/scratchpad/share-bench/harness/v3/out/Z_fork_cold/repo-share@f34d_1.json",
+   "footprint_mb": 364,
+   "rss_mb": 378
+  },
+  {
+   "pid": 89286,
+   "ppid": 89255,
+   "cmd": "torch_shm_manager",
+   "footprint_mb": 56,
+   "rss_mb": 87
+  },
+  {
+   "pid": 89288,
+   "ppid": 89254,
+   "cmd": "torch_shm_manager",
+   "footprint_mb": 56,
+   "rss_mb": 87
+  },
+  {
+   "pid": 89285,
+   "ppid": 89253,
+   "cmd": "torch_shm_manager",
+   "footprint_mb": 56,
+   "rss_mb": 86
+  },
+  {
+   "pid": 89287,
+   "ppid": 89252,
+   "cmd": "torch_shm_manager",
+   "footprint_mb": 56,
+   "rss_mb": 87
+  }
+ ],
+ "worker_footprint_mb": [
+  366.543736,
+  373.293944,
+  366.003064,
+  366.707576
+ ],
+ "worker_rss_mb": [
+  380.256256,
+  387.006464,
+  379.715584,
+  380.420096
+ ],
+ "main_footprint_at_90pct_mb": 733.087064,
+ "main_rss_at_90pct_mb": 866.402304,
+ "total_footprint_mb": 2205.635384,
+ "loader_s": 4.110385125000903,
+ "iter_to_last_batch_s": 4.092823207996844,
+ "pkm_exists_after_epoch": true,
+ "pkm_resident_after_epoch": 1.0,
+ "worker_peak_mb": [
+  350.9,
+  356.5,
+  349.4,
+  350.3
+ ],
+ "worker_peak_sum_mb": 1407.1,
+ "worker_last_mb": [
+  350.6,
+  356.3,
+  349.4,
+  350.1
+ ],
+ "worker_init_mb": [
+  327.7,
+  327.8,
+  327.8,
+  327.8
+ ],
+ "worker_init_peak_mb": [
+  327.7,
+  327.8,
+  327.8,
+  327.8
+ ],
+ "worker_init_rss_mb": [
+  336.1,
+  336.2,
+  336.3,
+  336.2
+ ],
+ "worker_start_to_first_batch_s": [
+  1.09,
+  1.073,
+  1.065,
+  1.046
+ ],
+ "worker_iter_to_first_batch_s": [
+  2.009,
+  2.009,
+  2.011,
+  2.009
+ ],
+ "worker_iter_to_init_s": [
+  2.006,
+  2.006,
+  2.007,
+  2.006
+ ],
+ "worker_iter_to_create_s": [
+  0.919,
+  0.936,
+  0.945,
+  0.963
+ ],
+ "main_lifetime_peak_mib": 702.1575088500977,
+ "max_concurrent_total_mib": 2105.5046920776367,
+ "main_peak_plus_worker_peaks_mib": 2109.2575088500976,
+ "n_samples": 20000,
+ "batches_sha256": "3c98d761142c9abb7ea7a169f03160b374b3e4cfa180c2c45c1ad6eba47f003a"
+}

@@ -1,0 +1,17 @@
+{
+ "tree": "$WORK/repo",
+ "mode": "build",
+ "datasets": "llava665k",
+ "pid": 31421,
+ "build_s": 5.773507457997766,
+ "n": 665298,
+ "rss_after_build_mb": 708.214784,
+ "footprint_after_build_mb": 575.423664,
+ "table_nbytes": 308305695,
+ "lengths_s": 4.75904625000112,
+ "modality_lengths_s": 4.659318999998504,
+ "lengths_sha256": "348d788a1eda0c285aa7984187337dcc5aad8ef059bc37a887ca1cb0fb4794e8",
+ "getitem_s": 4.93319687499752,
+ "n_samples": 20000,
+ "batches_sha256": "3c98d761142c9abb7ea7a169f03160b374b3e4cfa180c2c45c1ad6eba47f003a"
+}

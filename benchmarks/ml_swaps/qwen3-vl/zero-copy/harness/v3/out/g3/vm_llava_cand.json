@@ -1,0 +1,36 @@
+{
+ "repo": "$WORK/llava-next/repo",
+ "packmem": "0.1.1",
+ "packmem_file": "$WORK/llava-next/venv/lib/python3.12/site-packages/packmem/__init__.py",
+ "threads": null,
+ "load_s": 21.02,
+ "rows": 985000,
+ "nbytes": 715848543,
+ "footprint_mb": 1630.4,
+ "peak_mb": 1659.0,
+ "malloc_in_use_mb": 838.2,
+ "malloc_allocated_mb": 1031.2,
+ "reuse": {
+  "alloc_mb": 650.1,
+  "footprint_growth_mb": 569.3,
+  "reused_mb": 80.8,
+  "before": {
+   "footprint_mb": 1630.5,
+   "peak_mb": 1659.0,
+   "malloc_in_use_mb": 838.2,
+   "malloc_allocated_mb": 1031.2
+  },
+  "after_alloc": {
+   "footprint_mb": 2199.8,
+   "peak_mb": 2199.8,
+   "malloc_in_use_mb": 1561.3,
+   "malloc_allocated_mb": 1754.3
+  },
+  "after_free": {
+   "footprint_mb": 1938.0,
+   "peak_mb": 2199.8,
+   "malloc_in_use_mb": 838.2,
+   "malloc_allocated_mb": 1031.2
+  }
+ }
+}

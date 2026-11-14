@@ -1,0 +1,83 @@
+{
+ "pkm": "$TMPDIR/packmem-27027-01bdde4c8b7b4e25.pkm",
+ "pkm_bytes": 307625077,
+ "plain_pickle_bytes": 307625143,
+ "shared_pickle_bytes": 141,
+ "plain": {
+  "kind": "plain",
+  "start": {
+   "cur_mb": 15.0,
+   "peak_mb": 15.0,
+   "rss_mb": 25.4
+  },
+  "blob_bytes": 307625143,
+  "blob_read": {
+   "cur_mb": 323.6,
+   "peak_mb": 323.6,
+   "rss_mb": 333.1
+  },
+  "loads_s": 0.051,
+  "loaded": {
+   "cur_mb": 942.9,
+   "peak_mb": 942.9,
+   "rss_mb": 952.2
+  },
+  "blob_dropped": {
+   "cur_mb": 942.9,
+   "peak_mb": 942.9,
+   "rss_mb": 952.2
+  },
+  "rows": 665298,
+  "row0_ok": true
+ },
+ "shared": {
+  "kind": "shared",
+  "start": {
+   "cur_mb": 15.1,
+   "peak_mb": 15.1,
+   "rss_mb": 25.5
+  },
+  "blob_bytes": 141,
+  "blob_read": {
+   "cur_mb": 16.0,
+   "peak_mb": 16.2,
+   "rss_mb": 25.6
+  },
+  "loads_s": 0.04,
+  "loaded": {
+   "cur_mb": 327.6,
+   "peak_mb": 327.7,
+   "rss_mb": 337.1
+  },
+  "blob_dropped": {
+   "cur_mb": 327.6,
+   "peak_mb": 327.7,
+   "rss_mb": 337.1
+  },
+  "rows": 665298,
+  "row0_ok": true
+ },
+ "mmap": {
+  "kind": "mmap",
+  "start": {
+   "cur_mb": 15.1,
+   "peak_mb": 15.1,
+   "rss_mb": 25.6
+  },
+  "mapped": {
+   "cur_mb": 16.0,
+   "peak_mb": 16.2,
+   "rss_mb": 25.6
+  },
+  "mapped_touched": {
+   "cur_mb": 16.1,
+   "peak_mb": 16.2,
+   "rss_mb": 333.2
+  },
+  "unmapped": {
+   "cur_mb": 16.0,
+   "peak_mb": 16.2,
+   "rss_mb": 25.6
+  }
+ }
+}

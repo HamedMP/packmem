@@ -1,0 +1,7 @@
+start 23:49:52 { 3.44 4.54 5.65 }
+Pages free:                                  1175197.
+Pages inactive:                               657396.
+Pages speculative:                             89486.
+Pages purgeable:                               30304.
+vm.swapusage: total = 2048.00M  used = 1028.25M  free = 1019.75M  (encrypted)
+end 23:50:08 { 3.44 4.47 5.60 }

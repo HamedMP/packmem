@@ -1,0 +1,39 @@
+{
+ "tree": "$WORK/repo",
+ "build_s": 5.79,
+ "built": {
+  "footprint_mb": 577.6,
+  "peak_mb": 595.0,
+  "malloc_in_use_mb": 410.2,
+  "malloc_allocated_mb": 601.3,
+  "rows": 665298,
+  "nbytes_mb": 308.3,
+  "chunks": null
+ },
+ "packmem": "0.1.1",
+ "packmem_file": "$WORK/venv/lib/python3.13/site-packages/packmem/__init__.py",
+ "threads": null,
+ "reuse": {
+  "alloc_mb": 650.1,
+  "footprint_growth_mb": 627.6,
+  "reused_mb": 22.5,
+  "before": {
+   "footprint_mb": 577.7,
+   "peak_mb": 595.0,
+   "malloc_in_use_mb": 410.2,
+   "malloc_allocated_mb": 601.3
+  },
+  "after_alloc": {
+   "footprint_mb": 1205.3,
+   "peak_mb": 1205.3,
+   "malloc_in_use_mb": 1072.1,
+   "malloc_allocated_mb": 1263.3
+  },
+  "after_free": {
+   "footprint_mb": 1205.3,
+   "peak_mb": 1205.3,
+   "malloc_in_use_mb": 410.2,
+   "malloc_allocated_mb": 601.3
+  }
+ }
+}

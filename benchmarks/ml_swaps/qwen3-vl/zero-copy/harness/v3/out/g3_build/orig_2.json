@@ -1,0 +1,16 @@
+{
+ "tree": "$WORK/orig",
+ "mode": "build",
+ "datasets": "llava665k",
+ "pid": 31600,
+ "build_s": 2.6704707500030054,
+ "n": 665298,
+ "rss_after_build_mb": 5250.105344,
+ "footprint_after_build_mb": 5201.85876,
+ "lengths_s": 2.3465173750009853,
+ "modality_lengths_s": 2.2329995410036645,
+ "lengths_sha256": "348d788a1eda0c285aa7984187337dcc5aad8ef059bc37a887ca1cb0fb4794e8",
+ "getitem_s": 4.9787601249990985,
+ "n_samples": 20000,
+ "batches_sha256": "3c98d761142c9abb7ea7a169f03160b374b3e4cfa180c2c45c1ad6eba47f003a"
+}

@@ -1,0 +1,113 @@
+{
+ "tree": "$WORK/repo",
+ "mode": "loader",
+ "datasets": "llava665k",
+ "pid": 42345,
+ "build_s": 7.773251041999174,
+ "n": 665298,
+ "rss_after_build_mb": 757.235712,
+ "footprint_after_build_mb": 622.118064,
+ "table_nbytes": 307633620,
+ "lengths_s": 5.116182082998421,
+ "modality_lengths_s": 5.110690207999141,
+ "lengths_sha256": "348d788a1eda0c285aa7984187337dcc5aad8ef059bc37a887ca1cb0fb4794e8",
+ "mp_ctx": "spawn",
+ "iter_to_first_batch_s": 4.027578332999838,
+ "worker_footprint_checkpoints_mb": [
+  [
+   0.1,
+   [
+    809,
+    810,
+    809,
+    811
+   ]
+  ],
+  [
+   0.5,
+   [
+    811,
+    811,
+    811,
+    812
+   ]
+  ]
+ ],
+ "worker_footprint_mb": [
+  810.583264,
+  813.483232,
+  810.71436,
+  811.877576
+ ],
+ "worker_rss_mb": [
+  865.583104,
+  868.483072,
+  865.697792,
+  866.893824
+ ],
+ "main_footprint_at_90pct_mb": 858.310168,
+ "main_rss_at_90pct_mb": 1058.16064,
+ "total_footprint_mb": 4104.9686,
+ "loader_s": 97.02555695800038,
+ "iter_to_last_batch_s": 77.01857766600006,
+ "worker_peak_mb": [
+  773.4,
+  776.6,
+  773.5,
+  774.6
+ ],
+ "worker_peak_sum_mb": 3098.1,
+ "worker_last_mb": [
+  479.1,
+  481.7,
+  479.3,
+  478.1
+ ],
+ "worker_init_mb": [
+  764.8,
+  765.2,
+  764.7,
+  766.6
+ ],
+ "worker_init_peak_mb": [
+  765.3,
+  765.9,
+  765.3,
+  767.3
+ ],
+ "worker_init_rss_mb": [
+  814.4,
+  814.8,
+  814.4,
+  816.3
+ ],
+ "worker_start_to_first_batch_s": [
+  3.892,
+  2.881,
+  1.916,
+  0.971
+ ],
+ "worker_iter_to_first_batch_s": [
+  3.944,
+  3.943,
+  3.943,
+  3.987
+ ],
+ "worker_iter_to_init_s": [
+  1.06,
+  2.026,
+  3.011,
+  3.984
+ ],
+ "worker_iter_to_create_s": [
+  0.052,
+  1.062,
+  2.027,
+  3.015
+ ],
+ "main_lifetime_peak_mib": 1264.4236145019531,
+ "max_concurrent_total_mib": 4355.209625244141,
+ "main_peak_plus_worker_peaks_mib": 4362.5236145019535,
+ "n_samples": 665298,
+ "batches_sha256": "62f908d745c4ddd383c49d6a874fb6dc6095a60aabf721955f18da007136c12c"
+}
