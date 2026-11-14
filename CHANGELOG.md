@@ -29,6 +29,9 @@ to 4 times faster.
   pyarrow when it is installed. They copy the data; absent keys become nulls in Arrow. Columns of numbers,
   booleans and text are written straight into Arrow buffers. After a load, pyarrow's allocator is asked to give back
   the pages of the batches it has freed, which it otherwise keeps counted against the process.
+- Node and WebAssembly: `Table#toBytes()` and `Table.fromBytes(bytes)`. They use the byte form Python's `to_bytes`
+  writes, so a table packed by a Python or Node server can be sent to a browser running `packmem/wasm` and read
+  without re-encoding. `toBytes` also works on a table shared with worker threads.
 
 ### Changed
 - Nested values are split into sub-columns as rows arrive, not when a chunk is packed, so a load no longer holds
@@ -50,6 +53,9 @@ to 4 times faster.
 - The byte form (`to_bytes`, `save`, `share`, pickles) now starts with a format version. Files from 0.2.0 still
   open. 0.2.0 cannot read files written by this version and says so. From this version on, a file written by a
   newer packmem is refused with "written by a newer packmem" instead of a parse error.
+- Node: nested values stored as sub-columns come back in canonical form from `toJson` and `jsonBuffer`, as in
+  Python. They stay the same values. Escapes in strings are rewritten as `JSON.stringify` writes them; number text
+  and key order are kept as written. This replaces the 0.2.0 Node note about keeping nested JSON as written.
 
 ## 0.2.0 - 2026-11-14
 
