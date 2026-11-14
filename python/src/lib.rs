@@ -531,6 +531,8 @@ struct DictSink<'a, 'py> {
     /// Key strings for nested fields, by (column, field index); checked against the name, since field numbering
     /// can differ from chunk to chunk.
     nkeys: Vec<Vec<Option<(String, Py<PyString>)>>>,
+    /// String objects shared between the nested records of this batch, for short values that repeat.
+    nshared: std::collections::HashMap<String, Py<PyString>>,
 }
 struct Nest<'py> {
     is_record: bool,
@@ -561,6 +563,7 @@ impl<'a, 'py> DictSink<'a, 'py> {
             err: None,
             nest: None,
             nkeys: vec![],
+            nshared: Default::default(),
         }
     }
     #[inline]
@@ -657,7 +660,7 @@ impl<'a, 'py> RowVisitor for DictSink<'a, 'py> {
         match &slots[field] {
             Some((cached, key)) if cached == name => n.key = Some(key.clone_ref(py)),
             _ => {
-                let key = PyString::intern(py, name).unbind();
+                let key = PyString::new(py, name).unbind();
                 n.key = Some(key.clone_ref(py));
                 slots[field] = Some((name.to_string(), key))
             }
@@ -716,9 +719,22 @@ impl<'a, 'py> RowVisitor for DictSink<'a, 'py> {
         value: &mut dyn FnMut() -> String,
     ) {
         if self.nest.is_some() {
-            // a dictionary-coded field of a nested record: few distinct values, so intern them
-            let o = PyString::intern(self.py, &value()).into_any();
-            return self.put(col, Ok(o));
+            // a dictionary-coded field of a nested record: share the string objects of the commonest values within
+            // this batch. Never interned: a chunk of short answers has thousands of distinct values, and Python
+            // keeps interned strings for the life of the process.
+            let text = value();
+            let py = self.py;
+            let o = match self.nshared.get(text.as_str()) {
+                Some(o) => o.bind(py).clone(),
+                None => {
+                    let o = PyString::new(py, &text);
+                    if self.nshared.len() < 256 && text.len() <= 32 {
+                        self.nshared.insert(text, o.clone().unbind());
+                    }
+                    o
+                }
+            };
+            return self.put(col, Ok(o.into_any()));
         }
         if !self.use_cache {
             let o = PyString::new(self.py, &value()).into_any();
