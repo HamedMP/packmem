@@ -2,6 +2,18 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+### Added
+- Benchmarks: `benchmarks/browser/` measures JSON against packmem bytes in headless Chromium on five datasets,
+  uncompressed, Brotli-compressed and at 20 Mbit/s, with packmem 0.3.0. Every run is in
+  `benchmarks/browser/results/runs.jsonl`. From 10,000 rows, tables are usable 2.6 to 7.6 times sooner on
+  loopback and hold 1.3 to 2.4 times less memory. Below about 1,000 rows JSON is faster and smaller, and after
+  Brotli the conversation and issue datasets (long text) are 1 to 10% larger as packmem bytes at every size.
+  Turning every row into an object takes 2 to 3 times as long as `JSON.parse`.
+- Benchmarks: `benchmarks/wire-size/` breaks down where the bytes go and compares what 0.3.0 writes with JSON
+  (`benchmarks/wire-size/results/sizes-0.3.0.jsonl`).
+
 ## 0.3.2 - 2026-11-15
 
 ### Added
@@ -18,7 +30,10 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
   asks for `application/vnd.packmem; enc=gzip`, and mark the response with that media type. `fetchTable` asks for
   it and unzips with `DecompressionStream`. Hosts compress only the types they know: Next.js gzips JSON but not
   packmem bytes, and drops a route's own Content-Encoding. `{ gzip: false }` turns it off. `send` now returns a
-  Promise. Clients on 0.3.x do not ask for gzip, so they keep getting plain bytes.
+  Promise. Clients on 0.3.x do not ask for gzip, so they keep getting plain bytes. Measured on main 90602dc
+  against gzipped JSON (`benchmarks/browser/results/tables-gzip-main-90602dc.md`): flights is 29 to 52% smaller
+  from 100 rows; traces, logs and issues are 2 to 23% smaller from 1,000 to 10,000 rows on; conversations are 0 to
+  5% larger at every size, and every dataset is 11 to 52% larger at 10 rows.
 
 ## 0.3.1 - 2026-11-14
 
@@ -31,8 +46,8 @@ This version writes byte format 5, which 0.3.0 cannot read: upgrade readers befo
   count. This raises the byte format version to 5: files from 0.2.0 and 0.3.0 still open, and 0.3.0 refuses
   files from this version with "written by a newer packmem".
 - Node: `fetchTable` from `packmem/http` asks again for JSON when the server sends bytes from a newer packmem
-  than the reader. A browser on 0.3.0 talking to a 0.3.1 server then gets JSON instead of an error. Give the
-  browser the same packmem version as the server, or a newer one.
+  than the reader. This holds from this version on: a browser on 0.3.0 talking to a newer server still reports
+  the "newer packmem" error. Give the browser the same packmem version as the server, or a newer one.
 
 ## 0.3.0 - 2026-11-14
 
