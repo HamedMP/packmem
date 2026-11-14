@@ -1,5 +1,6 @@
 //! Integer columns: a small vocabulary of composable lightweight encodings,
 //! chosen per column from a sample, each with operators that run on the encoded form.
+use crate::buf::Buf;
 use std::collections::HashSet;
 
 /// What the caller will mostly do with the data. Steers the encoding choice.
@@ -16,7 +17,7 @@ fn width(max: u64) -> u8 {
 
 /// Exact-width bit-packed array (width <= 56), O(1) random access via one unaligned load.
 pub struct BitPacked {
-    data: Vec<u8>,
+    data: Buf<u8>,
     w: u8,
     mask: u64,
 }
@@ -31,7 +32,7 @@ impl BitPacked {
             data[p..p + 8].copy_from_slice(&x.to_le_bytes());
         }
         BitPacked {
-            data,
+            data: data.into(),
             w,
             mask: if w == 0 { 0 } else { (1u64 << w) - 1 },
         }
@@ -47,10 +48,10 @@ impl BitPacked {
 
 /// Physical storage of unsigned codes: byte-aligned (SIMD-friendly) or exact-width bits.
 pub enum Store {
-    A8(Vec<u8>),
-    A16(Vec<u16>),
-    A32(Vec<u32>),
-    A64(Vec<u64>),
+    A8(Buf<u8>),
+    A16(Buf<u16>),
+    A32(Buf<u32>),
+    A64(Buf<u64>),
     Bits(BitPacked),
 }
 
@@ -157,22 +158,22 @@ pub enum PackedInts {
     For { base: i64, s: Store, len: usize },
     /// Sorted dictionary + codes. Order-preserving, so range predicates work on codes.
     Dict {
-        dict: Vec<i64>,
+        dict: Buf<i64>,
         codes: Store,
         len: usize,
     },
     /// Run-length: (value, exclusive end index) per run.
     Rle {
-        vals: Vec<i64>,
-        ends: Vec<u32>,
+        vals: Buf<i64>,
+        ends: Buf<u32>,
         len: usize,
     },
     /// Per-1024-block frame of reference with per-block width (good for sorted/clustered data).
     BlockFor {
-        bases: Vec<i64>,
-        widths: Vec<u8>,
-        offs: Vec<u32>,
-        data: Vec<u8>,
+        bases: Buf<i64>,
+        widths: Buf<u8>,
+        offs: Buf<u32>,
+        data: Buf<u8>,
         len: usize,
         sorted: bool,
     },
@@ -367,7 +368,7 @@ impl PackedInts {
                     hint,
                 );
                 PackedInts::Dict {
-                    dict,
+                    dict: dict.into(),
                     codes,
                     len: n,
                 }
@@ -388,8 +389,8 @@ impl PackedInts {
                 rv.shrink_to_fit();
                 ends.shrink_to_fit();
                 PackedInts::Rle {
-                    vals: rv,
-                    ends,
+                    vals: rv.into(),
+                    ends: ends.into(),
                     len: n,
                 }
             }
@@ -423,10 +424,10 @@ impl PackedInts {
                 widths.shrink_to_fit();
                 offs.shrink_to_fit();
                 PackedInts::BlockFor {
-                    bases,
-                    widths,
-                    offs,
-                    data,
+                    bases: bases.into(),
+                    widths: widths.into(),
+                    offs: offs.into(),
+                    data: data.into(),
                     len: n,
                     sorted: st.sorted,
                 }

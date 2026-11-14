@@ -218,6 +218,9 @@ def test_pickle_take_extend_and_surrogates():
     e = pickle.loads(pickle.dumps(packmem.Table())); assert len(e) == 0 and e.columns == []
     # take, copy, shuffle, extend with another table, and the Sequence protocol
     idx = [5, -1, 5, 39_999, 0]
+    assert t.__getitems__(idx) == [m[i] for i in idx] and t.__getitems__([]) == []
+    try: t.__getitems__([0, len(m)]); raise AssertionError("expected IndexError")
+    except IndexError: pass
     assert list(t.take(idx)) == [m[i] for i in idx] and list(t.copy()) == m and len(t) == len(m)
     a = packmem.Table(m[:30_000]); b = packmem.Table([{"other": 1, "id": -1}] + m[30_000:])
     a.extend(b); assert list(a) == m[:30_000] + [{"id": -1, "other": 1}] + m[30_000:]
@@ -302,20 +305,72 @@ def test_share_between_processes():
                 except TypeError: pass
         assert list(t) == m and list(u) == m
         c = u.copy(); c.append({"id": 3}); assert len(c) == len(m) + 1 and not c.shared       # a copy is private and writable
-        try: u.share(dir=d); raise AssertionError("expected TypeError")
-        except TypeError: pass
+        assert u.share(dir=d) is u and len(os.listdir(d)) == 1 and len(pickle.dumps(u)) < 600   # already travels as a pointer
         want = (len(m), sum(r["id"] for r in m), sum(1 for r in m if r["g"] == "x"), True)
         with mp.get_context("spawn").Pool(2) as pool:
             assert pool.map(_worker_reads, [t, t, t]) == [want] * 3
         e = Examples(m[:10]); e.stats = {"n": 10}; e.share(dir=d)
         back = pickle.loads(pickle.dumps(e)); assert type(back) is Examples and back.stats == {"n": 10} and list(back) == m[:10]
+        del u, c, back; gc.collect()                                   # attached tables keep the file mapped
         t.unshare(); assert not t.shared and len(os.listdir(d)) == 1
         t.append({"id": 7}); assert len(t) == len(m) + 1 and len(pickle.dumps(t)) > 600
         try: pickle.loads(blob); raise AssertionError("expected FileNotFoundError after unshare")
         except FileNotFoundError: pass
-        del e, back; gc.collect(); assert os.listdir(d) == []                                    # collected: file removed
+        del e; gc.collect(); assert os.listdir(d) == []                                    # collected: file removed
         open(os.path.join(d, "packmem-999999999-00.pkm"), "w").close(); open(os.path.join(d, "packmem-%d-00.pkm" % os.getpid()), "w").close()
         assert packmem.cleanup_stale(d) == 1 and os.listdir(d) == ["packmem-%d-00.pkm" % os.getpid()]
+
+
+def _worker_private(t):
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "benchmarks"))
+    try:
+        import mem
+        before = mem.footprint()
+    except Exception:
+        before = None
+    total = t.sum("id")
+    return (len(t), total, t.shared)
+
+
+def test_save_and_open_in_place():
+    import gc, multiprocessing as mp, pickle, tempfile
+    r = random.Random(4)
+    m = [{"id": i, "g": "xyz"[i % 3], "v": None if i % 9 == 0 else i / 8, "text": "row %d %s" % (i, "word " * r.randint(1, 6)), **({"opt": {"k": [i]}} if i % 5 else {})} for i in range(40_000)]
+    with tempfile.TemporaryDirectory() as d:
+        t = packmem.Table(m); t.update(3, g="patched"); m[3]["g"] = "patched"
+        p = os.path.join(d, "t.pkm")
+        t.save(p); assert os.listdir(d) == ["t.pkm"] and os.path.getsize(p) >= t.nbytes * 0.9
+        o = packmem.open(p)
+        assert len(o) == len(m) and list(o) == m and o.columns == t.columns and o.shared
+        assert o.count(g="x") == t.count(g="x") and o.sum("v") == t.sum("v") and o.group_count("g") == t.group_count("g")
+        assert o.where(text__contains="row 777 ").rows() == [x for x in m if "row 777 " in x["text"]]
+        assert o.to_json() == t.to_json() and [x.to_dict() for x in o.lazy()][:50] == m[:50] and o[-1] == m[-1] and o[100:105] == m[100:105]
+        for change in (lambda x: x.append({"id": 1}), lambda x: x.update(0, id=5), lambda x: x.sort(key="id"), lambda x: x.set_column("z", 1)):
+            try: change(o); raise AssertionError("expected an opened table to refuse changes")
+            except TypeError: pass
+        blob = pickle.dumps(o); assert len(blob) < 600               # an opened table travels as its file's location
+        again = pickle.loads(blob); assert list(again) == m and again.shared
+        c = o.copy(); c.append({"id": -1}); assert len(c) == len(m) + 1 and not c.shared and list(c)[:100] == m[:100]
+        with mp.get_context("spawn").Pool(2) as pool:
+            assert pool.map(_worker_private, [o, o]) == [(len(m), sum(x["id"] for x in m), True)] * 2
+        t.append({"id": 10**6}); t.save(p)                              # saving again replaces the file whole
+        if os.name == "posix":
+            assert list(o) == m                                         # the old mapping still reads the old contents
+        fresh = packmem.open(p); assert len(fresh) == len(m) + 1 and fresh[-1] == {"id": 10**6}
+        e = Examples(m[:5]); e.stats = 1; q = os.path.join(d, "e.pkm"); e.save(q); assert type(packmem.open(q)) is packmem.Table
+        # damaged files are refused
+        raw = builtins_open(p, "rb").read()
+        for name, data in (("short", raw[: len(raw) // 2]), ("magic", b"nope" + raw[4:]), ("empty", b""), ("tail", raw + b"x")):
+            bad = os.path.join(d, name + ".pkm"); builtins_open(bad, "wb").write(data)
+            try: packmem.open(bad); raise AssertionError("expected ValueError for " + name)
+            except (ValueError, OSError): pass
+        try: packmem.open(os.path.join(d, "missing.pkm")); raise AssertionError("expected FileNotFoundError")
+        except FileNotFoundError: pass
+        del o, again, fresh, c; gc.collect()                           # mappings must be closed before the directory goes (Windows)
+
+
+builtins_open = open
 
 
 class Examples(packmem.Table):

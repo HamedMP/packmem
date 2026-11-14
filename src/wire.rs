@@ -1,5 +1,9 @@
 //! Byte-level reader and writer for saving packed tables as they are, without re-encoding.
-//! Integers are little-endian; vectors and byte strings carry a 64-bit length prefix.
+//! Integers are little-endian; vectors and byte strings carry a 64-bit length prefix. Each vector's data is padded
+//! to its element size, so that a reader holding the bytes in aligned memory (a mapped file) can use the vector in
+//! place instead of copying it.
+use crate::buf::{Backing, Buf};
+use std::sync::Arc;
 
 pub type Res<T> = Result<T, String>;
 
@@ -48,6 +52,13 @@ impl<'a> W<'a> {
     pub fn written(&self) -> usize {
         self.n
     }
+    /// Zero padding up to the next multiple of `n` bytes from the start of the output.
+    fn align(&mut self, n: usize) {
+        let pad = (n - self.n % n) % n;
+        if pad > 0 {
+            self.raw(&[0u8; 8][..pad])
+        }
+    }
     #[inline]
     pub fn raw(&mut self, b: &[u8]) {
         if let Some(out) = &mut self.out {
@@ -64,6 +75,8 @@ impl<'a> W<'a> {
 pub struct R<'a> {
     b: &'a [u8],
     p: usize,
+    /// The shared block `b` belongs to, when vectors may be borrowed from it rather than copied.
+    owner: Option<&'a Arc<dyn Backing>>,
 }
 
 macro_rules! num {
@@ -75,6 +88,7 @@ macro_rules! num {
             pub fn $putv(&mut self, v: &[$t]) {
                 const N: usize = std::mem::size_of::<$t>();
                 self.u64(v.len() as u64);
+                self.align(N);
                 let size = std::mem::size_of_val(v);
                 if let Some(out) = &mut self.out {
                     for (d, x) in out[self.n..self.n + size].chunks_exact_mut(N).zip(v) {
@@ -100,9 +114,16 @@ macro_rules! num {
                 const N: usize = std::mem::size_of::<$t>();
                 Ok(<$t>::from_le_bytes(self.take(N)?.try_into().unwrap()))
             }
-            pub fn $getv(&mut self) -> Res<Vec<$t>> {
+            /// A vector, borrowed in place when the reader has an owner for its bytes, copied otherwise.
+            pub fn $getv(&mut self) -> Res<Buf<$t>> {
                 const N: usize = std::mem::size_of::<$t>();
                 let n = self.len(N)?;
+                self.skip_to(N)?;
+                if let Some(owner) = self.owner {
+                    let buf = Buf::borrowed(owner, self.p, n)?;
+                    self.take(n * N)?;
+                    return Ok(buf);
+                }
                 Ok(self
                     .take(n * N)?
                     .chunks_exact(N)
@@ -130,8 +151,26 @@ impl W<'_> {
 }
 
 impl<'a> R<'a> {
+    /// Reads by copying: `b` can live anywhere.
     pub fn new(b: &'a [u8]) -> Self {
-        R { b, p: 0 }
+        R {
+            b,
+            p: 0,
+            owner: None,
+        }
+    }
+    /// Reads vectors in place from `owner`'s bytes, which they then keep alive.
+    pub fn borrowing(owner: &'a Arc<dyn Backing>) -> Self {
+        R {
+            b: owner.bytes(),
+            p: 0,
+            owner: Some(owner),
+        }
+    }
+    /// Skip the padding the writer put before a vector of `n`-byte elements.
+    fn skip_to(&mut self, n: usize) -> Res<()> {
+        let pad = (n - self.p % n) % n;
+        self.take(pad).map(|_| ())
     }
     pub fn take(&mut self, n: usize) -> Res<&'a [u8]> {
         let end = self

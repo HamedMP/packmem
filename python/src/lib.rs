@@ -1053,6 +1053,19 @@ impl PyTable {
         }
         Ok(l)
     }
+    /// The rows at the given positions, in that order, as dicts: one call for a whole batch.
+    fn rows_at<'py>(&self, py: Python<'py>, ids: Vec<usize>) -> PyResult<Bound<'py, PyList>> {
+        let n = self.t.len();
+        if let Some(&bad) = ids.iter().find(|&&i| i >= n) {
+            return Err(PyIndexError::new_err(format!(
+                "row index {bad} out of range"
+            )));
+        }
+        let l = PyList::empty(py);
+        // random positions jump between chunks, where a per-chunk string cache would be rebuilt at every step
+        self.visit(py, &l, false, ids.iter().map(|&i| (i, i + 1)))?;
+        Ok(l)
+    }
     /// Rows a..b as lazy `Row` objects.
     fn rows_lazy<'py>(slf: &Bound<'py, Self>, a: usize, b: usize) -> PyResult<Bound<'py, PyList>> {
         let py = slf.py();
@@ -1141,14 +1154,19 @@ impl PyTable {
         })
     }
     /// Write the packed columns to a file other processes can attach to. Returns the file's size.
-    fn write_file(&mut self, path: &str) -> PyResult<usize> {
+    #[pyo3(signature = (path, private = true))]
+    fn write_file(&mut self, path: &str, private: bool) -> PyResult<usize> {
         use std::io::Write;
         let n = self.t.byte_len();
-        // owner-only: the file holds the table's data and sits in a directory other users can list
         let mut options = std::fs::OpenOptions::new();
         options.write(true).create_new(true);
+        // owner-only for shared tables: the file holds the data and sits in a directory other users can list
         #[cfg(unix)]
-        std::os::unix::fs::OpenOptionsExt::mode(&mut options, 0o600);
+        if private {
+            std::os::unix::fs::OpenOptionsExt::mode(&mut options, 0o600);
+        }
+        #[cfg(not(unix))]
+        let _ = private;
         let file = options.open(path)?;
         let mut out = std::io::BufWriter::with_capacity(1 << 20, file);
         // written through a small window, so the parent never holds a second copy of the table
@@ -1158,21 +1176,24 @@ impl PyTable {
         out.flush()?;
         Ok(n)
     }
-    /// Load a table from a file written by `write_file`, read-only. The file is mapped, so nothing but the table itself
-    /// is allocated in this process.
+    /// Open a table from a file written by `write_file`, read-only. The file is mapped and the packed columns are read
+    /// in place, so the table costs this process no memory of its own beyond bookkeeping, and every process that opens
+    /// the same file shares the same pages.
     #[staticmethod]
     fn attach(py: Python<'_>, path: &str, size: usize) -> PyResult<PyTable> {
         let file = std::fs::File::open(path)?;
-        // SAFETY: the mapping is read-only and dropped before this function returns; the file is written once by its
-        // creator and never modified afterwards.
+        // SAFETY: the mapping is read-only and lives as long as the table (the columns hold it through an `Arc`).
+        // The file must not be truncated or rewritten in place while it is open; packmem itself only ever creates
+        // these files whole (shared files are private to their owner, saved files are moved into place).
         let map = unsafe { memmap2::Mmap::map(&file)? };
         if map.len() != size {
             return Err(PyValueError::new_err(
-                "shared table file has the wrong size; it was replaced or truncated",
+                "packed table file has the wrong size; it was replaced or truncated",
             ));
         }
+        let owner: std::sync::Arc<dyn packmem::buf::Backing> = std::sync::Arc::new(Mapped(map));
         let mut t = PyTable {
-            t: DynTable::from_bytes(&map).map_err(PyValueError::new_err)?,
+            t: DynTable::from_backing(owner).map_err(PyValueError::new_err)?,
             keys: vec![],
             template: None,
             seen_keys: vec![],
@@ -1370,6 +1391,14 @@ impl RowVisitor for JsonSink {
             Cell::Json(s) => self.out.extend_from_slice(s.as_bytes()),
             other => self.out.extend_from_slice(to_text(other).as_bytes()),
         }
+    }
+}
+
+/// A memory-mapped file that packed columns borrow from.
+struct Mapped(memmap2::Mmap);
+impl packmem::buf::Backing for Mapped {
+    fn bytes(&self) -> &[u8] {
+        &self.0
     }
 }
 

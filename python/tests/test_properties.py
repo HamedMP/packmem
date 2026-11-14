@@ -44,6 +44,11 @@ def test_round_trip(rows, cut, hint):
     assert same([r.to_dict() for r in t.lazy()], want)
     t.compact(); assert same(list(t), want)
     assert same(list(__import__("pickle").loads(__import__("pickle").dumps(t))), want)
+    import gc, os, tempfile
+    with tempfile.TemporaryDirectory() as d:
+        t.save(os.path.join(d, "t.pkm")); o = packmem.open(os.path.join(d, "t.pkm"))
+        assert same(list(o), want) and same(o.copy()[:], want) and o.to_json() == t.to_json()
+        del o; gc.collect()
     assert same(list(t.take(range(len(want) - 1, -1, -1))), want[::-1])
 
 
