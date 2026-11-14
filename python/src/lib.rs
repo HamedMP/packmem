@@ -217,6 +217,125 @@ impl<'de, 'a, R: Raw<'de>> Visitor<'de> for RowSeed<'a, R> {
     }
 }
 
+/// macOS goes on counting memory against a process after it is freed, so the buffers a load needs only while it runs
+/// would stay in the process's footprint for good. Blocks of `BIG` bytes or more therefore get a mapping of their own,
+/// which goes back to the system the moment it is freed.
+#[cfg(target_os = "macos")]
+mod big_alloc {
+    use std::alloc::{GlobalAlloc, Layout, System};
+    const BIG: usize = 96 << 10;
+    pub struct Alloc;
+    fn big(l: Layout) -> bool {
+        l.size() >= BIG && l.align() <= 4096
+    }
+    // SAFETY: each block is served either by the system allocator or by its own anonymous mapping, decided by its
+    // layout alone, so `dealloc` and `realloc` always return a block to where it came from.
+    unsafe impl GlobalAlloc for Alloc {
+        unsafe fn alloc(&self, l: Layout) -> *mut u8 {
+            if !big(l) {
+                return unsafe { System.alloc(l) };
+            }
+            let p = unsafe {
+                libc::mmap(
+                    std::ptr::null_mut(),
+                    l.size(),
+                    libc::PROT_READ | libc::PROT_WRITE,
+                    libc::MAP_PRIVATE | libc::MAP_ANON,
+                    -1,
+                    0,
+                )
+            };
+            if p == libc::MAP_FAILED {
+                std::ptr::null_mut()
+            } else {
+                p.cast()
+            }
+        }
+        unsafe fn alloc_zeroed(&self, l: Layout) -> *mut u8 {
+            if big(l) {
+                unsafe { self.alloc(l) }
+            } else {
+                unsafe { System.alloc_zeroed(l) }
+            }
+        }
+        unsafe fn dealloc(&self, p: *mut u8, l: Layout) {
+            if big(l) {
+                unsafe { libc::munmap(p.cast(), l.size()) };
+            } else {
+                unsafe { System.dealloc(p, l) }
+            }
+        }
+        unsafe fn realloc(&self, p: *mut u8, l: Layout, size: usize) -> *mut u8 {
+            // SAFETY: the caller guarantees `size` is valid for this alignment.
+            let new = unsafe { Layout::from_size_align_unchecked(size, l.align()) };
+            if !big(l) && !big(new) {
+                return unsafe { System.realloc(p, l, size) };
+            }
+            let q = unsafe { self.alloc(new) };
+            if !q.is_null() {
+                unsafe {
+                    std::ptr::copy_nonoverlapping(p, q, l.size().min(size));
+                    self.dealloc(p, l)
+                }
+            }
+            q
+        }
+    }
+}
+#[cfg(target_os = "macos")]
+#[global_allocator]
+static ALLOC: big_alloc::Alloc = big_alloc::Alloc;
+
+/// The threaded load cannot take this input; load it on one thread instead.
+struct Redo;
+
+/// A run of records cut from a mapped file for one worker.
+enum Piece<'a> {
+    /// JSON lines, one record a line, blank lines allowed.
+    Lines(&'a [u8]),
+    /// Elements of a JSON array: the file and where each element starts and ends.
+    Items(&'a [u8], Vec<(usize, usize)>),
+}
+impl Piece<'_> {
+    /// Call `f` with each record until it returns false; true when every record was accepted.
+    fn records(&self, mut f: impl FnMut(&[u8]) -> bool) -> bool {
+        match self {
+            Piece::Lines(text) => text.split(|&b| b == b'\n').filter(|l| !blank(l)).all(f),
+            Piece::Items(data, items) => items.iter().all(|&(a, b)| f(&data[a..b])),
+        }
+    }
+}
+fn blank(l: &[u8]) -> bool {
+    l.iter().all(u8::is_ascii_whitespace)
+}
+/// Where the JSON object starting at `data[at] == b'{'` ends (one past its closing brace), without checking that
+/// what is inside is valid.
+fn object_end(data: &[u8], at: usize) -> Option<usize> {
+    let (mut depth, mut i) = (0usize, at);
+    while i < data.len() {
+        match data[i] {
+            b'"' => loop {
+                i += 1;
+                match data.get(i)? {
+                    b'"' => break,
+                    b'\\' => i += 1,
+                    _ => {}
+                }
+            },
+            b'{' | b'[' => depth += 1,
+            b'}' | b']' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(i + 1);
+                }
+            }
+            _ => {}
+        }
+        i += 1
+    }
+    None
+}
+
 /// Files smaller than this load on one thread.
 const PARALLEL_LOAD_BYTES: u64 = 8 << 20;
 
@@ -683,48 +802,42 @@ impl PyTable {
             }
         }
     }
-    /// Load JSON lines with the parsing and packing spread over threads: the file is mapped and cut into pieces of one
-    /// chunk's rows, each piece becomes a small table on a worker, and the pieces are joined here in file order. A
-    /// piece with a line the fast parser rejects is redone on this thread, so results and errors match a one-thread
-    /// load.
-    fn load_jsonl_threads(
+    /// Load records with the parsing and packing spread over threads. `next_piece(rows)` cuts the next piece of that
+    /// many records from the mapped file; each piece becomes a small table on a worker, and the pieces are joined
+    /// here in file order. A piece of lines that the fast parser rejects is redone on this thread, so results and
+    /// errors match a one-thread load; a piece of array elements that fails ends the load with `Redo`.
+    fn load_pieces<'a>(
         &mut self,
         py: Python<'_>,
-        f: &std::fs::File,
         threads: usize,
-    ) -> PyResult<usize> {
+        mut next_piece: impl FnMut(usize) -> Result<Option<Piece<'a>>, Redo>,
+    ) -> PyResult<Result<usize, Redo>> {
         use std::sync::mpsc;
         const ROWS: usize = packmem::dynamic::CHUNK;
-        let blank = |l: &[u8]| l.iter().all(u8::is_ascii_whitespace);
-        // SAFETY: the mapping is read-only and private to this call; as with any reader, the file must not be
-        // truncated while it is being loaded.
-        let map = unsafe { memmap2::Mmap::map(f)? };
-        let data: &[u8] = &map;
         let hint = self.t.hint;
         let only = self.only.clone();
-        let (work_tx, work_rx) = mpsc::sync_channel::<(usize, &[u8])>(1);
+        let (work_tx, work_rx) = mpsc::sync_channel::<(usize, Piece<'a>)>(1);
         let work_rx = std::sync::Mutex::new(work_rx);
-        let (done_tx, done_rx) = mpsc::channel::<(usize, &[u8], Option<DynTable>)>();
+        let (done_tx, done_rx) = mpsc::channel::<(usize, Piece<'a>, Option<DynTable>)>();
         std::thread::scope(|sc| {
             for _ in 0..threads {
                 let (work_rx, done_tx, only) = (&work_rx, done_tx.clone(), &only);
                 sc.spawn(move || {
                     let mut spare = packmem::dynamic::Buffers::default();
                     loop {
-                        let Ok((i, text)) = work_rx.lock().unwrap().recv() else {
+                        let Ok((i, piece)) = work_rx.lock().unwrap().recv() else {
                             packmem::dynamic::release_thread_buffers();
                             return;
                         };
                         let mut t = DynTable::new(hint);
                         t.reuse_buffers(std::mem::take(&mut spare));
                         t.set_bulk(true);
-                        let ok = std::str::from_utf8(text).is_ok_and(|text| {
-                            text.lines()
-                                .filter(|l| !blank(l.as_bytes()))
-                                .all(|l| push_line(&mut t, l, only.as_ref()).is_ok())
+                        let ok = piece.records(|r| {
+                            std::str::from_utf8(r)
+                                .is_ok_and(|r| push_line(&mut t, r, only.as_ref()).is_ok())
                         });
                         spare = t.take_buffers();
-                        if done_tx.send((i, text, ok.then_some(t))).is_err() {
+                        if done_tx.send((i, piece, ok.then_some(t))).is_err() {
                             return;
                         }
                     }
@@ -732,50 +845,46 @@ impl PyTable {
             }
             drop(done_tx);
             let mut pending = std::collections::BTreeMap::new();
-            let (mut pos, mut sent, mut joined, mut n) = (0usize, 0usize, 0usize, 0usize);
-            let r = (|| -> PyResult<usize> {
-                while pos < data.len() || joined < sent {
-                    if pos < data.len() {
+            let (mut more, mut sent, mut joined, mut n) = (true, 0usize, 0usize, 0usize);
+            let r = (|| -> PyResult<Result<usize, Redo>> {
+                while more || joined < sent {
+                    if more {
                         // the first piece brings the table to a chunk boundary, so later pieces can be moved in whole
                         let want = if sent == 0 {
                             ROWS - self.t.len() % ROWS
                         } else {
                             ROWS
                         };
-                        let (start, mut rows) = (pos, 0);
-                        while rows < want && pos < data.len() {
-                            let end = data[pos..]
-                                .iter()
-                                .position(|&b| b == b'\n')
-                                .map_or(data.len(), |k| pos + k + 1);
-                            rows += !blank(&data[pos..end]) as usize;
-                            pos = end
-                        }
-                        if rows > 0 {
-                            work_tx
-                                .send((sent, &data[start..pos]))
-                                .expect("load threads stopped");
-                            sent += 1
+                        match next_piece(want) {
+                            Ok(Some(piece)) => {
+                                work_tx.send((sent, piece)).expect("load threads stopped");
+                                sent += 1
+                            }
+                            Ok(None) => more = false,
+                            Err(Redo) => return Ok(Err(Redo)),
                         }
                     }
-                    let mut next = if pos >= data.len() && joined < sent && pending.is_empty() {
+                    let mut next = if !more && joined < sent && pending.is_empty() {
                         Some(done_rx.recv().map_err(|_| {
                             pyo3::exceptions::PyRuntimeError::new_err("a load thread stopped early")
                         })?)
                     } else {
                         done_rx.try_recv().ok()
                     };
-                    while let Some((i, text, t)) = next {
-                        pending.insert(i, (text, t));
+                    while let Some((i, piece, t)) = next {
+                        pending.insert(i, (piece, t));
                         next = done_rx.try_recv().ok()
                     }
-                    while let Some((text, t)) = pending.remove(&joined) {
+                    while let Some((piece, t)) = pending.remove(&joined) {
                         joined += 1;
                         if let Some(t) = t {
                             n += t.len();
                             self.t.append_table(t);
                             continue;
                         }
+                        let Piece::Lines(text) = piece else {
+                            return Ok(Err(Redo));
+                        };
                         let text = std::str::from_utf8(text)
                             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
                         for l in text.lines().filter(|l| !blank(l.as_bytes())) {
@@ -784,10 +893,89 @@ impl PyTable {
                         }
                     }
                 }
-                Ok(n)
+                Ok(Ok(n))
             })();
             drop(work_tx);
             r
+        })
+    }
+    fn load_jsonl_threads(
+        &mut self,
+        py: Python<'_>,
+        f: &std::fs::File,
+        threads: usize,
+    ) -> PyResult<usize> {
+        // SAFETY: the mapping is read-only and private to this call; as with any reader, the file must not be
+        // truncated while it is being loaded.
+        let map = unsafe { memmap2::Mmap::map(f)? };
+        let (data, mut pos): (&[u8], usize) = (&map, 0);
+        let r = self.load_pieces(py, threads, |want| {
+            let (start, mut rows) = (pos, 0);
+            while rows < want && pos < data.len() {
+                let end = data[pos..]
+                    .iter()
+                    .position(|&b| b == b'\n')
+                    .map_or(data.len(), |k| pos + k + 1);
+                rows += !blank(&data[pos..end]) as usize;
+                pos = end
+            }
+            Ok((rows > 0).then(|| Piece::Lines(&data[start..pos])))
+        })?;
+        Ok(r.unwrap_or_else(|Redo| unreachable!("pieces of lines are redone in place")))
+    }
+    /// The threaded load of a file holding one JSON array of objects, into an empty table. `Redo` means the file is
+    /// not laid out as this expects or holds something the fast parser rejects: the caller loads it on one thread
+    /// instead, which also produces the error message if the file is wrong.
+    fn load_json_array_threads(
+        &mut self,
+        py: Python<'_>,
+        f: &std::fs::File,
+        threads: usize,
+    ) -> PyResult<Result<usize, Redo>> {
+        // SAFETY: as in `load_jsonl_threads`.
+        let map = unsafe { memmap2::Mmap::map(f)? };
+        let data: &[u8] = &map;
+        let skip = |mut p: usize| {
+            while data.get(p).is_some_and(u8::is_ascii_whitespace) {
+                p += 1
+            }
+            p
+        };
+        let mut pos = skip(0);
+        if data.get(pos) != Some(&b'[') {
+            return Ok(Err(Redo));
+        }
+        pos = skip(pos + 1);
+        let mut closed = false;
+        self.load_pieces(py, threads, |want| {
+            let mut items = Vec::with_capacity(want);
+            while items.len() < want && !closed {
+                match data.get(pos) {
+                    Some(b']') => {
+                        closed = true;
+                        if skip(pos + 1) != data.len() {
+                            return Err(Redo);
+                        }
+                        break;
+                    }
+                    Some(b'{') => {}
+                    _ => return Err(Redo),
+                }
+                let end = object_end(data, pos).ok_or(Redo)?;
+                items.push((pos, end));
+                pos = skip(end);
+                match data.get(pos) {
+                    Some(b',') => {
+                        pos = skip(pos + 1);
+                        if data.get(pos) != Some(&b'{') {
+                            return Err(Redo);
+                        }
+                    }
+                    Some(b']') => {}
+                    _ => return Err(Redo),
+                }
+            }
+            Ok((!items.is_empty()).then(|| Piece::Items(data, items)))
         })
     }
     /// Run a bulk load: rows are packed a chunk at a time, and whatever was loaded before an error stays consistent.
@@ -1053,6 +1241,16 @@ impl PyTable {
     fn load_json_array_path(&mut self, py: Python<'_>, path: &str) -> PyResult<usize> {
         self.guard()?;
         let f = std::fs::File::open(path)?;
+        let threads = packmem::dynamic::query_threads().min(4);
+        if threads > 1 && self.t.len() == 0 && f.metadata()?.len() >= PARALLEL_LOAD_BYTES {
+            if let Ok(n) = self.bulk(py, |s| s.load_json_array_threads(py, &f, threads))? {
+                return Ok(n);
+            }
+            self.t = DynTable::new(self.t.hint);
+            self.keys.clear();
+            self.template = None;
+            self.seen_keys.clear();
+        }
         self.bulk(py, |s| {
             let mut de =
                 serde_json::Deserializer::from_reader(BufReader::with_capacity(1 << 20, f));

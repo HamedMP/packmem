@@ -569,6 +569,43 @@ def test_large_jsonl_loads_on_threads_like_one_thread():
         assert len(bad) == len(want) + 1 and bad[-1]["id"] == -1
 
 
+def test_large_json_array_loads_on_threads_like_json_load():
+    import json, os, random, tempfile
+    rnd = random.Random(9)
+    tricky = ['a "quoted" } word', "back\\slash\\", "braces {[ ]} and , commas", "caf\u00e9 \u2603 \U0001f600", "ends with backslash quote \\\"", ""]
+    rows = []
+    for i in range(6 * 16384 + 55):
+        r = {"id": "%06d" % i, "image": "coco/%d.jpg" % rnd.randrange(10 ** 6),
+             "conversations": [{"from": "human" if j % 2 == 0 else "gpt", "value": rnd.choice(tricky) + " turn %d" % j} for j in range(rnd.randrange(1, 5))]}
+        if i % 9 == 0: del r["image"]
+        if i > 50000: r["meta"] = {"k": [i, None, {"deep": "}"}]}
+        rows.append(r)
+    with tempfile.TemporaryDirectory() as d:
+        for name, kw in (("compact.json", {"separators": (",", ":")}), ("pretty.json", {"indent": 2, "ensure_ascii": False})):
+            path = os.path.join(d, name)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("\n  " + json.dumps(rows, **kw) + "\n\n")
+            assert os.path.getsize(path) > 8 << 20
+            t = packmem.load_json(path)
+            assert len(t) == len(rows) and t.columns == ["id", "conversations", "image", "meta"]
+            assert all(t[i] == rows[i] for i in range(0, len(rows), 499)) and t[-1] == rows[-1] and t[50001] == rows[50001]
+            assert t.col("conversations").list.len() == [len(r["conversations"]) for r in rows]
+            assert t.count(id="050001") == 1 and packmem.load_json(path, fields=["id"])[70000] == {"id": "070000"}
+
+        path = os.path.join(d, "nan.json")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(rows[:60000] + [{"id": "x", "score": float("nan")}] + rows[60000:]))
+        t = packmem.load_json(path)
+        assert len(t) == len(rows) + 1 and t[60000]["score"] != t[60000]["score"] and t[60001] == rows[60000] and t[-1] == rows[-1]
+
+        text = json.dumps(rows)
+        for name, body in (("cut.json", text[: len(text) // 2]), ("extra.json", text + " x"), ("comma.json", text[:-1] + ",]"), ("mixed.json", text[:-1] + ",7]")):
+            path = os.path.join(d, name)
+            with open(path, "w", encoding="utf-8") as f: f.write(body)
+            try: packmem.load_json(path); raise AssertionError("expected ValueError for " + name)
+            except ValueError: pass
+
+
 def test_default_converts_values_json_has_no_form_for():
     import datetime, decimal, json, uuid
     u = uuid.UUID(int=7)
