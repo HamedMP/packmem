@@ -14,6 +14,8 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 - Python: `hint="compact"` compresses long text with Zstandard in small blocks with a trained dictionary. Native
   builds only; a table saved this way cannot be opened by the WebAssembly build.
+- Python: `Table(records, default=...)`, `extend(rows, default=...)` and `append(row, default=...)` convert values
+  JSON has no form for (dates, decimals, UUIDs), at any depth, as `json.dumps(default=...)` does.
 - Python: `Table.to_arrow()`, `Table.to_parquet()`, `packmem.from_arrow()` and `packmem.read_parquet()`, using
   pyarrow when it is installed. They copy the data; absent keys become nulls in Arrow. Columns of numbers,
   booleans and text are written straight into Arrow buffers.

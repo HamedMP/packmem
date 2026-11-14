@@ -20,6 +20,24 @@ fn dumps(v: &Bound<'_, PyAny>) -> PyResult<String> {
         .extract()
 }
 
+/// A value `to_cell` refused, converted as `json.dumps(v, default=f)` would: `f` is called for each part JSON has no
+/// form for, wherever it sits inside nested lists and dicts.
+fn to_cell_with(v: &Bound<'_, PyAny>, f: &Bound<'_, PyAny>) -> PyResult<Cell> {
+    let py = v.py();
+    let kw = PyDict::new(py);
+    kw.set_item("separators", (",", ":"))?;
+    kw.set_item("default", f)?;
+    let s: String = py
+        .import("json")?
+        .getattr("dumps")?
+        .call((v,), Some(&kw))?
+        .extract()?;
+    Ok(match from_text(s.as_bytes()) {
+        Cell::Missing => Cell::Null,
+        c => c,
+    })
+}
+
 fn to_cell(v: &Bound<'_, PyAny>) -> PyResult<Cell> {
     if v.is_none() {
         Ok(Cell::Null)
@@ -339,6 +357,8 @@ struct PyTable {
     frozen: bool,
     /// Set by the Python loaders while a load with `fields=` runs: only these keys are stored.
     only: Option<std::collections::HashSet<String>>,
+    /// Set while `append` or `extend` runs with `default=`: called for values JSON has no form for.
+    conv: Option<PyObject>,
 }
 
 /// Builds one dict per visited row by copying a template that already holds every key, then replacing values.
@@ -612,7 +632,11 @@ impl PyTable {
                 if v.is_exact_instance_of::<PyString>() {
                     self.t.put_str_cell(c, v.downcast::<PyString>()?)?
                 } else {
-                    self.t.put_at(c, to_cell(&v)?)
+                    let cell = match (to_cell(&v), &self.conv) {
+                        (Err(_), Some(f)) => to_cell_with(&v, f.bind(v.py()))?,
+                        (r, _) => r?,
+                    };
+                    self.t.put_at(c, cell)
                 }
                 Ok(())
             });
@@ -832,27 +856,45 @@ impl PyTable {
             seen_keys: vec![],
             frozen: false,
             only: None,
+            conv: None,
         })
     }
     fn __len__(&self) -> usize {
         self.t.len()
     }
-    fn append(&mut self, py: Python<'_>, row: &Bound<'_, PyAny>) -> PyResult<()> {
+    #[pyo3(signature = (row, default = None))]
+    fn append(
+        &mut self,
+        py: Python<'_>,
+        row: &Bound<'_, PyAny>,
+        default: Option<PyObject>,
+    ) -> PyResult<()> {
         self.guard()?;
+        self.conv = default;
         let r = self.push_any(py, row);
+        self.conv = None;
         self.sync_keys(py)?;
         r
     }
-    fn extend(&mut self, py: Python<'_>, rows: &Bound<'_, PyAny>) -> PyResult<usize> {
+    #[pyo3(signature = (rows, default = None))]
+    fn extend(
+        &mut self,
+        py: Python<'_>,
+        rows: &Bound<'_, PyAny>,
+        default: Option<PyObject>,
+    ) -> PyResult<usize> {
         self.guard()?;
-        self.bulk(py, |s| {
+        self.conv = default;
+        let r = self.bulk(py, |s| {
             let mut n = 0;
             for r in rows.try_iter()? {
                 s.push_any(py, &r?)?;
                 n += 1
             }
             Ok(n)
-        })
+        });
+        self.conv = None;
+        r
     }
     /// Rows given as sequences of values aligned with `names` (what a DB-API cursor yields): no dict is built per row.
     #[pyo3(signature = (names, rows, default = None))]
@@ -1471,6 +1513,7 @@ impl PyTable {
             seen_keys: vec![],
             frozen: false,
             only: None,
+            conv: None,
         };
         t.sync_keys(py)?;
         Ok(t)
@@ -1540,6 +1583,7 @@ impl PyTable {
             seen_keys: vec![],
             frozen: true,
             only: None,
+            conv: None,
         };
         t.sync_keys(py)?;
         Ok(t)
@@ -1581,6 +1625,7 @@ impl PyTable {
             seen_keys: vec![],
             frozen: false,
             only: None,
+            conv: None,
         };
         t.sync_keys(py)?;
         Ok(t)

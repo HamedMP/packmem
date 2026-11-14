@@ -147,11 +147,11 @@ class Table:
 
     __slots__ = ("_t", "_share")
 
-    def __init__(self, records=None, hint="balanced"):
+    def __init__(self, records=None, hint="balanced", default=None):
         self._t = _Table(hint)
         self._share = None
         if records is not None:
-            self._t.extend(records)
+            self._t.extend(records, default)
 
     # --- list-of-dicts behaviour ---
     def __len__(self):
@@ -209,14 +209,16 @@ class Table:
     def __repr__(self):
         return f"<packmem.Table {len(self)} rows x {len(self.columns)} columns, {self.nbytes / 1e6:.1f} MB>"
 
-    def append(self, row):
-        self._t.append(row)
+    def append(self, row, default=None):
+        self._t.append(row, default)
 
-    def extend(self, rows):
+    def extend(self, rows, default=None):
+        """Add records. `default` is called for any value JSON has no form for (dates, decimals, UUIDs), at any
+        depth, and must return one that it has, as with `json.dumps(default=...)`."""
         if isinstance(rows, Table):
             self._t.extend_table((rows.copy() if rows is self else rows)._t)
         else:
-            self._t.extend(rows)
+            self._t.extend(rows, default)
 
     def set_column(self, name, values):
         """Set one field on every record: `values` is a single value, or one value per record.
@@ -643,9 +645,9 @@ class View:
         return self._sel.ids()
 
 
-def from_records(records, hint="balanced"):
-    """Pack any iterable of mappings (dicts, csv.DictReader, sqlite3.Row with keys, ...)."""
-    return Table(records, hint=hint)
+def from_records(records, hint="balanced", default=None):
+    """Pack any iterable of mappings (dicts, csv.DictReader, sqlite3.Row with keys, ...). See `Table.extend` for `default`."""
+    return Table(records, hint=hint, default=default)
 
 
 def from_cursor(cursor, hint="balanced", default=None):

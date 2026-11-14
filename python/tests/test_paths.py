@@ -569,6 +569,23 @@ def test_large_jsonl_loads_on_threads_like_one_thread():
         assert len(bad) == len(want) + 1 and bad[-1]["id"] == -1
 
 
+def test_default_converts_values_json_has_no_form_for():
+    import datetime, decimal, json, uuid
+    u = uuid.UUID(int=7)
+    rows = [{"pk": 1, "fields": {"created": datetime.datetime(2026, 5, 1, 12, 30), "total": decimal.Decimal("9.50"), "tags": [u, "a"]}, "day": datetime.date(2026, 5, 1)},
+            {"pk": 2, "fields": {"created": None, "total": decimal.Decimal("0.1")}, "day": None, "id": u}]
+    want = json.loads(json.dumps(rows, default=str))
+    assert list(packmem.Table(rows, default=str)) == want == list(packmem.from_records(rows, default=str))
+    t = packmem.Table()
+    t.extend(rows, default=str); t.append(rows[0], default=str)
+    assert list(t) == want + want[:1] and t.count(day="2026-05-01") == 2
+    for bad in (lambda: packmem.Table(rows), lambda: t.append(rows[1]), lambda: t.extend(rows)):
+        try: bad(); raise AssertionError("expected TypeError without default")
+        except TypeError: pass
+    assert len(t) == 3
+    assert list(packmem.Table([{"x": decimal.Decimal("1.5")}], default=float)) == [{"x": 1.5}]
+
+
 def test_arrow_and_parquet():
     try:
         import pyarrow as pa, pyarrow.parquet as pq
