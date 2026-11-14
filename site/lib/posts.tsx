@@ -100,7 +100,9 @@ function DataLoaderPost() {
       <P>
         The usual advice in the issue is to hold the data as NumPy arrays or tensors, which works for numbers but not for nested
         conversation text. <C>gc.freeze()</C> stops the collector&apos;s writes but not the reference counts, and does nothing under
-        spawn.
+        spawn. An open pull request, <A href="https://github.com/pytorch/pytorch/pull/191555">#191555</A>, proposes a{" "}
+        <C>SharedList</C> for PyTorch itself: it pickles each record into one shared-memory buffer that workers read without copying.
+        Its maintainers have asked for a design review first.
       </P>
 
       <H2>The fix: one memory-mapped file for every worker</H2>
