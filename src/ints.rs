@@ -139,7 +139,8 @@ impl Store {
         }
     }
     pub fn sum(&self, n: usize) -> u64 {
-        each!(self, v => v.iter().map(|&x| x as u64).sum(), b, _z => (0..n).map(|i| b.get(i)).sum())
+        // wraps on purpose: `PackedInts::sum` is a wrapping 64-bit sum, and the table only uses it for small values
+        each!(self, v => v.iter().fold(0u64, |a, &x| a.wrapping_add(x as u64)), b, _z => (0..n).fold(0u64, |a, i| a.wrapping_add(b.get(i))))
     }
     pub fn count_range(&self, n: usize, lo: u64, hi: u64) -> usize {
         each!(self, v => v.iter().filter(|&&x| (x as u64) >= lo && (x as u64) <= hi).count(), b, _z => (0..n).filter(|&i| { let x = b.get(i); x >= lo && x <= hi }).count())
