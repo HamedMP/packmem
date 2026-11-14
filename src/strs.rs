@@ -374,7 +374,7 @@ impl StrPool {
                 w.u8(1);
                 w.u8(p.n_symbols);
                 for s in &p.symbols {
-                    w.u64(s.to_u64())
+                    w.u64_raw(s.to_u64())
                 }
                 w.raw(&p.lengths)
             }
@@ -399,7 +399,7 @@ impl StrPool {
                 let n_symbols = r.get_u8()?;
                 let mut symbols = [fsst::Symbol::ZERO; 255];
                 for s in &mut symbols {
-                    *s = fsst::Symbol::from_slice(&r.get_u64()?.to_le_bytes())
+                    *s = fsst::Symbol::from_slice(&r.get_u64_raw()?.to_le_bytes())
                 }
                 let lengths: [u8; 255] = r.take(255)?.try_into().unwrap();
                 if lengths.iter().any(|&l| l > 8) {

@@ -911,12 +911,12 @@ impl ListCol {
         }
         let elems = *offs.last().unwrap() as usize;
         let mut shapes = Vec::new();
-        for _ in 0..r.len(8)? {
+        for _ in 0..r.len(1)? {
             shapes.push(r.get_v_u16()?.to_vec())
         }
         let shape_of = PackedInts::read(r)?;
         let (mut names, mut cols) = (Vec::new(), Vec::new());
-        for _ in 0..r.len(8)? {
+        for _ in 0..r.len(1)? {
             names.push(r.get_string()?);
             let col = Chunk::read_max(r, u32::MAX as usize)?;
             if col.len as usize != elems {
@@ -2321,7 +2321,7 @@ use crate::wire::{R, Res, W, bad};
 const MAGIC: &[u8; 4] = b"PKMT";
 const MAGIC_0_2: &[u8; 4] = b"PKM2";
 /// Raised whenever a reader built before the change could misread the bytes.
-pub const FORMAT: u8 = 3;
+pub const FORMAT: u8 = 4;
 
 fn write_cell(w: &mut W, c: &Cell) {
     match c {
@@ -2471,7 +2471,7 @@ impl Chunk {
         }
         let (nulls, missing) = (read_bits(r, n)?, read_bits(r, n)?);
         let mut patches = BTreeMap::new();
-        for _ in 0..r.len(5)? {
+        for _ in 0..r.len(2)? {
             let i = r.get_u32()?;
             if i >= len {
                 return bad("patch position");
@@ -2553,17 +2553,21 @@ impl DynTable {
     }
     fn read(mut r: R) -> Res<DynTable> {
         let magic = r.take(4)?;
-        if magic == MAGIC {
-            let format = r.get_u8()?;
-            if format > FORMAT {
-                return Err(format!(
-                    "written by a newer packmem (format {format}, this build reads up to {FORMAT}): upgrade packmem to read it"
-                )
-                .into());
-            }
-        } else if magic != MAGIC_0_2 {
+        let format = if magic == MAGIC {
+            r.get_u8()?
+        } else if magic == MAGIC_0_2 {
+            2
+        } else {
             return Err("not packed table data, or written by packmem 0.1".into());
+        };
+        if format > FORMAT {
+            return Err(format!(
+                "written by a newer packmem (format {format}, this build reads up to {FORMAT}): upgrade packmem to read it"
+            )
+            .into());
         }
+        // formats 2 and 3 wrote every single integer at full width
+        r.fixed = format < 4;
         let hint = match r.get_u8()? {
             0 => Hint::Memory,
             1 => Hint::Balanced,
@@ -2574,7 +2578,7 @@ impl DynTable {
         let len = r.get_u64()? as usize;
         let (nfull, plen) = (len / CHUNK, len % CHUNK);
         let mut t = DynTable::new(hint);
-        for _ in 0..r.len(8)? {
+        for _ in 0..r.len(1)? {
             let name = r.get_string()?;
             let mut col = Column {
                 chunks: Vec::new(),
