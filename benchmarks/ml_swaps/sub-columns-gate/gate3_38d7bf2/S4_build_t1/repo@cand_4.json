@@ -1,0 +1,80 @@
+{
+ "tree": "$WORK/repo",
+ "mode": "build",
+ "datasets": "llava665k",
+ "pid": 470971,
+ "build_s": 6.514404236804694,
+ "linux_build_pss_anon": {
+  "samples": [
+   [
+    0.0,
+    496.2
+   ]
+  ],
+  "max_pss_anon_mb": 496.2
+ },
+ "n": 665298,
+ "rss_after_build_mb": 582.193152,
+ "footprint_after_build_mb": 569.3,
+ "linux_after_build": {
+  "smaps": {
+   "Rss": 582.2,
+   "Pss": 572.2,
+   "Pss_Anon": 496.2,
+   "Pss_File": 76.0,
+   "Pss_Shmem": 0.0,
+   "Shared_Clean": 12.9,
+   "Shared_Dirty": 0.0,
+   "Private_Clean": 73.1,
+   "Private_Dirty": 496.2,
+   "Swap": 0.0,
+   "USS": 569.3
+  },
+  "VmHWM_mb": 645.1,
+  "ru_maxrss_mb": 645.1,
+  "malloc": {
+   "in_use_mb": 397.4,
+   "mmapped_mb": 233.1,
+   "arena_mb": 190.9,
+   "free_in_arenas_mb": 26.5
+  }
+ },
+ "linux_release": {
+  "release_freed_memory": "called",
+  "returned": "None",
+  "after_settle": {
+   "smaps": {
+    "Rss": 557.8,
+    "Pss": 547.9,
+    "Pss_Anon": 471.8,
+    "Pss_File": 76.0,
+    "Pss_Shmem": 0.0,
+    "Shared_Clean": 12.9,
+    "Shared_Dirty": 0.0,
+    "Private_Clean": 73.1,
+    "Private_Dirty": 471.8,
+    "Swap": 0.0,
+    "USS": 544.9
+   },
+   "VmHWM_mb": 645.1,
+   "ru_maxrss_mb": 645.1,
+   "malloc": {
+    "in_use_mb": 397.4,
+    "mmapped_mb": 233.1,
+    "arena_mb": 189.3,
+    "free_in_arenas_mb": 25.0
+   }
+  }
+ },
+ "table_nbytes": 296193386,
+ "lengths_s": 5.0180896781384945,
+ "modality_lengths_s": 5.290672040078789,
+ "lengths_sha256": "348d788a1eda0c285aa7984187337dcc5aad8ef059bc37a887ca1cb0fb4794e8",
+ "getitem_s": 8.757371162064373,
+ "n_samples": 20000,
+ "batches_sha256": "3c98d761142c9abb7ea7a169f03160b374b3e4cfa180c2c45c1ad6eba47f003a",
+ "linux_peak": {
+  "VmHWM_mb": 733.7,
+  "ru_maxrss_mb": 733.3
+ }
+}

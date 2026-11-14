@@ -1,0 +1,10 @@
+Please install pyav to use video processing functions.
+Loading $WORK/llava-next/data/llava_v1_5_mix665k.json with all sampling strategy
+Loaded 665000 samples from $WORK/llava-next/data/llava_v1_5_mix665k.json
+Loading $WORK/llava-next/data/si_mix.json with end:200000 sampling strategy
+Loaded 200000 samples from $WORK/llava-next/data/si_mix.json
+Loading $WORK/llava-next/data/text_mix.jsonl with first:80% sampling strategy
+Loaded 120000 samples from $WORK/llava-next/data/text_mix.jsonl
+Loaded 985000 samples from $WORK/llava-next/data/mix.yaml
+Formatting inputs...Skip in lazy mode
+{"records": 985000, "type": "Table", "load_s": 21.755, "footprint_after_load_mb": 1139.4, "linux_build_pss_anon": {"samples": [[0.0, 225.4], [10.99, 735.9], [16.36, 1321.0]], "max_pss_anon_mb": 1321.0}, "linux_after_build": {"smaps": {"Rss": 1208.9, "Pss": 1198.0, "Pss_Anon": 1118.8, "Pss_File": 79.3, "Pss_Shmem": 0.0, "Shared_Clean": 14.3, "Shared_Dirty": 0.0, "Private_Clean": 75.9, "Private_Dirty": 1118.8, "Swap": 0.0, "USS": 1194.7}, "VmHWM_mb": 1603.8, "ru_maxrss_mb": 1603.8, "malloc": {"in_use_mb": 838.3, "mmapped_mb": 247.0, "arena_mb": 767.9, "free_in_arenas_mb": 176.6}}, "linux_release": {"release_freed_memory": "called", "returned": "None", "after_settle": {"smaps": {"Rss": 1034.8, "Pss": 1024.0, "Pss_Anon": 944.7, "Pss_File": 79.3, "Pss_Shmem": 0.0, "Shared_Clean": 14.3, "Shared_Dirty": 0.0, "Private_Clean": 75.9, "Private_Dirty": 944.7, "Swap": 0.0, "USS": 1020.6}, "VmHWM_mb": 1603.8, "ru_maxrss_mb": 1603.8, "malloc": {"in_use_mb": 838.3, "mmapped_mb": 247.0, "arena_mb": 758.4, "free_in_arenas_mb": 167.1}}}, "lengths_s": 10.982, "modality_lengths_s": 10.928, "lengths_sha": "e45b09149f28c8ad838dfd0dc1138fecdf7a01cb47460092fb08384567649f9f", "iter_to_first_batch_s": 0.002, "iter_s": 4.44, "iter_to_last_batch_s": 4.423, "main_footprint_end_mb": 1089.2, "main_lifetime_peak_mb": 1529.5, "max_concurrent_total_mb": 1091.2, "sha256": "392700325fba3a76c355004dbf8dc39eb15ef63a783ea6d9e13bfc1e281c2229", "linux_peak": {"VmHWM_mb": 1603.8, "ru_maxrss_mb": 1603.8}}

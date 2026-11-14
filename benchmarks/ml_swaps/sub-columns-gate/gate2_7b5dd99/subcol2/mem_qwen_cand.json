@@ -1,0 +1,105 @@
+{
+ "kind": "qwen",
+ "tree": "$WORK/repo",
+ "packmem": "0.3.0.dev0",
+ "build_s": 1.53,
+ "rows": 665298,
+ "nbytes": 296193386,
+ "after_build": {
+  "smaps": {
+   "Rss": 709.3,
+   "Pss": 698.3,
+   "Pss_Anon": 623.4,
+   "Pss_File": 74.8,
+   "Pss_Shmem": 0.0,
+   "Shared_Clean": 13.6,
+   "Shared_Dirty": 0.0,
+   "Private_Clean": 72.3,
+   "Private_Dirty": 623.4,
+   "Swap": 0.0,
+   "USS": 695.7
+  },
+  "VmHWM_mb": 1991.2,
+  "ru_maxrss_mb": 1991.2,
+  "malloc": {
+   "in_use_mb": 396.5,
+   "mmapped_mb": 225.5,
+   "arena_mb": 328.6,
+   "free_in_arenas_mb": 157.6
+  }
+ },
+ "reuse": {
+  "alloc_mb": 650.1,
+  "uss_growth_mb": 633.4,
+  "reused_mb": 16.7,
+  "before": {
+   "smaps": {
+    "Rss": 709.3,
+    "Pss": 698.3,
+    "Pss_Anon": 623.4,
+    "Pss_File": 74.8,
+    "Pss_Shmem": 0.0,
+    "Shared_Clean": 13.6,
+    "Shared_Dirty": 0.0,
+    "Private_Clean": 72.3,
+    "Private_Dirty": 623.4,
+    "Swap": 0.0,
+    "USS": 695.7
+   },
+   "VmHWM_mb": 1991.2,
+   "ru_maxrss_mb": 1991.2,
+   "malloc": {
+    "in_use_mb": 396.5,
+    "mmapped_mb": 225.5,
+    "arena_mb": 328.6,
+    "free_in_arenas_mb": 157.6
+   }
+  },
+  "after_alloc": {
+   "smaps": {
+    "Rss": 1342.6,
+    "Pss": 1332.3,
+    "Pss_Anon": 1256.6,
+    "Pss_File": 75.7,
+    "Pss_Shmem": 0.0,
+    "Shared_Clean": 13.4,
+    "Shared_Dirty": 0.0,
+    "Private_Clean": 72.5,
+    "Private_Dirty": 1256.6,
+    "Swap": 0.0,
+    "USS": 1329.1
+   },
+   "VmHWM_mb": 1991.2,
+   "ru_maxrss_mb": 1991.2,
+   "malloc": {
+    "in_use_mb": 1046.6,
+    "mmapped_mb": 561.1,
+    "arena_mb": 626.2,
+    "free_in_arenas_mb": 140.7
+   }
+  },
+  "after_free": {
+   "smaps": {
+    "Rss": 698.9,
+    "Pss": 688.6,
+    "Pss_Anon": 612.9,
+    "Pss_File": 75.7,
+    "Pss_Shmem": 0.0,
+    "Shared_Clean": 13.4,
+    "Shared_Dirty": 0.0,
+    "Private_Clean": 72.5,
+    "Private_Dirty": 612.9,
+    "Swap": 0.0,
+    "USS": 685.4
+   },
+   "VmHWM_mb": 1991.2,
+   "ru_maxrss_mb": 1991.2,
+   "malloc": {
+    "in_use_mb": 396.5,
+    "mmapped_mb": 225.5,
+    "arena_mb": 318.0,
+    "free_in_arenas_mb": 147.0
+   }
+  }
+ }
+}

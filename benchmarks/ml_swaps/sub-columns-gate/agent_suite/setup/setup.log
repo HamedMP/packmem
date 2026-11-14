@@ -1,0 +1,218 @@
+== 2026-11-14T03:18:57+01:00 setup start: phases=all (load 9.86,19.17,28.31)
+Linux linux-server 6.8.0-139-generic #139-Ubuntu SMP PREEMPT_DYNAMIC Sat Aug  1 03:52:05 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+32
+               total        used        free      shared  buff/cache   available
+Mem:             124          14          43           1          69         110
+Swap:              3           1           2
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/md2        1.8T  291G  1.4T  18% /
+Python 3.12.3
+== 2026-11-14T03:18:57+01:00 venv020: PyPI packmem 0.2.0 (load 9.86,19.17,28.31)
+09c5ba04ee380af34600af1c9d6fac3f3a0337ebeb19f75292eb6423633614c7  $WORK/wheels/pypi020/packmem-0.2.0-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+datasets==5.2.0
+huggingface_hub==2.4.0
+numpy==2.5.4
+pandas==3.1.1
+psutil==7.2.2
+pyarrow==26.0.1
+torch==2.15.0+cpu
+$WORK/venv020/lib/python3.12/site-packages/packmem/__init__.py 0.2.0 5.2.0 2.15.0+cpu
+== 2026-11-14T03:19:28+01:00 main: Rust toolchain, clone, maturin build (load 10.40,18.47,27.79)
+info: downloading installer
+info: profile set to minimal
+info: default host tuple is x86_64-unknown-linux-gnu
+info: syncing channel updates for stable-x86_64-unknown-linux-gnu
+info: latest update on 2026-11-12 for version 1.100.0 (0ef1bc386 2026-11-09)
+info: downloading 3 components
+info: default toolchain set to stable-x86_64-unknown-linux-gnu
+
+  stable-x86_64-unknown-linux-gnu installed - rustc 1.100.0 (0ef1bc386 2026-11-09)
+
+
+Rust is installed now. Great!
+
+To get started you need Cargo's bin directory 
+($WORK/rust/cargo/bin) in your PATH
+environment variable. This has not been done automatically.
+
+To configure your current shell, you need to source
+the corresponding env file under $WORK/rust/cargo.
+
+Consider running the right command for your shell (note the leading DOT):
+. "$WORK/rust/cargo/env" # For 
+sh/ash/dash/pdksh/bash/zsh
+cargo:rerun-if-env-changed=CC_x86_64-unknown-linux-gnu
+CC_x86_64-unknown-linux-gnu = None
+cargo:rerun-if-env-changed=CC_x86_64_unknown_linux_gnu
+CC_x86_64_unknown_linux_gnu = None
+cargo:rerun-if-env-changed=HOST_CC
+HOST_CC = None
+cargo:rerun-if-env-changed=CC
+CC = None
+cargo:rerun-if-env-changed=CC_ENABLE_DEBUG_OUTPUT
+cargo:rerun-if-env-changed=CPATH
+cargo:rerun-if-env-changed=C_INCLUDE_PATH
+cargo:rerun-if-env-changed=CPLUS_INCLUDE_PATH
+cargo:rerun-if-env-changed=OBJC_INCLUDE_PATH
+cargo:rerun-if-env-changed=OBJCPLUS_INCLUDE_PATH
+cargo:rerun-if-env-changed=COMPILER_PATH
+cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH
+cargo:rerun-if-env-changed=GCC_EXEC_PREFIX
+cargo:rerun-if-env-changed=CRATE_CC_NO_DEFAULTS
+CRATE_CC_NO_DEFAULTS = None
+cargo:rerun-if-env-changed=CFLAGS
+CFLAGS = None
+cargo:rerun-if-env-changed=HOST_CFLAGS
+HOST_CFLAGS = None
+cargo:rerun-if-env-changed=CFLAGS_x86_64_unknown_linux_gnu
+CFLAGS_x86_64_unknown_linux_gnu = None
+cargo:rerun-if-env-changed=CFLAGS_x86_64-unknown-linux-gnu
+CFLAGS_x86_64-unknown-linux-gnu = None
+cargo 1.100.0 (3acc79c0c 2026-11-05)
+rustc 1.100.0 (0ef1bc386 2026-11-09)
+4629330017da8eecda770a5658bd28f3a07e19f6 2026-11-14T03:12:56+01:00 Load single-array JSON files on threads and return freed buffers on macOS
+    Updating crates.io index
+ Downloading crates ...
+  Downloaded heck v0.5.0
+  Downloaded autocfg v1.5.1
+  Downloaded jobserver v0.1.35
+  Downloaded cfg-if v1.0.5
+  Downloaded equivalent v1.0.3
+  Downloaded foldhash v0.2.0
+  Downloaded indoc v2.0.8
+  Downloaded itoa v1.0.19
+  Downloaded memoffset v0.9.1
+  Downloaded unindent v0.2.4
+  Downloaded pyo3-macros v0.23.5
+  Downloaded rustc-hash v2.1.3
+  Downloaded find-msvc-tools v0.1.15
+  Downloaded rustversion v1.0.23
+  Downloaded shlex v2.0.1
+  Downloaded target-lexicon v0.12.16
+  Downloaded memmap2 v0.9.12
+  Downloaded once_cell v1.21.4
+  Downloaded pyo3-build-config v0.23.5
+  Downloaded zmij v1.0.23
+  Downloaded quote v1.0.47
+  Downloaded pkg-config v0.3.34
+  Downloaded unicode-ident v1.0.27
+  Downloaded proc-macro2 v1.0.107
+  Downloaded fsst-rs v0.7.0
+  Downloaded getrandom v0.4.3
+  Downloaded zstd v0.14.4
+  Downloaded r-efi v6.0.0
+  Downloaded serde_derive v1.0.229
+  Downloaded serde_core v1.0.229
+  Downloaded zstd-safe v8.3.0
+  Downloaded hashbrown v0.17.1
+  Downloaded pyo3-macros-backend v0.23.5
+  Downloaded memchr v2.8.3
+  Downloaded serde v1.0.229
+  Downloaded pyo3-ffi v0.23.5
+  Downloaded indexmap v2.14.2
+  Downloaded cc v1.11.2
+  Downloaded serde_json v1.0.154
+  Downloaded portable-atomic v1.15.0
+  Downloaded syn v2.0.119
+  Downloaded syn v3.0.10
+  Downloaded zstd-sys v2.1.3+zstd.1.5.7
+  Downloaded libc v0.2.191
+  Downloaded pyo3 v0.23.5
+🍹 Building a mixed python/rust project
+🐍 Found CPython 3.12 at /usr/bin/python3
+🔗 Found pyo3 bindings with abi3-py3.10 support
+📡 Using build options features from pyproject.toml
+   Compiling libc v0.2.191
+   Compiling target-lexicon v0.12.16
+   Compiling once_cell v1.21.4
+   Compiling find-msvc-tools v0.1.15
+   Compiling shlex v2.0.1
+   Compiling pkg-config v0.3.34
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.27
+   Compiling serde_core v1.0.229
+   Compiling zmij v1.0.23
+   Compiling autocfg v1.5.1
+   Compiling zstd-safe v8.3.0
+   Compiling serde v1.0.229
+   Compiling hashbrown v0.17.1
+   Compiling memoffset v0.9.1
+   Compiling equivalent v1.0.3
+   Compiling pyo3-build-config v0.23.5
+   Compiling serde_json v1.0.154
+   Compiling heck v0.5.0
+   Compiling syn v2.0.119
+   Compiling itoa v1.0.19
+   Compiling foldhash v0.2.0
+   Compiling indexmap v2.14.2
+   Compiling memchr v2.8.3
+   Compiling rustc-hash v2.1.3
+   Compiling fsst-rs v0.7.0
+   Compiling jobserver v0.1.35
+   Compiling indoc v2.0.8
+   Compiling cc v1.11.2
+   Compiling cfg-if v1.0.5
+   Compiling unindent v0.2.4
+   Compiling pyo3-ffi v0.23.5
+   Compiling pyo3-macros-backend v0.23.5
+   Compiling pyo3 v0.23.5
+   Compiling memmap2 v0.9.12
+   Compiling zstd-sys v2.1.3+zstd.1.5.7
+   Compiling pyo3-macros v0.23.5
+   Compiling zstd v0.14.4
+   Compiling packmem v0.2.0 ($WORK/src/packmem)
+   Compiling packmem-py v0.2.0 ($WORK/src/packmem/python)
+    Finished `release` profile [optimized] target(s) in 14.73s
+📦 Built wheel for abi3 Python ≥ 3.10 to $WORK/wheels/main/packmem-0.3.0.dev0-cp310-abi3-manylinux_2_34_x86_64.whl
+total 1128
+drwxrwxr-x 2 <user> <user>    4096 Nov 14 03:19 .
+drwxrwxr-x 4 <user> <user>    4096 Nov 14 03:19 ..
+-rw-rw-r-- 1 <user> <user> 1143294 Nov 14 03:19 packmem-0.3.0.dev0-cp310-abi3-manylinux_2_34_x86_64.whl
+6afc56519bdabf7dd2d404e51eb0568406dbd4043f18f9233d612b849805f4b9  $WORK/wheels/main/packmem-0.3.0.dev0-cp310-abi3-manylinux_2_34_x86_64.whl
+$WORK/venvmain/lib/python3.12/site-packages/packmem/__init__.py 0.3.0.dev0
+[[1, None]] {'a': [{'x': 1}, {'y': None}]}
+== 2026-11-14T03:20:22+01:00 venv314: CPython 3.14 (uv-managed, inside $WORK) for the GC suite (load 9.67,16.94,26.73)
+downloading uv 0.13.8 x86_64-unknown-linux-gnu
+installing to $WORK/uv/bin
+  uv
+  uvx
+everything's installed!
+Using Python 3.14.10 environment at: venv314
+3.14.10 (main, Nov 11 2026, 00:18:44) [Clang 23.1.3 ] (2000, 10, 10) 0.3.0.dev0
+== 2026-11-14T03:20:24+01:00 data: Hub downloads and derived sources (prepare.py, capped at 24 GB) (load 9.67,16.94,26.73)
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+{"hermes_fc": {"repo": "NousResearch/hermes-function-calling-v1", "revision": "dae3e1d28cfbcf4b915c04ea1e072030529b4bda", "license": "apache-2.0", "kind": "function calling", "derive": "the five JSON arrays (one per Hub config) concatenated as JSON lines; records unchanged", "raw": [{"file": "NousResearch__hermes-function-calling-v1/func-calling-singleturn.json", "bytes": 17793686, "sha256": "fb2df9fe3f295dfd65b223c2dbf04d6b90006357d737f8f8927749f0bea09527"}, {"file": "NousResearch__hermes-function-calling-v1/func-calling.json", "bytes": 20554130, "sha256": "769478035a886678d525d057ea66e3fd1e247f43e35c8d6d7cc866e080b6742b"}, {"file": "NousResearch__hermes-function-calling-v1/glaive-function-calling-5k.json", "bytes": 20416419, "sha256": "b98eb3f160359f27ad15018e974ce6db444f566eb5be4aa9e4aa690b34d50832"}, {"file": "NousResearch__hermes-function-calling-v1/json-mode-agentic.json", "bytes": 5019263, "sha256": "7343a1ce0b3c1e894978fc15bb79c695a925f835c91a81786bf59e7379eb5da2"}, {"file": "NousResearch__hermes-function-calling-v1/json-mode-singleturn.json", "bytes": 2953007, "sha256": "c07b20b7e88afc9cde0cf8c92e50ad150861ba2e35f4c82eb85999aba7182f4a"}], "src": "data/src/hermes_fc.jsonl", "src_bytes": 66717956, "src_sha256": "ea5f45d56239bfd898c7f64886629ce459b1e3d72d8df3ce4ddc5f2e0fc2059c", "records": 11578}}
+{"glaive_fc": {"repo": "glaiveai/glaive-function-calling-v2", "revision": "e7f4b6456019f5d8bcb991ef0dd67d8ff23221ac", "license": "apache-2.0", "kind": "function calling (control: two long strings per record)", "derive": "the JSON array as JSON lines; records unchanged", "raw": [{"file": "glaiveai__glaive-function-calling-v2/glaive-function-calling-v2.json", "bytes": 271190065, "sha256": "e9b5d671812b5ca2fbd7b625a37d5c99a19576c37252cdc806defe256aea6dad"}], "src": "data/src/glaive_fc.jsonl", "src_bytes": 268044140, "src_sha256": "24379b92034efbebcc5de91cb6794d1108f0f781e34b569a7b13df1ba4de2476", "records": 112960}}
+{"swe_smith": {"repo": "SWE-bench/SWE-smith-trajectories", "revision": "08e109b4a59eaeebf80e4675cd125d42e7ac99a4", "license": "mit", "kind": "SWE agent trajectories (tool-calling split)", "derive": "first shard of the `tool` split; the `messages` column (published as JSON text) decoded, so each record holds its OpenAI-format message list", "raw": [{"file": "SWE-bench__SWE-smith-trajectories/data/tool-00000-of-00008.parquet", "bytes": 248851790, "sha256": "ac76e9efe75978f83d4daec98a55604587dd58b0f1509364893b8778cbf5b487"}], "src": "data/src/swe_smith.jsonl", "src_bytes": 823757622, "src_sha256": "1c80ef0c701c556821048ec45f7d11d6523c4bd4c9bba1d85a5f0c308f6fb73c", "records": 3013}}
+{"swe_rebench": {"repo": "nebius/SWE-rebench-openhands-trajectories", "revision": "35455389ab51bf5e2306bfd436ef72d0f98bf882", "license": "cc-by-4.0", "kind": "SWE agent trajectories (OpenHands)", "derive": "first 4000 rows; inside `trajectory` messages and their tool calls, keys whose value is null are dropped, as the OpenAI wire format writes them (tool_calls only on assistant turns, tool_call_id/name only on tool turns)", "raw": [{"file": "nebius__SWE-rebench-openhands-trajectories/trajectories.parquet", "bytes": 2079503354, "sha256": "14048dd1fcd22ce094b6e85f8a38f223a9ef1327031aaaad052804870212efa1"}], "src": "data/src/swe_rebench.jsonl", "src_bytes": 1129632756, "src_sha256": "3fe1a66b822ed0d088e0efd3dc3341be8a74eebd915a2e228c622ac2b4611409", "records": 4000}}
+{"swe_rebench_pq": {"repo": "nebius/SWE-rebench-openhands-trajectories", "revision": "35455389ab51bf5e2306bfd436ef72d0f98bf882", "license": "cc-by-4.0", "kind": "SWE agent trajectories (OpenHands), as published in parquet", "derive": "the same first 4000 rows, rewritten as a zstd parquet file with the published schema", "raw": [{"file": "nebius__SWE-rebench-openhands-trajectories/trajectories.parquet", "bytes": 2079503354, "sha256": "14048dd1fcd22ce094b6e85f8a38f223a9ef1327031aaaad052804870212efa1"}], "src": "data/src/swe_rebench_pq.parquet", "src_bytes": 157046960, "src_sha256": "0d45cf15d39a9b236f086217801c8b3d3dcb36cd89e6be34905a65c82b8cbd8b", "records": 4000}}
+{"mind2web": {"repo": "osunlp/Mind2Web", "revision": "17ece8eb89862368edc0cc806acee6fca5163474", "license": "cc-by-4.0", "kind": "web browsing (DOM per action)", "derive": "train shards 0-1; `raw_html` dropped from every action (cleaned_html, operation and the positive/negative DOM candidates kept)", "raw": [{"file": "osunlp__Mind2Web/data/train/train_0.json", "bytes": 616000823, "sha256": "c8b622901057bca813a6d171733c41e4fc266c2902a23d63b9094c0add3f8f2c"}, {"file": "osunlp__Mind2Web/data/train/train_1.json", "bytes": 627832230, "sha256": "41084922c50174ec032185707ae43bb04d3e8d725788b2e95936db629ba59100"}], "src": "data/src/mind2web.jsonl", "src_bytes": 565210661, "src_sha256": "551eaffb042c5a8eb88939ef09a90a63f149534a14f4698f8ddf1e67e5c82302", "records": 200}}
+{"agentnet": {"repo": "xlangai/AgentNet", "revision": "d76ee50a63fad81cfdbe576416757d7c2091ed50", "license": "mit", "kind": "computer use (desktop trajectories)", "derive": "the Ubuntu file as published (screenshots are file names; image archives not downloaded)", "raw": [{"file": "xlangai__AgentNet/agentnet_ubuntu_5k.jsonl", "bytes": 282313437, "sha256": "8e24c5a5a1ef5a5113755b33ed12164fc37ce8fbbd35d1c7dba81bf950d53d00"}], "src": "data/src/agentnet.jsonl", "src_bytes": 282313437, "src_sha256": "8e24c5a5a1ef5a5113755b33ed12164fc37ce8fbbd35d1c7dba81bf950d53d00", "records": 5000}}
+{"gui_odyssey": {"repo": "OpenGVLab/GUI-Odyssey", "revision": "71e0e7e2d169c642e7a99c264d82ffecadf67889", "license": "cc-by-4.0", "kind": "mobile GUI navigation", "derive": "all_anno.json with `steps` and `app` (published as Python-literal text) parsed with ast.literal_eval, giving the per-step structure of the per-episode annotation files", "raw": [{"file": "OpenGVLab__GUI-Odyssey/all_anno.json", "bytes": 33691272, "sha256": "45550df67575d202ea67da21da9f1807af1b7f1a3c817283dafdfd16576b6a21"}], "src": "data/src/gui_odyssey.jsonl", "src_bytes": 33651357, "src_sha256": "295dfd38e6761dcab60a32e2b5bee599ab4815dcb3207277e11fb4a2b3072f69", "records": 7735}}
+4.0G	$WORK/data/raw
+3.1G	$WORK/data/src
+total 3248456
+drwxrwxr-x 2 <user> <user>       4096 Nov 14 03:21 .
+drwxrwxr-x 4 <user> <user>       4096 Nov 14 03:21 ..
+-rw-rw-r-- 1 <user> <user>  282313437 Nov 14 03:21 agentnet.jsonl
+-rw-rw-r-- 1 <user> <user>  268044140 Nov 14 03:20 glaive_fc.jsonl
+-rw-rw-r-- 1 <user> <user>   33651357 Nov 14 03:21 gui_odyssey.jsonl
+-rw-rw-r-- 1 <user> <user>   66717956 Nov 14 03:20 hermes_fc.jsonl
+-rw-rw-r-- 1 <user> <user>  565210661 Nov 14 03:21 mind2web.jsonl
+-rw-rw-r-- 1 <user> <user> 1129632756 Nov 14 03:21 swe_rebench.jsonl
+-rw-rw-r-- 1 <user> <user>  157046960 Nov 14 03:21 swe_rebench_pq.parquet
+-rw-rw-r-- 1 <user> <user>  823757622 Nov 14 03:20 swe_smith.jsonl
+== 2026-11-14T03:21:47+01:00 flights: nycflights13 JSON lines via the packmem repo's benchmarks/fetch_data.py (load 7.14,14.35,24.96)
+flights.jsonl 104.5 MB
+flights.json 104.5 MB
+flights.csv 34.2 MB
+flights.db 27.5 MB
+nginx.jsonl 12.1 MB
+flights rows 336776 | nginx rows 51462
+nginx sample {'time': '17/May/2015:08:05:32 +0000', 'remote_ip': '93.180.71.3', 'remote_user': '-', 'request': 'GET /downloads/product_1 HTTP/1.1', 'response': 304, 'bytes': 0, 'referrer': '-', 'agent': 'Debian APT-HTTP/1.3 (0.8.16~exp12ubuntu10.21)'}
+4e5127d3bcd97f2367274a45e2df1dd8142811961177ce67646c5969dea5a6da  $WORK/data/flights/flights.jsonl
+== 2026-11-14T03:21:53+01:00 setup done (load 7.04,14.21,24.86)
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/md2        1.8T  297G  1.4T  18% /
+12G	$WORK

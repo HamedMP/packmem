@@ -1,0 +1,54 @@
+Traceback (most recent call last):
+  File "$WORK/venv020/lib/python3.12/site-packages/datasets/builder.py", line 1835, in _prepare_split_single
+    for key, table in generator:
+  File "$WORK/venv020/lib/python3.12/site-packages/datasets/packaged_modules/json/json.py", line 369, in _generate_tables
+    self._cast_table(pa_table, json_field_paths=json_field_paths),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WORK/venv020/lib/python3.12/site-packages/datasets/packaged_modules/json/json.py", line 132, in _cast_table
+    pa_table = table_cast(pa_table, self.info.features.arrow_schema)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WORK/venv020/lib/python3.12/site-packages/datasets/table.py", line 2385, in table_cast
+    return cast_table_to_schema(table, schema)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WORK/venv020/lib/python3.12/site-packages/datasets/table.py", line 2313, in cast_table_to_schema
+    raise CastError(
+datasets.table.CastError: Couldn't cast
+id: string
+conversations: list<item: struct<from: string, value: string>>
+  child 0, item: struct<from: string, value: string>
+      child 0, from: string
+      child 1, value: string
+tools: string
+category: string
+subcategory: string
+task: string
+source: string
+to
+{'id': Value('string'), 'conversations': List({'from': Value('string'), 'value': Value('string')}), 'tools': Value('string'), 'category': Value('string'), 'subcategory': Value('string'), 'task': Value('string')}
+because column names don't match
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "$WORK/bench/harness/dl.py", line 171, in <module>
+    main()
+  File "$WORK/bench/harness/dl.py", line 122, in main
+    x, out["load_s"] = load(name, arm)
+                       ^^^^^^^^^^^^^^^
+  File "$WORK/bench/harness/dl.py", line 33, in load
+    return C.load_hf(name)
+           ^^^^^^^^^^^^^^^
+  File "$WORK/bench/harness/common.py", line 152, in load_hf
+    ds = datasets.load_dataset("parquet" if is_parquet(name) else "json", data_files=p, split="train",
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$WORK/venv020/lib/python3.12/site-packages/datasets/load.py", line 1687, in load_dataset
+    builder_instance.download_and_prepare(
+  File "$WORK/venv020/lib/python3.12/site-packages/datasets/builder.py", line 901, in download_and_prepare
+    self._download_and_prepare(
+  File "$WORK/venv020/lib/python3.12/site-packages/datasets/builder.py", line 962, in _download_and_prepare
+    self._prepare_split(split_generator, **prepare_split_kwargs)
+  File "$WORK/venv020/lib/python3.12/site-packages/datasets/builder.py", line 1702, in _prepare_split
+    for job_id, done, content in self._prepare_split_single(
+  File "$WORK/venv020/lib/python3.12/site-packages/datasets/builder.py", line 1887, in _prepare_split_single
+    raise DatasetGenerationError("An error occurred while generating the dataset") from e
+datasets.exceptions.DatasetGenerationError: An error occurred while generating the dataset

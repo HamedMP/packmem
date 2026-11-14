@@ -1,0 +1,19 @@
+{
+ "repo": "$WORK/llava-next/repo-orig",
+ "module": "$WORK/llava-next/repo-orig/llava/train/train.py",
+ "rss_before_load_mb": 315.219968,
+ "load_s": 5.454782614018768,
+ "n": 170000,
+ "container": "list",
+ "rss_after_load_mb": 1821.343744,
+ "lengths_s": 1.3741728127934039,
+ "modality_lengths_s": 1.333347680978477,
+ "getitem_lookups_10k_s": 0.010480998083949089,
+ "rss_end_mb": 1824.149504,
+ "lengths_sha": "317307317195168835f294a59564804de527c6284b2d52f52fb601b7b44aed26",
+ "modality_lengths_sha": "2d218106f7ca242c68ce0410710d289983d3ba378c15e8cdd4c6609d8ea6b6a7",
+ "sample_ids_sha": "92920ae9ea506857732e9b1829b36f42367dc323e98ed0c26a82e8897c3a90bb",
+ "rows_sha_key_order": "b94fb1c0da6883057e075a97e634e065d93e0119bb5c0a3564eb86cacbc21075",
+ "rows_sha_sorted_keys": "e78cd672df0b78721c926ca26521faaa239010247c5e180c0aff062078846657",
+ "hash_s": 2.3627878120169044
+}

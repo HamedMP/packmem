@@ -1,0 +1,171 @@
+{
+ "hermes_fc": {
+  "repo": "NousResearch/hermes-function-calling-v1",
+  "revision": "dae3e1d28cfbcf4b915c04ea1e072030529b4bda",
+  "license": "apache-2.0",
+  "kind": "function calling",
+  "derive": "the five JSON arrays (one per Hub config) concatenated as JSON lines; records unchanged",
+  "raw": [
+   {
+    "file": "NousResearch__hermes-function-calling-v1/func-calling-singleturn.json",
+    "bytes": 17793686,
+    "sha256": "fb2df9fe3f295dfd65b223c2dbf04d6b90006357d737f8f8927749f0bea09527"
+   },
+   {
+    "file": "NousResearch__hermes-function-calling-v1/func-calling.json",
+    "bytes": 20554130,
+    "sha256": "769478035a886678d525d057ea66e3fd1e247f43e35c8d6d7cc866e080b6742b"
+   },
+   {
+    "file": "NousResearch__hermes-function-calling-v1/glaive-function-calling-5k.json",
+    "bytes": 20416419,
+    "sha256": "b98eb3f160359f27ad15018e974ce6db444f566eb5be4aa9e4aa690b34d50832"
+   },
+   {
+    "file": "NousResearch__hermes-function-calling-v1/json-mode-agentic.json",
+    "bytes": 5019263,
+    "sha256": "7343a1ce0b3c1e894978fc15bb79c695a925f835c91a81786bf59e7379eb5da2"
+   },
+   {
+    "file": "NousResearch__hermes-function-calling-v1/json-mode-singleturn.json",
+    "bytes": 2953007,
+    "sha256": "c07b20b7e88afc9cde0cf8c92e50ad150861ba2e35f4c82eb85999aba7182f4a"
+   }
+  ],
+  "src": "data/src/hermes_fc.jsonl",
+  "src_bytes": 66717956,
+  "src_sha256": "ea5f45d56239bfd898c7f64886629ce459b1e3d72d8df3ce4ddc5f2e0fc2059c",
+  "records": 11578
+ },
+ "glaive_fc": {
+  "repo": "glaiveai/glaive-function-calling-v2",
+  "revision": "e7f4b6456019f5d8bcb991ef0dd67d8ff23221ac",
+  "license": "apache-2.0",
+  "kind": "function calling (control: two long strings per record)",
+  "derive": "the JSON array as JSON lines; records unchanged",
+  "raw": [
+   {
+    "file": "glaiveai__glaive-function-calling-v2/glaive-function-calling-v2.json",
+    "bytes": 271190065,
+    "sha256": "e9b5d671812b5ca2fbd7b625a37d5c99a19576c37252cdc806defe256aea6dad"
+   }
+  ],
+  "src": "data/src/glaive_fc.jsonl",
+  "src_bytes": 268044140,
+  "src_sha256": "24379b92034efbebcc5de91cb6794d1108f0f781e34b569a7b13df1ba4de2476",
+  "records": 112960
+ },
+ "swe_smith": {
+  "repo": "SWE-bench/SWE-smith-trajectories",
+  "revision": "08e109b4a59eaeebf80e4675cd125d42e7ac99a4",
+  "license": "mit",
+  "kind": "SWE agent trajectories (tool-calling split)",
+  "derive": "first shard of the `tool` split; the `messages` column (published as JSON text) decoded, so each record holds its OpenAI-format message list",
+  "raw": [
+   {
+    "file": "SWE-bench__SWE-smith-trajectories/data/tool-00000-of-00008.parquet",
+    "bytes": 248851790,
+    "sha256": "ac76e9efe75978f83d4daec98a55604587dd58b0f1509364893b8778cbf5b487"
+   }
+  ],
+  "src": "data/src/swe_smith.jsonl",
+  "src_bytes": 823757622,
+  "src_sha256": "1c80ef0c701c556821048ec45f7d11d6523c4bd4c9bba1d85a5f0c308f6fb73c",
+  "records": 3013
+ },
+ "swe_rebench": {
+  "repo": "nebius/SWE-rebench-openhands-trajectories",
+  "revision": "35455389ab51bf5e2306bfd436ef72d0f98bf882",
+  "license": "cc-by-4.0",
+  "kind": "SWE agent trajectories (OpenHands)",
+  "derive": "first 4000 rows; inside `trajectory` messages and their tool calls, keys whose value is null are dropped, as the OpenAI wire format writes them (tool_calls only on assistant turns, tool_call_id/name only on tool turns)",
+  "raw": [
+   {
+    "file": "nebius__SWE-rebench-openhands-trajectories/trajectories.parquet",
+    "bytes": 2079503354,
+    "sha256": "14048dd1fcd22ce094b6e85f8a38f223a9ef1327031aaaad052804870212efa1"
+   }
+  ],
+  "src": "data/src/swe_rebench.jsonl",
+  "src_bytes": 1129632756,
+  "src_sha256": "3fe1a66b822ed0d088e0efd3dc3341be8a74eebd915a2e228c622ac2b4611409",
+  "records": 4000
+ },
+ "swe_rebench_pq": {
+  "repo": "nebius/SWE-rebench-openhands-trajectories",
+  "revision": "35455389ab51bf5e2306bfd436ef72d0f98bf882",
+  "license": "cc-by-4.0",
+  "kind": "SWE agent trajectories (OpenHands), as published in parquet",
+  "derive": "the same first 4000 rows, rewritten as a zstd parquet file with the published schema",
+  "raw": [
+   {
+    "file": "nebius__SWE-rebench-openhands-trajectories/trajectories.parquet",
+    "bytes": 2079503354,
+    "sha256": "14048dd1fcd22ce094b6e85f8a38f223a9ef1327031aaaad052804870212efa1"
+   }
+  ],
+  "src": "data/src/swe_rebench_pq.parquet",
+  "src_bytes": 157046960,
+  "src_sha256": "0d45cf15d39a9b236f086217801c8b3d3dcb36cd89e6be34905a65c82b8cbd8b",
+  "records": 4000
+ },
+ "mind2web": {
+  "repo": "osunlp/Mind2Web",
+  "revision": "17ece8eb89862368edc0cc806acee6fca5163474",
+  "license": "cc-by-4.0",
+  "kind": "web browsing (DOM per action)",
+  "derive": "train shards 0-1; `raw_html` dropped from every action (cleaned_html, operation and the positive/negative DOM candidates kept)",
+  "raw": [
+   {
+    "file": "osunlp__Mind2Web/data/train/train_0.json",
+    "bytes": 616000823,
+    "sha256": "c8b622901057bca813a6d171733c41e4fc266c2902a23d63b9094c0add3f8f2c"
+   },
+   {
+    "file": "osunlp__Mind2Web/data/train/train_1.json",
+    "bytes": 627832230,
+    "sha256": "41084922c50174ec032185707ae43bb04d3e8d725788b2e95936db629ba59100"
+   }
+  ],
+  "src": "data/src/mind2web.jsonl",
+  "src_bytes": 565210661,
+  "src_sha256": "551eaffb042c5a8eb88939ef09a90a63f149534a14f4698f8ddf1e67e5c82302",
+  "records": 200
+ },
+ "agentnet": {
+  "repo": "xlangai/AgentNet",
+  "revision": "d76ee50a63fad81cfdbe576416757d7c2091ed50",
+  "license": "mit",
+  "kind": "computer use (desktop trajectories)",
+  "derive": "the Ubuntu file as published (screenshots are file names; image archives not downloaded)",
+  "raw": [
+   {
+    "file": "xlangai__AgentNet/agentnet_ubuntu_5k.jsonl",
+    "bytes": 282313437,
+    "sha256": "8e24c5a5a1ef5a5113755b33ed12164fc37ce8fbbd35d1c7dba81bf950d53d00"
+   }
+  ],
+  "src": "data/src/agentnet.jsonl",
+  "src_bytes": 282313437,
+  "src_sha256": "8e24c5a5a1ef5a5113755b33ed12164fc37ce8fbbd35d1c7dba81bf950d53d00",
+  "records": 5000
+ },
+ "gui_odyssey": {
+  "repo": "OpenGVLab/GUI-Odyssey",
+  "revision": "71e0e7e2d169c642e7a99c264d82ffecadf67889",
+  "license": "cc-by-4.0",
+  "kind": "mobile GUI navigation",
+  "derive": "all_anno.json with `steps` and `app` (published as Python-literal text) parsed with ast.literal_eval, giving the per-step structure of the per-episode annotation files",
+  "raw": [
+   {
+    "file": "OpenGVLab__GUI-Odyssey/all_anno.json",
+    "bytes": 33691272,
+    "sha256": "45550df67575d202ea67da21da9f1807af1b7f1a3c817283dafdfd16576b6a21"
+   }
+  ],
+  "src": "data/src/gui_odyssey.jsonl",
+  "src_bytes": 33651357,
+  "src_sha256": "295dfd38e6761dcab60a32e2b5bee599ab4815dcb3207277e11fb4a2b3072f69",
+  "records": 7735
+ }
+}

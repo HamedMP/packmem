@@ -1,0 +1,137 @@
+seq_subcol start 2026-11-14 02:35:40 41.16 35.83 29.19 nproc=32
+09c5ba04ee380af34600af1c9d6fac3f3a0337ebeb19f75292eb6423633614c7  $WORK/wheels/020/packmem-0.2.0-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+71c6b62248ac1b668aeb086cbb7ff4390b9c35fb916dd90a9071ee9eea3a6d4b  $WORK/wheels/cand/packmem-0.3.0.dev0-cp310-abi3-manylinux_2_34_x86_64.whl
+2f1b172bad7d46f1ce795141b60c0b7ec4091bfe2810db2c4e7c0136249bfe5a  $WORK/wheels/compact/packmem-0.3.0.dev0-cp310-abi3-manylinux_2_34_x86_64.whl
+S_build begin 2026-11-14 02:35:40 41.16 35.83 29.19
+S_build end 2026-11-14 02:49:21 22.11 28.22 30.74
+S_llava begin 2026-11-14 02:49:21 22.11 28.22 30.74
+S_llava end 2026-11-14 03:13:24 28.73 37.83 36.20
+mem_qwen_020 rc=0 wall=10.1506 load_start=28.73 37.83 36.20 load_end=25.54 36.85 35.90
+mem_llava_020 rc=0 wall=28.8241 load_start=25.54 36.85 35.90 load_end=21.19 34.74 35.22
+mem_qwen_cand rc=0 wall=10.3026 load_start=21.19 34.74 35.22 load_end=19.61 33.96 34.96
+mem_llava_cand rc=0 wall=30.0841 load_start=19.61 33.96 34.96 load_end=14.17 31.27 34.04
+subcol_qwen_list rc=0 wall=25.7992 load_start=14.17 31.27 34.04 load_end=10.90 29.11 33.25
+subcol_qwen_020 rc=0 wall=83.635 load_start=10.90 29.11 33.25 load_end=13.09 25.27 31.52
+subcol_qwen_cand rc=0 wall=88.5076 load_start=13.09 25.27 31.52 load_end=10.63 21.14 29.47
+subcol_files_020 rc=0 wall=34.101 load_start=10.63 21.14 29.47 load_end=10.18 19.87 28.73
+subcol_files_cand rc=0 wall=39.8943 load_start=10.18 19.87 28.73 load_end=11.40 18.93 28.04
+S_verify begin 2026-11-14 03:19:15 11.40 18.93 28.04
+S_verify end 2026-11-14 03:20:22 9.67 16.94 26.73
+hash_llava_repo-orig_mix.yaml rc=0 wall=43.2794 load_start=9.67 16.94 26.73 load_end=8.14 15.49 25.78
+hash_llava_repo-orig_mix_random.yaml rc=0 wall=14.7867 load_start=8.14 15.49 25.78 load_end=8.29 15.17 25.51
+hash_llava_repo@020_mix.yaml rc=0 wall=77.4382 load_start=8.29 15.17 25.51 load_end=7.45 13.30 24.04
+hash_llava_repo@020_mix_random.yaml rc=0 wall=20.8639 load_start=7.45 13.30 24.04 load_end=8.38 13.12 23.75
+hash_llava_repo@cand_mix.yaml rc=0 wall=93.5142 load_start=8.38 13.12 23.75 load_end=18.00 14.91 23.34
+hash_llava_repo@cand_mix_random.yaml rc=0 wall=21.6221 load_start=18.00 14.91 23.34 load_end=18.87 15.33 23.30
+seq_subcol end 2026-11-14 03:24:53 18.87 15.33 23.30
+2026-11-14 03:24:54 start build_balanced_1 18.87 15.33 23.30
+2026-11-14 03:25:14 end build_balanced_1 rc=0 19.87 15.78 23.28
+2026-11-14 03:25:14 start build_compact_1 19.87 15.78 23.28
+2026-11-14 03:25:45 end build_compact_1 rc=0 20.47 16.35 23.19
+2026-11-14 03:25:45 start build_balanced_2 20.47 16.35 23.19
+2026-11-14 03:26:08 end build_balanced_2 rc=0 18.84 16.24 23.00
+2026-11-14 03:26:08 start build_compact_2 18.84 16.24 23.00
+2026-11-14 03:26:43 end build_compact_2 rc=0 21.21 17.09 23.04
+2026-11-14 03:26:43 start build_balanced_3 21.21 17.09 23.04
+2026-11-14 03:27:03 end build_balanced_3 rc=0 20.53 17.21 22.95
+2026-11-14 03:27:03 start build_compact_3 20.53 17.21 22.95
+2026-11-14 03:27:37 end build_compact_3 rc=0 18.78 17.16 22.72
+2026-11-14 03:27:37 start build_compact_L9 18.78 17.16 22.72
+2026-11-14 03:28:22 end build_compact_L9 rc=0 18.19 17.26 22.49
+2026-11-14 03:28:22 start build_balanced_L9ref 18.19 17.26 22.49
+2026-11-14 03:28:46 end build_balanced_L9ref rc=0 19.61 17.65 22.48
+2026-11-14 03:28:46 start workers_balanced 19.61 17.65 22.48
+2026-11-14 03:28:56 end workers_balanced rc=0 19.86 17.77 22.47
+2026-11-14 03:28:56 start workers_compact 19.86 17.77 22.47
+2026-11-14 03:29:08 end workers_compact rc=0 20.85 18.06 22.51
+2026-11-14 03:29:08 start verify_balanced 20.85 18.06 22.51
+2026-11-14 03:29:39 end verify_balanced rc=0 20.89 18.30 22.45
+2026-11-14 03:29:39 start verify_compact 20.89 18.30 22.45
+2026-11-14 03:30:19 end verify_compact rc=0 17.31 17.76 22.09
+seq_compact end 2026-11-14 03:30:19 17.31 17.76 22.09
+seq_gate2 start 2026-11-14 03:56:01 7.42 9.01 13.39
+09c5ba04ee380af34600af1c9d6fac3f3a0337ebeb19f75292eb6423633614c7  $WORK/wheels/020/packmem-0.2.0-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+086f5ab63362006e17a9f1261f73fa1aa078372c3bc6c64ba8c330c3f035c416  $WORK/wheels/cand/packmem-0.3.0.dev0-cp310-abi3-manylinux_2_34_x86_64.whl
+9826db3db63f1df97616560447abd96de6693071b71e7560614cdec306d804ff  $WORK/wheels/compact/packmem-0.3.0.dev0-cp310-abi3-manylinux_2_34_x86_64.whl
+candt PACKMEM_THREADS= None 0.3.0.dev0
+S2_build begin 2026-11-14 03:56:02 7.42 9.01 13.39
+S2_build end 2026-11-14 04:07:21 6.01 6.03 9.40
+S2_llava begin 2026-11-14 04:07:21 6.01 6.03 9.40
+S2_llava end 2026-11-14 04:24:36 3.05 4.44 6.13
+mem2_qwen_020 rc=0 wall=8.02243 load_start=3.05 4.44 6.13 load_end=3.04 4.41 6.11
+mem2_llava_020 rc=0 wall=24.5634 load_start=3.04 4.41 6.11 load_end=3.04 4.30 6.03
+mem2_qwen_candt rc=0 wall=3.50956 load_start=3.04 4.30 6.03 load_end=3.12 4.30 6.01
+mem2_llava_candt rc=0 wall=18.2505 load_start=3.12 4.30 6.01 load_end=3.09 4.21 5.95
+mem2_qwen_cand rc=0 wall=3.46182 load_start=3.09 4.21 5.95 load_end=3.09 4.21 5.95
+mem2_llava_cand rc=0 wall=18.5117 load_start=3.09 4.21 5.95 load_end=2.99 4.11 5.88
+subcol2_qwen_020 rc=0 wall=76.0693 load_start=2.99 4.11 5.88 load_end=2.88 3.85 5.65
+subcol2_qwen_candt rc=0 wall=67.6872 load_start=2.88 3.85 5.65 load_end=2.98 3.67 5.45
+subcol2_qwen_cand rc=0 wall=64.3996 load_start=2.98 3.67 5.45 load_end=2.91 3.52 5.28
+seq_gate2 end 2026-11-14 04:29:21 2.91 3.52 5.28
+2026-11-14 04:29:21 start build_default_1 2.91 3.52 5.28
+2026-11-14 04:29:32 end build_default_1 rc=0 2.85 3.48 5.25
+2026-11-14 04:29:32 start build_default_2 2.85 3.48 5.25
+2026-11-14 04:29:43 end build_default_2 rc=0 2.88 3.47 5.22
+2026-11-14 04:29:43 start workers_default 2.88 3.47 5.22
+2026-11-14 04:29:45 end workers_default rc=0 2.88 3.47 5.22
+2026-11-14 04:29:45 start build_b512_d256_1 2.88 3.47 5.22
+2026-11-14 04:30:00 end build_b512_d256_1 rc=0 3.10 3.48 5.19
+2026-11-14 04:30:00 start build_b512_d256_2 3.10 3.48 5.19
+2026-11-14 04:30:16 end build_b512_d256_2 rc=0 2.94 3.43 5.14
+2026-11-14 04:30:16 start workers_b512_d256 2.94 3.43 5.14
+2026-11-14 04:30:20 end workers_b512_d256 rc=0 2.94 3.43 5.14
+2026-11-14 04:30:20 start build_b512_d1024_1 2.94 3.43 5.14
+2026-11-14 04:30:36 end build_b512_d1024_1 rc=0 3.13 3.45 5.11
+2026-11-14 04:30:36 start build_b512_d1024_2 3.13 3.45 5.11
+2026-11-14 04:30:52 end build_b512_d1024_2 rc=0 3.02 3.41 5.07
+2026-11-14 04:30:52 start workers_b512_d1024 3.02 3.41 5.07
+2026-11-14 04:30:57 end workers_b512_d1024 rc=0 3.34 3.47 5.08
+2026-11-14 04:30:57 start build_b1024_d256_1 3.34 3.47 5.08
+2026-11-14 04:31:13 end build_b1024_d256_1 rc=0 3.32 3.46 5.06
+2026-11-14 04:31:13 start build_b1024_d256_2 3.32 3.46 5.06
+2026-11-14 04:31:29 end build_b1024_d256_2 rc=0 3.31 3.45 5.03
+2026-11-14 04:31:29 start workers_b1024_d256 3.31 3.45 5.03
+2026-11-14 04:31:33 end workers_b1024_d256 rc=0 3.53 3.50 5.03
+2026-11-14 04:31:33 start build_b1024_d1024_1 3.53 3.50 5.03
+2026-11-14 04:31:49 end build_b1024_d1024_1 rc=0 3.54 3.50 5.01
+2026-11-14 04:31:49 start build_b1024_d1024_2 3.54 3.50 5.01
+2026-11-14 04:32:05 end build_b1024_d1024_2 rc=0 3.51 3.50 4.98
+2026-11-14 04:32:05 start workers_b1024_d1024 3.51 3.50 4.98
+2026-11-14 04:32:10 end workers_b1024_d1024 rc=0 3.47 3.49 4.97
+2026-11-14 04:32:10 start build_b2048_d256_1 3.47 3.49 4.97
+2026-11-14 04:32:27 end build_b2048_d256_1 rc=0 3.29 3.45 4.93
+2026-11-14 04:32:27 start build_b2048_d256_2 3.29 3.45 4.93
+2026-11-14 04:32:44 end build_b2048_d256_2 rc=0 3.23 3.43 4.90
+2026-11-14 04:32:44 start workers_b2048_d256 3.23 3.43 4.90
+2026-11-14 04:32:47 end workers_b2048_d256 rc=0 3.45 3.47 4.90
+2026-11-14 04:32:47 start build_b2048_d1024_1 3.45 3.47 4.90
+2026-11-14 04:33:04 end build_b2048_d1024_1 rc=0 3.55 3.50 4.89
+2026-11-14 04:33:04 start build_b2048_d1024_2 3.55 3.50 4.89
+2026-11-14 04:33:22 end build_b2048_d1024_2 rc=0 3.44 3.48 4.85
+2026-11-14 04:33:22 start workers_b2048_d1024 3.44 3.48 4.85
+2026-11-14 04:33:27 end workers_b2048_d1024 rc=0 3.65 3.52 4.86
+2026-11-14 04:33:27 start build_b1024_d256_L9 3.65 3.52 4.86
+2026-11-14 04:33:45 end build_b1024_d256_L9 rc=0 3.73 3.55 4.84
+2026-11-14 04:33:45 start build_b1024_d1024_L9 3.73 3.55 4.84
+2026-11-14 04:34:05 end build_b1024_d1024_L9 rc=0 3.59 3.53 4.81
+2026-11-14 04:34:05 start verify_b1024_d256 3.59 3.53 4.81
+2026-11-14 04:34:24 end verify_b1024_d256 rc=0 3.66 3.55 4.79
+2026-11-14 04:34:24 start verify_default 3.66 3.55 4.79
+2026-11-14 04:34:38 end verify_default rc=0 3.21 3.46 4.74
+seq_compact2 end 2026-11-14 04:34:38 3.21 3.46 4.74
+chain2 done 04:34:38
+S3_build_t1 begin 2026-11-14 04:39:51 1.03 1.91 3.69
+S3_build_t1 end 2026-11-14 04:45:20 1.81 2.07 3.25
+S3_llava_t1 begin 2026-11-14 04:45:20 1.81 2.07 3.25
+S3_llava_t1 end 2026-11-14 04:54:38 1.91 1.99 2.68
+t1 rerun done 04:55:12
+gate3 built 38d7bf2e2475396fef2fa71da78f0e1c32e4de71 37d2cb4cb371f7b4119e134eaa2916aa2d6ed3a3168b4d02c1323d33edf4d705  $WORK/wheels/cand3/packmem-0.3.0.dev0-cp310-abi3-manylinux_2_34_x86_64.whl
+S4_build_t1 begin 2026-11-14 05:03:36 1.50 1.66 2.20
+S4_build_t1 end 2026-11-14 05:09:07 1.94 1.86 2.12
+S4_llava_t1 begin 2026-11-14 05:09:07 1.94 1.86 2.12
+S4_llava_t1 end 2026-11-14 05:18:25 1.93 1.93 2.00
+S4_build_def begin 2026-11-14 05:18:25 1.93 1.93 2.00
+S4_build_def end 2026-11-14 05:21:29 1.93 1.92 1.99
+S4_llava_def begin 2026-11-14 05:21:29 1.93 1.92 1.99
+S4_llava_def end 2026-11-14 05:26:40 1.98 1.96 2.00
+gate3 done 05:26:40

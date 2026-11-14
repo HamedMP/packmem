@@ -1,0 +1,49 @@
+{
+ "hint": "compact",
+ "zstd_level": "default",
+ "packmem": "0.3.0.dev0",
+ "load_start": [
+  3.0986328125,
+  3.48388671875,
+  5.1904296875
+ ],
+ "build_s": 3.99,
+ "maxrss_after_build_mb": 1640.2,
+ "smaps_after_build": {
+  "Rss": 385.0,
+  "Pss": 376.3,
+  "Pss_Anon": 372.6,
+  "Shared_Clean": 10.7,
+  "Shared_Dirty": 0.0,
+  "Private_Clean": 1.7,
+  "Private_Dirty": 372.6,
+  "USS": 374.3
+ },
+ "smaps_after_release": {
+  "Rss": 261.4,
+  "Pss": 252.6,
+  "Pss_Anon": 248.9,
+  "Shared_Clean": 10.7,
+  "Shared_Dirty": 0.0,
+  "Private_Clean": 1.7,
+  "Private_Dirty": 248.9,
+  "USS": 250.6
+ },
+ "n": 665298,
+ "nbytes": 209313535,
+ "describe": "[[\"id\", \"str:direct+fsst, str:dict(6802)/13bit, str:dict(4097)/13bit (+6 more)\", 5412377], [\"image\", \"str:direct+fsst, str:dict(6802)+fsst/13bit, str:dict(4097)/13bit (+4 more)\", 6655987], [\"conversations\", \"list<from: str:dict(2)/1bit, value: str:direct+zstd>, list<from: str:dict(2)/1bit, value: str:direct+fsst>, list<from: str:dict(2)/1bit, value: str:dict(68344)+zstd/17bit> (+13 more)\", 197239139], [\"model\", \"absent, str:dict(1)/0bit\", 6032]]",
+ "zstd_in_describe": true,
+ "random_row_us": 8.34,
+ "full_pass_s": 4.05,
+ "lengths_colops_s": 1.16,
+ "lengths_sha": "9c23c1611e273fb3",
+ "save_s": 0.1,
+ "saved_bytes": 209300626,
+ "open_ms": 4.7,
+ "share_s": 0.08,
+ "load_end": [
+  2.94140625,
+  3.42724609375,
+  5.14404296875
+ ]
+}

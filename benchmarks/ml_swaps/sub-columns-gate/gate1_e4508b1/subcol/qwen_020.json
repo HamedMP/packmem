@@ -1,0 +1,58 @@
+{
+ "tag": "020",
+ "packmem": "0.2.0",
+ "load_s": 6.88,
+ "n": 665298,
+ "loop_lengths_s": 6.379,
+ "loop_lengths_runs": [
+  6.213,
+  6.657,
+  6.379
+ ],
+ "loop_modality_s": 7.035,
+ "loop_modality_runs": [
+  6.835,
+  7.035,
+  7.378
+ ],
+ "lengths_sha": "348d788a1eda0c285aa7984187337dcc5aad8ef059bc37a887ca1cb0fb4794e8",
+ "random_100k_rows_s": 1.37,
+ "random_100k_runs": [
+  1.324,
+  1.635,
+  1.37
+ ],
+ "full_pass_s": 6.453,
+ "full_pass_runs": [
+  6.31,
+  6.453,
+  6.637
+ ],
+ "rows_sha": "42eb499c73db95183a55b49b5c41be2433e67784549b703ba93e92ff77bd5248",
+ "nbytes": 308300201,
+ "describe": [
+  [
+   "id",
+   "str:direct+fsst, str:dict(6802)/u16, str:dict(4097)/u16 (+6 more)",
+   5449193
+  ],
+  [
+   "image",
+   "str:direct+fsst, str:dict(6802)+fsst/u16, str:dict(4097)/u16 (+4 more)",
+   6692803
+  ],
+  [
+   "conversations",
+   "mixed:direct+fsst",
+   296152173
+  ],
+  [
+   "model",
+   "absent, str:dict(1)/0bit",
+   6032
+  ]
+ ],
+ "to_json_sha": "f618d64fdcd9ba5d8f319399dc15bfe9125489b7289c09a368e8e54fbc3633a8",
+ "to_json_bytes": 776385527,
+ "to_json_equals_source_decoded": null
+}
