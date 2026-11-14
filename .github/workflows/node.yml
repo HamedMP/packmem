@@ -89,3 +89,12 @@ jobs:
         env:
           PACKMEM_PYTHON: python
         run: node --test test/wasm.test.js test/bytes.test.js test/load.test.js
+      - name: A browser reads tables from Node and Python servers; the React hook
+        working-directory: node
+        env:
+          PACKMEM_PYTHON: python
+          PACKMEM_REQUIRE_BROWSER: "1"
+        run: |
+          npm ci
+          npx playwright-core install --with-deps chromium
+          node --test test/browser.test.js test/react.test.js test/http.test.js

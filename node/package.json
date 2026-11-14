@@ -34,6 +34,14 @@
       "default": "./wasm.js"
     },
     "./wasm/packmem.wasm": "./wasm-dist/packmem_bg.wasm",
+    "./http": {
+      "types": "./http.d.ts",
+      "default": "./http.js"
+    },
+    "./react": {
+      "types": "./react.d.ts",
+      "default": "./react.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -42,6 +50,10 @@
     "api.js",
     "wasm.js",
     "wasm.d.ts",
+    "http.js",
+    "http.d.ts",
+    "react.js",
+    "react.d.ts",
     "wasm-dist/packmem.js",
     "wasm-dist/packmem_bg.wasm",
     "*.node",
@@ -52,8 +64,9 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test test/table.test.js test/review.test.js test/listops.test.js test/csv.test.js test/load.test.js test/share.test.js test/bytes.test.js test/wasm.test.js test/pg.test.js",
-    "build:wasm": "node scripts/build-wasm.mjs"
+    "test": "node --test test/table.test.js test/review.test.js test/listops.test.js test/csv.test.js test/load.test.js test/share.test.js test/bytes.test.js test/wasm.test.js test/http.test.js test/react.test.js test/pg.test.js",
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "test:browser": "node --test test/browser.test.js"
   },
   "peerDependencies": {
     "pg-cursor": ">=2",
@@ -70,6 +83,9 @@
   "devDependencies": {
     "pg": "^8.23.1",
     "pg-copy-streams": "^7.0.0",
-    "pg-cursor": "^2.22.1"
+    "pg-cursor": "^2.22.1",
+    "playwright-core": "^1.65.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   }
 }

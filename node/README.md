@@ -183,6 +183,25 @@ rows.slice(0, 50); // objects only for the rows on screen
 The byte form is tied to the packmem version that wrote it: send it between matching versions, and keep JSON for
 clients that do not ask for it. Tables saved with Python's `hint="compact"` cannot be read by the WebAssembly build.
 
+`packmem/http` does the asking and answering. It has no Node imports, so it runs in Node, Next.js route handlers,
+Workers and browsers:
+
+```js
+import { respond, send, fetchTable } from "packmem/http";
+
+// server: bytes for a client that sends Accept: application/vnd.packmem, a streamed JSON array for anyone else
+export const GET = (req) => respond(req, table.where({ carrier: "UA" }));   // web Request/Response
+app.get("/api/rows", (req, res) => send(req, res, table));                // Node res, Express
+
+// browser: asks for bytes, falls back to JSON from a server without packmem; works as an SWR fetcher
+const rows = await fetchTable(pm, "/api/rows");
+```
+
+`useRows(rows, { offset, limit })` from `packmem/react` returns plain objects for just that window, and the same
+array on each render until the window or the table changes, for virtualized lists. It does not import React, so it
+also works where Next.js loads packmem outside its bundle (`serverExternalPackages`). `../demos/nextjs` has a page
+that uses both (`/browse`).
+
 ## What to expect
 
 Measured on 336,776 flight records (nycflights13, 104 MB as JSON lines), Apple M4 Pro. Every figure here
