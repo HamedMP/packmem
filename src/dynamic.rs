@@ -671,7 +671,9 @@ impl Nest {
         SPARE_TAILS.with(|s| {
             let mut spare = s.borrow_mut();
             let room = 64usize.saturating_sub(spare.len());
-            spare.extend(self.sh.tails.drain(..).take(room))
+            // last field first: the next chunk takes buffers off the end as it meets its fields, so each field gets
+            // back the buffer it grew, and the large one does not go to a small field while another is grown
+            spare.extend(self.sh.tails.drain(..).rev().take(room))
         })
     }
 }
@@ -2184,7 +2186,8 @@ impl DynTable {
     /// table built on this thread. Building many short-lived tables then stops allocating a fresh set each time.
     pub fn take_buffers(&mut self) -> Buffers {
         let mut out = std::mem::take(&mut self.spare_tails);
-        for c in &mut self.cols {
+        // last column first, so the next table's columns take back the buffers they grew (see `Nest::recycle`)
+        for c in self.cols.iter_mut().rev() {
             if c.tail.len() == 0 {
                 out.push(std::mem::take(&mut c.tail))
             }
