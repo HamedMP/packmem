@@ -1208,6 +1208,22 @@ impl PyTable {
     fn set_fields(&mut self, fields: Option<Vec<String>>) {
         self.only = fields.map(|f| f.into_iter().collect())
     }
+    /// Hand memory that was freed back to the operating system, where the allocator supports being asked (glibc).
+    /// Used after a table drops its own copy of the data in favour of a shared file: without it the freed copy stays
+    /// counted against the process, and forked workers inherit it.
+    #[staticmethod]
+    fn release_freed_memory() {
+        #[cfg(all(target_os = "linux", target_env = "gnu"))]
+        {
+            unsafe extern "C" {
+                fn malloc_trim(pad: usize) -> i32;
+            }
+            // SAFETY: malloc_trim takes no pointers and only returns free heap pages to the system.
+            unsafe {
+                malloc_trim(0);
+            }
+        }
+    }
     fn set_frozen(&mut self, on: bool) {
         self.frozen = on
     }

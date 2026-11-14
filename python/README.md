@@ -133,7 +133,8 @@ An opened table is memory-mapped and read in place: a 2-million-row table opened
 1 MB to the process. Pages are read from disk as they are touched and shared by every process that opens the
 same file. Opened tables are read-only (`copy()` gives a private, writable one), and pickling one sends the
 file's location, not the data. The file format belongs to the packmem version that wrote it; do not truncate or
-rewrite a file in place while it is open.
+rewrite a file in place while it is open. `save` over an existing file replaces it whole, which Windows refuses
+while that file is open anywhere.
 
 ## What to expect
 

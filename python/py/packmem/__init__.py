@@ -282,6 +282,7 @@ class Table:
             # in the file's pages, shared with every worker, including ones created by fork
             self._t = _Table.attach(h.path, h.size)
             self._share = h
+            _Table.release_freed_memory()
         return self
 
     def save(self, path):
@@ -295,7 +296,12 @@ class Table:
         tmp = f"{path}.{_os.getpid()}-{secrets.token_hex(4)}.tmp"
         try:
             self._t.write_file(tmp, False)
-            _os.replace(tmp, path)
+            try:
+                _os.replace(tmp, path)
+            except PermissionError as e:
+                # Windows does not allow replacing a file that is memory-mapped
+                raise PermissionError(f"cannot replace {path}: it is open in this or another process (a table opened "
+                                      "with packmem.open keeps its file mapped); close those tables first") from e
         except BaseException:
             try:
                 _os.unlink(tmp)

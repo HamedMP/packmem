@@ -354,9 +354,15 @@ def test_save_and_open_in_place():
         c = o.copy(); c.append({"id": -1}); assert len(c) == len(m) + 1 and not c.shared and list(c)[:100] == m[:100]
         with mp.get_context("spawn").Pool(2) as pool:
             assert pool.map(_worker_private, [o, o]) == [(len(m), sum(x["id"] for x in m), True)] * 2
-        t.append({"id": 10**6}); t.save(p)                              # saving again replaces the file whole
+        t.append({"id": 10**6})
         if os.name == "posix":
+            t.save(p)                                                   # saving again replaces the file whole
             assert list(o) == m                                         # the old mapping still reads the old contents
+        else:
+            try: t.save(p); raise AssertionError("expected PermissionError while the file is open")   # Windows
+            except PermissionError: pass
+            assert [f for f in os.listdir(d) if f.endswith(".tmp")] == [] and list(o) == m
+            del o, again; gc.collect(); t.save(p); o = again = None
         fresh = packmem.open(p); assert len(fresh) == len(m) + 1 and fresh[-1] == {"id": 10**6}
         e = Examples(m[:5]); e.stats = 1; q = os.path.join(d, "e.pkm"); e.save(q); assert type(packmem.open(q)) is packmem.Table
         # damaged files are refused
