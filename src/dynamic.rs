@@ -299,6 +299,58 @@ struct Tail {
     vals: Vec<u64>,
     text: String,
     ends: Vec<usize>,
+    /// Nested values (`T_NEST`), split into their fields as they arrive.
+    nest: Option<Box<Nest>>,
+    /// Splitting was tried for this chunk and a value did not fit: nested values are kept as text until `clear`.
+    no_nest: bool,
+    /// How deep this buffer sits inside nested values: 0 for a column of the table.
+    level: u8,
+}
+/// The nested values of one column's unpacked rows, held as sub-columns from the start. Keeping their JSON text
+/// until the chunk is packed would hold every such value twice while it is split.
+struct Nest {
+    sh: Shredder,
+    /// For each nested row, in order: the number of elements once it has been added.
+    ends: Vec<u32>,
+    is_record: bool,
+}
+impl Nest {
+    fn range(&self, j: usize) -> (usize, usize) {
+        (
+            if j == 0 { 0 } else { self.ends[j - 1] as usize },
+            self.ends[j] as usize,
+        )
+    }
+    /// Nested row `j` as compact JSON text.
+    fn text(&self, j: usize) -> String {
+        let (a, b) = self.range(j);
+        let mut out = String::new();
+        if !self.is_record {
+            out.push('[')
+        }
+        for e in a..b {
+            if e > a {
+                out.push(',')
+            }
+            out.push('{');
+            for (k, &c) in self.sh.shapes[self.sh.shape_of[e] as usize]
+                .iter()
+                .enumerate()
+            {
+                if k > 0 {
+                    out.push(',')
+                }
+                out.push_str(&serde_json::to_string(&self.sh.names[c as usize]).unwrap());
+                out.push(':');
+                out.push_str(&to_text(&self.sh.tails[c as usize].get(e)))
+            }
+            out.push('}')
+        }
+        if !self.is_record {
+            out.push(']')
+        }
+        out
+    }
 }
 const T_MISSING: u8 = 0;
 const T_NULL: u8 = 1;
@@ -307,6 +359,8 @@ const T_INT: u8 = 3;
 const T_FLOAT: u8 = 4;
 const T_STR: u8 = 5;
 const T_JSON: u8 = 6;
+/// A nested value held in `Tail::nest`; the payload is its index among the nested rows.
+const T_NEST: u8 = 7;
 impl Tail {
     fn missing(n: usize) -> Tail {
         Tail {
@@ -331,8 +385,70 @@ impl Tail {
             Cell::Int(i) => (T_INT, *i as u64),
             Cell::Float(f) => (T_FLOAT, f.to_bits()),
             Cell::Str(s) => (T_STR, self.intern(s)),
-            Cell::Json(s) => (T_JSON, self.intern(s)),
+            Cell::Json(s) => match self.nest_push(s) {
+                Some(j) => (T_NEST, j),
+                None => (T_JSON, self.intern(s)),
+            },
         }
+    }
+    /// Split a list of records (or a record) into the sub-columns of `nest`. `None` when the value is something
+    /// else or does not fit with the nested rows before it; the chunk then keeps its nested values as text.
+    fn nest_push(&mut self, s: &str) -> Option<u64> {
+        use serde::de::DeserializeSeed;
+        if self.no_nest || self.level >= 2 {
+            return None;
+        }
+        let is_record = match s.as_bytes().first() {
+            Some(b'{') => true,
+            Some(b'[') => false,
+            _ => return None, // an integer beyond 64 bits
+        };
+        let level = self.level + 1;
+        let nest = self.nest.get_or_insert_with(|| {
+            Box::new(Nest {
+                sh: Shredder {
+                    level,
+                    ..Default::default()
+                },
+                ends: vec![],
+                is_record,
+            })
+        });
+        let before = nest.sh.elems;
+        let mut de = serde_json::Deserializer::from_str(s);
+        let ok = nest.is_record == is_record
+            && if is_record {
+                ElemSeed(&mut nest.sh).deserialize(&mut de).is_ok()
+            } else {
+                ListSeed(&mut nest.sh).deserialize(&mut de).is_ok()
+            }
+            && de.end().is_ok();
+        match u32::try_from(nest.sh.elems) {
+            Ok(n) if ok => {
+                nest.ends.push(n);
+                Some(nest.ends.len() as u64 - 1)
+            }
+            _ => {
+                nest.sh.truncate(before);
+                self.unnest();
+                None
+            }
+        }
+    }
+    /// Turn the nested rows back into JSON text and stop splitting for this chunk.
+    fn unnest(&mut self) {
+        self.no_nest = true;
+        let Some(nest) = self.nest.take() else {
+            return;
+        };
+        for i in 0..self.tags.len() {
+            if self.tags[i] == T_NEST {
+                let text = nest.text(self.vals[i] as usize);
+                self.vals[i] = self.intern(&text);
+                self.tags[i] = T_JSON
+            }
+        }
+        nest.recycle()
     }
     fn push(&mut self, c: &Cell) {
         let (t, v) = self.enc(c);
@@ -340,6 +456,10 @@ impl Tail {
         self.vals.push(v)
     }
     fn set(&mut self, i: usize, c: &Cell) {
+        // nested rows are held in arrival order, which replacing one would break
+        if self.nest.is_some() && (self.tags[i] == T_NEST || matches!(c, Cell::Json(_))) {
+            self.unnest()
+        }
         let (t, v) = self.enc(c);
         self.tags[i] = t;
         self.vals[i] = v
@@ -348,9 +468,20 @@ impl Tail {
         self.tags.clear();
         self.vals.clear();
         self.text.clear();
-        self.ends.clear()
+        self.ends.clear();
+        self.no_nest = false;
+        if let Some(nest) = self.nest.take() {
+            nest.recycle()
+        }
     }
     fn truncate(&mut self, n: usize) {
+        if let Some(nest) = &mut self.nest {
+            if let Some(k) = (n..self.tags.len()).find(|&k| self.tags[k] == T_NEST) {
+                let j = self.vals[k] as usize;
+                nest.sh.truncate(nest.range(j).0);
+                nest.ends.truncate(j)
+            }
+        }
         self.tags.truncate(n);
         self.vals.truncate(n)
     }
@@ -368,6 +499,7 @@ impl Tail {
             T_INT => Cell::Int(v as i64),
             T_FLOAT => Cell::Float(f64::from_bits(v)),
             T_STR => Cell::Str(self.s(i).to_string()),
+            T_NEST => Cell::Json(self.nest.as_ref().unwrap().text(v as usize)),
             _ => Cell::Json(self.s(i).to_string()),
         }
     }
@@ -388,7 +520,15 @@ impl Tail {
         (0..self.len()).map(|i| self.get(i))
     }
     fn bytes(&self) -> usize {
-        self.tags.len() * 9 + self.text.len() + self.ends.len() * 8
+        self.tags.len() * 9 + self.text_bytes() + self.ends.len() * 8
+    }
+    /// Bytes of text held, counting the fields of nested values.
+    fn text_bytes(&self) -> usize {
+        let nested = self
+            .nest
+            .as_ref()
+            .map_or(0, |n| n.sh.tails.iter().map(Tail::bytes).sum());
+        self.text.len() + nested
     }
 }
 
@@ -465,6 +605,32 @@ pub fn release_thread_buffers() {
     crate::ztext::release()
 }
 
+/// Nested JSON text with the whitespace between tokens removed. The parser has already validated it, so it is kept
+/// as written (escapes, number text and key order included) instead of being parsed into a tree and written back.
+pub fn compact_json(t: &str) -> String {
+    let mut out = Vec::with_capacity(t.len());
+    let (mut in_string, mut escaped) = (false, false);
+    for &c in t.as_bytes() {
+        if in_string {
+            out.push(c);
+            if escaped {
+                escaped = false
+            } else if c == b'\\' {
+                escaped = true
+            } else if c == b'"' {
+                in_string = false
+            }
+        } else if c == b'"' {
+            in_string = true;
+            out.push(c)
+        } else if !matches!(c, b' ' | b'\n' | b'\r' | b'\t') {
+            out.push(c)
+        }
+    }
+    // only ASCII whitespace outside strings was dropped, so the bytes are still valid UTF-8
+    String::from_utf8(out).expect("compacting JSON keeps it valid UTF-8")
+}
+
 /// Collects the elements of a chunk's nested values into one tail per field.
 #[derive(Default)]
 struct Shredder {
@@ -476,8 +642,32 @@ struct Shredder {
     shape_of: Vec<i64>,
     shape: Vec<u16>,
     elems: usize,
+    /// The `Tail::level` of the field buffers.
+    level: u8,
+}
+impl Nest {
+    /// Hand the emptied field buffers to the next chunk that is split on this thread.
+    fn recycle(mut self: Box<Self>) {
+        for tail in &mut self.sh.tails {
+            tail.clear() // outside the borrow below: a field holding nested values recycles its own buffers here
+        }
+        SPARE_TAILS.with(|s| {
+            let mut spare = s.borrow_mut();
+            let room = 64usize.saturating_sub(spare.len());
+            spare.extend(self.sh.tails.drain(..).take(room))
+        })
+    }
 }
 impl Shredder {
+    /// Forget every element from `elems` on, after a value that could not be split.
+    fn truncate(&mut self, elems: usize) {
+        for t in &mut self.tails {
+            t.truncate(elems)
+        }
+        self.shape_of.truncate(elems);
+        self.shape.clear();
+        self.elems = elems
+    }
     fn field(&mut self, name: &str) -> Option<u16> {
         if let Some(&c) = self.index.get(name) {
             return Some(c);
@@ -488,6 +678,7 @@ impl Shredder {
         let mut tail = SPARE_TAILS
             .with(|s| s.borrow_mut().pop())
             .unwrap_or_default();
+        tail.level = self.level;
         tail.tags.resize(self.elems, T_MISSING);
         tail.vals.resize(self.elems, 0);
         self.tails.push(tail);
@@ -507,7 +698,11 @@ impl Shredder {
             t.vals.push(v);
             return;
         }
-        let cell = from_text(b);
+        // nested text is kept without its whitespace wherever it ends up
+        let cell = match b.first() {
+            Some(b'[' | b'{') => Cell::Json(compact_json(text)),
+            _ => from_text(b),
+        };
         if fresh {
             t.push(&cell)
         } else {
@@ -592,68 +787,39 @@ impl<'de> serde::de::Visitor<'de> for ListSeed<'_> {
 }
 
 impl ListCol {
-    /// Try to store a chunk whose values are all JSON text as sub-columns. `None` when the values are not uniformly
-    /// lists of records (or uniformly records), in which case the chunk keeps them as text.
-    fn shred(t: &Tail, hint: Hint, depth: usize) -> Option<ListCol> {
-        use serde::de::DeserializeSeed;
-        let n = t.len();
-        let first = (0..n).find(|&k| t.tags[k] == T_JSON)?;
-        let is_record = match t.s(first).as_bytes().first()? {
-            b'{' => true,
-            b'[' => false,
-            _ => return None, // an integer beyond 64 bits
-        };
-        let mut sh = Shredder::default();
-        let mut offs = Vec::with_capacity(n + 1);
-        offs.push(0u32);
-        for k in 0..n {
-            if t.tags[k] == T_JSON {
-                let text = t.s(k);
-                if (text.as_bytes().first() == Some(&b'{')) != is_record {
-                    return None;
-                }
-                let mut de = serde_json::Deserializer::from_str(text);
-                let ok = if is_record {
-                    ElemSeed(&mut sh).deserialize(&mut de).is_ok()
-                } else {
-                    ListSeed(&mut sh).deserialize(&mut de).is_ok()
-                };
-                if !ok || de.end().is_err() {
-                    return None;
-                }
-            }
-            offs.push(u32::try_from(sh.elems).ok()?);
-        }
+    /// The sub-columns built while a chunk's rows arrived, packed. `None` when there is nothing to gain (only empty
+    /// lists), in which case the chunk keeps its nested values as text.
+    fn from_nest(t: &Tail, hint: Hint, depth: usize) -> Option<ListCol> {
+        let nest = t.nest.as_ref()?;
+        let sh = &nest.sh;
         if sh.elems == 0 {
-            return None; // only empty lists: nothing to gain
+            return None;
         }
-        let cols = sh
-            .tails
-            .iter()
-            .map(|tail| Chunk::seal_at(tail, hint, depth + 1))
-            .collect();
-        SPARE_TAILS.with(|s| {
-            let mut spare = s.borrow_mut();
-            for mut tail in sh.tails.drain(..) {
-                if spare.len() < 64 {
-                    tail.clear();
-                    spare.push(tail)
-                }
+        let mut offs = Vec::with_capacity(t.len() + 1);
+        let mut at = 0u32;
+        offs.push(at);
+        for k in 0..t.len() {
+            if t.tags[k] == T_NEST {
+                at = nest.ends[t.vals[k] as usize]
             }
-        });
-        let keys_json = sh
-            .names
-            .iter()
-            .map(|k| format!("{}:", serde_json::to_string(k).unwrap()))
-            .collect();
+            offs.push(at)
+        }
         Some(ListCol {
-            is_record,
+            is_record: nest.is_record,
             offs: offs.into(),
-            names: sh.names,
-            keys_json,
-            shapes: sh.shapes,
+            names: sh.names.clone(),
+            keys_json: sh
+                .names
+                .iter()
+                .map(|k| format!("{}:", serde_json::to_string(k).unwrap()))
+                .collect(),
+            shapes: sh.shapes.clone(),
             shape_of: PackedInts::encode(&sh.shape_of, hint),
-            cols,
+            cols: sh
+                .tails
+                .iter()
+                .map(|tail| Chunk::seal_at(tail, hint, depth + 1))
+                .collect(),
         })
     }
     #[inline]
@@ -820,7 +986,7 @@ impl Chunk {
     /// `depth` counts how many nested lists this column is inside; sub-columns are not split further beyond two levels.
     fn seal_at(t: &Tail, hint: Hint, depth: usize) -> Chunk {
         let n = t.len();
-        let mut cnt = [0usize; 7];
+        let mut cnt = [0usize; 8];
         for &g in &t.tags {
             cnt[g as usize] += 1
         }
@@ -926,8 +1092,8 @@ impl Chunk {
                 .collect();
             return mk(Data::Str(PackedStrs::encode(&v, hint)), 0, true);
         }
-        if vals > 0 && cnt[T_JSON as usize] == vals && depth < 2 {
-            if let Some(list) = ListCol::shred(t, hint, depth) {
+        if vals > 0 && cnt[T_NEST as usize] == vals && depth < 2 {
+            if let Some(list) = ListCol::from_nest(t, hint, depth) {
                 return mk(Data::List(Box::new(list)), 0, true);
             }
         }
@@ -1385,7 +1551,10 @@ impl DynTable {
                 None
             },
             tail: match self.spare_tails.pop() {
-                Some(t) if tl == 0 => t,
+                Some(mut t) if tl == 0 => {
+                    t.level = 0;
+                    t
+                }
                 _ => Tail::missing(tl),
             },
         });
@@ -1422,6 +1591,23 @@ impl DynTable {
             t.set(slot, &v)
         }
     }
+    /// Put a list of records or a record, given as JSON text, straight into the column's sub-columns. False when it
+    /// does not fit there; the caller then stores it with `put_at`.
+    pub fn put_nested_at(&mut self, c: usize, json: &str) -> bool {
+        let slot = self.tail_len();
+        let t = &mut self.cols[c].tail;
+        if t.len() != slot {
+            return false;
+        }
+        match t.nest_push(json) {
+            Some(j) => {
+                t.tags.push(T_NEST);
+                t.vals.push(j);
+                true
+            }
+            None => false,
+        }
+    }
     /// Same as `put_at` with a string cell, without building a `Cell`.
     pub fn put_str_at(&mut self, c: usize, s: &str) {
         let slot = self.tail_len();
@@ -1451,7 +1637,7 @@ impl DynTable {
             && self.bulk
             && self.seal_threads > 0
             && self.plen == 0
-            && self.cols.iter().map(|c| c.tail.text.len()).sum::<usize>() >= PARALLEL_TEXT_BYTES;
+            && self.cols.iter().map(|c| c.tail.text_bytes()).sum::<usize>() >= PARALLEL_TEXT_BYTES;
         if heavy {
             if self.sealers.len() >= self.seal_threads {
                 self.join_oldest()

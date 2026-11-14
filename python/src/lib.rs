@@ -1,6 +1,6 @@
 //! Python bindings for packmem: a list-of-dicts replacement backed by packed, mutable columns.
 use packmem::csv::{ColType, CsvLoader, CsvOptions};
-use packmem::dynamic::{from_text, to_text, RowVisitor};
+use packmem::dynamic::{compact_json, from_text, to_text, RowVisitor};
 use packmem::{Cell, DynTable, Hint, Num, Pred, StrMeasure};
 use pyo3::exceptions::{PyIndexError, PyKeyError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -105,32 +105,6 @@ impl<'de> Raw<'de> for Box<RawValue> {
     }
 }
 
-/// Nested JSON text with the whitespace between tokens removed. The parser has already validated it, so it is kept
-/// as written (escapes, number text and key order included) instead of being parsed into a tree and written back.
-fn compact_json(t: &str) -> String {
-    let mut out = Vec::with_capacity(t.len());
-    let (mut in_string, mut escaped) = (false, false);
-    for &c in t.as_bytes() {
-        if in_string {
-            out.push(c);
-            if escaped {
-                escaped = false
-            } else if c == b'\\' {
-                escaped = true
-            } else if c == b'"' {
-                in_string = false
-            }
-        } else if c == b'"' {
-            in_string = true;
-            out.push(c)
-        } else if !matches!(c, b' ' | b'\n' | b'\r' | b'\t') {
-            out.push(c)
-        }
-    }
-    // only ASCII whitespace outside strings was dropped, so the bytes are still valid UTF-8
-    String::from_utf8(out).expect("compacting JSON keeps it valid UTF-8")
-}
-
 fn raw_cell(t: &str) -> Result<Cell, String> {
     let b = t.as_bytes();
     Ok(match b.first() {
@@ -209,6 +183,7 @@ impl<'de, 'a, R: Raw<'de>> Visitor<'de> for RowSeed<'a, R> {
             let b = x.as_bytes();
             if b[0] == b'"' && !b.contains(&b'\\') {
                 t.put_str_at(c, &x[1..x.len() - 1])
+            } else if matches!(b[0], b'[' | b'{') && t.put_nested_at(c, x) {
             } else {
                 t.put_at(c, raw_cell(x).map_err(serde::de::Error::custom)?)
             }

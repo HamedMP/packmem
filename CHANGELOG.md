@@ -21,6 +21,9 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
   booleans and text are written straight into Arrow buffers.
 
 ### Changed
+- Nested values are split into sub-columns as rows arrive, not when a chunk is packed, so a load no longer holds
+  each chunk's nested values twice. A chunk whose nested values turn out not to be uniform keeps them as text in
+  canonical form.
 - Filters, group counts over a whole column, and sums of decimal columns run on several threads once a table has
   16 chunks (about 260,000 rows). Answers are the same as with one thread. `PACKMEM_THREADS` sets the number of
   threads (default: the cores, at most 8; 1 turns it off). The WebAssembly build stays single-threaded.
