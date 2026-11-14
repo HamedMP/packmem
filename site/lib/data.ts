@@ -345,3 +345,33 @@ export const mlShare = (() => {
   })
   return { pickled: arm(pickled), shared: arm(shared) }
 })()
+
+// ---------- the fine-tuning loader demo (demos/finetune-loader, published packmem 0.1.2 and 0.2.0, macOS) ----------
+// Medians of the per-run result files, as demos/finetune-loader/table.py computes them; "above" subtracts the no-data floor.
+const LOADER = "demos/finetune-loader/results"
+const loaderRuns: Rec[] = existsSync(file(LOADER))
+  ? readdirSync(file(LOADER)).filter((f) => f.endsWith(".json") && !f.endsWith("prepare.json")).map((f) => json(`${LOADER}/${f}`))
+  : []
+export const loaderDemo = (() => {
+  if (!loaderRuns.length) return null
+  const metric = loaderRuns[0].charged_metric as string
+  const arm = (start: string, mode: string, pm?: string) => {
+    const rs = loaderRuns.filter((r) => r.start === start && r.mode === mode && (!pm || r.versions.packmem === pm))
+    return rs.length ? { runs: rs.length, peakMb: median(rs.map((r) => r.peak_sum[metric])), firstBatchS: median(rs.map((r) => r.first_batch_s)), buildS: median(rs.map((r) => r.build_s)) } : null
+  }
+  const at = (start: string) => {
+    const floor = arm(start, "floor")
+    const above = (a: ReturnType<typeof arm>) => (a && floor ? { ...a, aboveMb: a.peakMb - floor.peakMb } : null)
+    return { floor, list: above(arm(start, "list")), hf: above(arm(start, "hf")), share012: above(arm(start, "packmem", "0.1.2")), share020: above(arm(start, "packmem", "0.2.0")), open020: above(arm(start, "packmem-open", "0.2.0")) }
+  }
+  const data = loaderRuns.filter((r) => r.mode !== "floor")
+  const loads = loaderRuns.map((r) => r.loadavg_at_start as number)
+  return {
+    spawn: at("spawn"),
+    fork: at("fork"),
+    workers: loaderRuns[0].workers as number,
+    records: data[0].records as number,
+    sameBatches: new Set(data.map((r) => r.batch_digest)).size === 1,
+    load: { lo: Math.min(...loads), hi: Math.max(...loads) },
+  }
+})()

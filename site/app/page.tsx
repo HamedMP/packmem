@@ -28,6 +28,7 @@ const jello = d.tools[1]
 const ml = d.mlLoader
 const hf = d.hfDatasets
 const share = d.mlShare
+const ld = d.loaderDemo
 const wk = d.workers?.sizes.at(-1) ?? null
 const workersVersion = d.workers?.version
 const workersLoad = d.workers ? `${d.workers.load.lo.toFixed(1)} to ${d.workers.load.hi.toFixed(1)}` : ""
@@ -552,29 +553,38 @@ export default function Page() {
                   </p>
                 </Fit>
               )}
-              {hf && (
-                <Fit wide title="If you already use Hugging Face datasets" tag="Linux, shared server">
+              {ld?.spawn.open020 && ld.spawn.hf && ld.spawn.list && ld.fork.open020 && ld.fork.hf && (
+                <Fit
+                  wide
+                  title="Against Hugging Face datasets"
+                  tag="0.2.0, verified"
+                  stat={`+${mb(ld.spawn.hf.aboveMb)} → +${mb(ld.spawn.open020.aboveMb)}`}
+                  statSub={`Memory above a no-data loader, ${ld.workers} spawn workers: datasets' memory-mapped Arrow against packmem.open()`}
+                >
                   <div className="flex flex-col gap-2">
-                    <p className="font-medium text-foreground">Stay there if your workers share a memory-mapped dataset.</p>
+                    <p className="font-medium text-foreground">0.2.0 holds the same training data in less memory than memory-mapped Arrow.</p>
                     <p>
-                      datasets keeps the records as memory-mapped Arrow, so {hf.workers} forkserver workers share one copy and each gets a{" "}
-                      {(hf.pickledBytes.hf / 1000).toFixed(1)} KB reference instead of a {mb(hf.pickledBytes.packmem / 1e6)} pickle: the
-                      whole node peaked at {gb(hf.nodePeakMb.hf)} against {gb(hf.nodePeakMb.packmem)} with packmem. It reloads from its cache
-                      in {hf.loadS.hf.toFixed(2)} s where packmem parses the JSON again ({hf.loadS.packmem.toFixed(1)} s), its batched access
-                      is about twice as fast, and its compressed Parquet source is smaller at rest.
+                      Save the packed table once, then <code className="font-mono text-xs">packmem.open()</code> it in every run: the parent and
+                      every worker read the same mapped file, with no schema to declare. In our fine-tuning loader demo on{" "}
+                      {ld.records.toLocaleString("en-US")} LLaVA records, {ld.workers} spawn workers held {mb(ld.spawn.open020.aboveMb)} above a
+                      loader with no data, against {mb(ld.spawn.hf.aboveMb)} for Hugging Face datasets and {gb(ld.spawn.list.aboveMb)} for a list;
+                      with fork it was {mb(ld.fork.open020.aboveMb)} against {mb(ld.fork.hf.aboveMb)}. The first batch arrived in{" "}
+                      {ld.spawn.open020.firstBatchS.toFixed(1)} s against {ld.spawn.hf.firstBatchS.toFixed(1)} s.
                     </p>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <p className="font-medium text-foreground">packmem replaces the Python list, not Arrow.</p>
+                    <p className="font-medium text-foreground">Where datasets still wins.</p>
                     <p>
-                      Against the list the same node peaked at {gb(hf.nodePeakMb.list)}, {x(hf.nodePeakMb.list / hf.nodePeakMb.packmem)} as much as with packmem.
-                      Against datasets, packmem turns a random row into a dict in {hf.rowUs.packmem.toFixed(0)} µs instead
-                      of {hf.rowUs.hf.toFixed(0)} µs, holds {x(hf.anonMb.arrowInMemory / hf.anonMb.packmem)} less than the same Arrow data held in
-                      memory, and needs no schema or conversion step.
+                      Its batched access (<code className="font-mono text-xs">ds[i:i+64]</code>, <code className="font-mono text-xs">ds.iter()</code>)
+                      was about twice as fast in our earlier comparison, its compressed Parquet source is smaller at rest, and parsing JSON
+                      into packmem is slower than <code className="font-mono text-xs">json.load</code> the first time. That earlier Linux
+                      comparison, on 665,298 records and packmem 0.1.1 before open() existed, is being re-run on 0.2.0.
                     </p>
                     <p className="text-xs leading-relaxed">
-                      The same 665,298 records, 4 workers. Memory figures hold under the server&apos;s load; timings are indicative.{" "}
-                      <a className="underline underline-offset-4" href={`${d.REPO}/tree/main/benchmarks/ml_swaps/hf-datasets`}>Method and raw outputs</a>.
+                      packmem 0.1.2 and 0.2.0 from PyPI, datasets 5.2.0, Apple M4 Pro, medians of 3 spawn runs and 1 fork run, load average{" "}
+                      {ld.load.lo.toFixed(1)} to {ld.load.hi.toFixed(1)}; annotations only, no model or GPU.
+                      {ld.sameBatches && " Every variant produced identical batches."}{" "}
+                      <a className="underline underline-offset-4" href={`${d.REPO}/tree/main/demos/finetune-loader`}>The demo, its code and results</a>.
                     </p>
                   </div>
                 </Fit>
@@ -725,9 +735,9 @@ export default function Page() {
               )}
               {hf && (
                 <li>
-                  <b className="font-medium">Memory-mapped Arrow datasets share better across worker processes.</b> Each worker gets its own
-                  copy of a packmem table; Hugging Face datasets workers share one mapped file, so a node with {hf.workers} workers peaked
-                  at {gb(hf.nodePeakMb.hf)} against {gb(hf.nodePeakMb.packmem)}. packmem replaces the Python list, not Arrow.
+                  <b className="font-medium">Hugging Face datasets is faster for batched access.</b> Slices and batched iteration over its
+                  Arrow columns were about twice as fast as packmem&apos;s in our comparison on 665,298 LLaVA records,
+                  and its compressed Parquet source is smaller at rest.
                 </li>
               )}
               <li><b className="font-medium">A one-line swap can cost time.</b> sqlite-utils used {less(d.tools[0].a, d.tools[0].b)} memory but took {d.tools[0].tb.toFixed(2)} s against {d.tools[0].ta.toFixed(2)} s.</li>
