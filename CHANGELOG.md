@@ -21,7 +21,8 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
   JSON has no form for (dates, decimals, UUIDs), at any depth, as `json.dumps(default=...)` does.
 - Python: `Table.to_arrow()`, `Table.to_parquet()`, `packmem.from_arrow()` and `packmem.read_parquet()`, using
   pyarrow when it is installed. They copy the data; absent keys become nulls in Arrow. Columns of numbers,
-  booleans and text are written straight into Arrow buffers.
+  booleans and text are written straight into Arrow buffers. After a load, pyarrow's allocator is asked to give back
+  the pages of the batches it has freed, which it otherwise keeps counted against the process.
 
 ### Changed
 - Nested values are split into sub-columns as rows arrive, not when a chunk is packed, so a load no longer holds

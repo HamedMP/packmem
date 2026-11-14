@@ -690,14 +690,27 @@ def from_arrow(data, hint="balanced", default=None):
         cols = [c.to_pylist() for c in batch.columns]
         if cols:
             t._t.extend_rows(list(batch.schema.names), zip(*cols), default)
+    del data
+    _release_arrow()
     return t
+
+
+def _release_arrow():
+    """pyarrow's allocator keeps the pages of freed batches counted against the process until asked for them."""
+    try:
+        import pyarrow
+        pyarrow.default_memory_pool().release_unused()
+    except Exception:
+        pass
 
 
 def read_parquet(path, hint="balanced", columns=None, default=None):
     """Pack a parquet file (needs pyarrow), reading it in batches. `columns` limits what is read."""
     import pyarrow.parquet as pq
     with pq.ParquetFile(path) as f:
-        return from_arrow(f.iter_batches(batch_size=65536, columns=columns), hint=hint, default=default)
+        t = from_arrow(f.iter_batches(batch_size=65536, columns=columns), hint=hint, default=default)
+    _release_arrow()
+    return t
 
 
 def _only(fields):
