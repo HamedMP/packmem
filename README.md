@@ -4,6 +4,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/packmem?label=PyPI&cacheSeconds=3600)](https://pypi.org/project/packmem/)
 [![npm](https://img.shields.io/npm/v/packmem?label=npm&cacheSeconds=3600)](https://www.npmjs.com/package/packmem)
+[![crates.io](https://img.shields.io/crates/v/packmem?label=crates.io&cacheSeconds=3600)](https://crates.io/crates/packmem)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://pypi.org/project/packmem/)
 [![CI](https://github.com/HamedMP/packmem/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/HamedMP/packmem/actions/workflows/ci.yml)
 [![Node CI](https://github.com/HamedMP/packmem/actions/workflows/node.yml/badge.svg?branch=main)](https://github.com/HamedMP/packmem/actions/workflows/node.yml)
@@ -147,6 +148,7 @@ The full study, including the cases above and the method, is in [docs/report.md]
 ```
 pip install packmem          # Python 3.10 or later; wheels for Linux, macOS and Windows
 npm install packmem          # Node, Bun and Deno, see node/README.md
+cargo add packmem --no-default-features   # Rust, without the benchmark's C dependencies
 ```
 
 From a checkout, with Rust:

@@ -183,7 +183,7 @@ export function GET() {
 }`,
   },
   rust: {
-    install: "cargo add packmem --git https://github.com/HamedMP/packmem",
+    install: "cargo add packmem --no-default-features",
     lang: "rust",
     code: `use packmem::{Cell, DynTable, Hint, Pred};
 
@@ -871,8 +871,9 @@ export default function Page() {
             </Tabs>
             <p className="text-sm leading-relaxed text-muted-foreground">
               <Badge variant="secondary" className="mr-2 align-[1px]">0.2.0 alpha</Badge>
-              On <a className="underline underline-offset-4" href="https://pypi.org/project/packmem/">PyPI</a> and{" "}
-              <a className="underline underline-offset-4" href="https://www.npmjs.com/package/packmem">npm</a>, with prebuilt builds for Linux (glibc
+              On <a className="underline underline-offset-4" href="https://pypi.org/project/packmem/">PyPI</a>,{" "}
+              <a className="underline underline-offset-4" href="https://www.npmjs.com/package/packmem">npm</a> and{" "}
+              <a className="underline underline-offset-4" href="https://crates.io/crates/packmem">crates.io</a>, with prebuilt Python and Node builds for Linux (glibc
               and musl), macOS and Windows. <span className="whitespace-nowrap">Apache-2.0.</span>
             </p>
           </Section>
