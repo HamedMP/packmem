@@ -12,6 +12,9 @@ export default function BlogLayout({ children }: { children: React.ReactNode }) 
           <Logo />
         </Link>
         <nav className="flex items-center gap-2">
+          <Button variant="secondary" size="lg" nativeButton={false} render={<Link href="/docs/" />}>
+            Docs
+          </Button>
           <Button variant="secondary" size="lg" nativeButton={false} render={<Link href="/blog/" />}>
             Blog
           </Button>

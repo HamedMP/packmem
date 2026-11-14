@@ -2,12 +2,12 @@
 import "server-only"
 import { createHighlighter } from "shiki"
 
-export type Lang = "python" | "typescript" | "rust" | "shellscript"
+export type Lang = "python" | "typescript" | "tsx" | "rust" | "shellscript" | "toml" | "json" | "markdown" | "text"
 
 const THEMES = { light: "vitesse-light", dark: "vitesse-dark" } as const
 const highlighter = createHighlighter({
   themes: Object.values(THEMES),
-  langs: ["python", "typescript", "rust", "shellscript"],
+  langs: ["python", "typescript", "tsx", "rust", "shellscript", "toml", "json", "markdown"],
 })
 
 /** Tokens carry both themes as CSS variables; globals.css picks one from the page's theme. */

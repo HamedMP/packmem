@@ -19,6 +19,7 @@ import * as d from "@/lib/data"
 import { Code } from "@/components/site/code"
 import type { Lang } from "@/lib/highlight"
 import { cn } from "@/lib/utils"
+import { BASE, VERSION } from "@/lib/docs"
 
 const x = (v: number) => `${v >= 10 ? Math.round(v) : v.toFixed(1)}×`
 const range = (xs: number[], digits = 1) => {
@@ -102,6 +103,42 @@ const NAV: NavSection[] = [
   { id: "use", title: "Use it", summary: "pip install, npm install, or the Rust crate." },
   { id: "method", title: "How these numbers were made", summary: "Machines, medians, load averages and the results files." },
 ]
+
+// The 0.3.0 release, from CHANGELOG.md's 0.3.0 section. Benchmark figures elsewhere keep the versions they were measured on.
+const NEW_IN_0_3: { title: string; body: string; href: string }[] = [
+  { title: "Browsers get packed bytes", body: "toBytes and fromBytes in Node and WebAssembly; packmem/http sends bytes to clients that ask and JSON to the rest.", href: "/docs/http/" },
+  { title: "A React hook", body: "useRows from packmem/react builds objects only for the rows on screen, and works inside Next.js.", href: "/docs/react/" },
+  { title: "Lists of records as columns", body: "Conversation turns and other nested records are stored as sub-columns, with pandas-style list and str operations in Python.", href: "/docs/python/#lists-of-records-inside-a-record" },
+  { title: "Several threads", body: "Filters, group counts and large file loads use several threads; PACKMEM_THREADS=1 turns it off.", href: "/docs/python/#threads" },
+  { title: "Arrow, Parquet and compact text", body: "to_arrow, from_arrow, read_parquet and to_parquet in Python; hint=\"compact\" compresses long text with Zstandard.", href: "/docs/python/#arrow-and-parquet" },
+  { title: "Smaller byte headers", body: "Format 4 writes header integers as varints, so small tables take fewer bytes.", href: "/docs/format/" },
+]
+
+function WhatsNew() {
+  return (
+    <div className="flex flex-col gap-4 rounded-xl border bg-background/60 p-5 backdrop-blur">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-sm font-medium">
+          <Badge className="mr-2 align-[1px]">New</Badge>
+          In 0.3.0
+        </h2>
+        <a className="text-xs text-muted-foreground underline underline-offset-4" href={`${d.REPO}/blob/main/CHANGELOG.md`}>
+          Changelog
+        </a>
+      </div>
+      <ul className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+        {NEW_IN_0_3.map((n) => (
+          <li key={n.title}>
+            <Link href={n.href} className="font-medium underline-offset-4 hover:underline">
+              {n.title}
+            </Link>
+            <p className="mt-0.5 leading-relaxed text-muted-foreground">{n.body}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
 
 function Section({ id, title, children }: { id?: string; title?: string; children: React.ReactNode }) {
   return (
@@ -235,15 +272,18 @@ export default function Page() {
           <Logo />
         </a>
         <nav className="flex items-center gap-2">
-          <Button variant="secondary" size="lg" className="bg-secondary/70 backdrop-blur" nativeButton={false} render={<Link href="/blog/" />}>
+          <Button variant="secondary" size="lg" className="bg-secondary/70 backdrop-blur" nativeButton={false} render={<Link href="/docs/" />}>
+            Docs
+          </Button>
+          <Button variant="secondary" size="lg" className="hidden bg-secondary/70 backdrop-blur sm:inline-flex" nativeButton={false} render={<Link href="/blog/" />}>
             Blog
           </Button>
-          <Button variant="secondary" size="lg" className="hidden bg-secondary/70 backdrop-blur sm:inline-flex" nativeButton={false} render={<a href="#results" />}>
+          <Button variant="secondary" size="lg" className="hidden bg-secondary/70 backdrop-blur md:inline-flex" nativeButton={false} render={<a href="#results" />}>
             Results
           </Button>
           <Button variant="secondary" size="lg" className="gap-2 bg-secondary/70 font-mono text-xs backdrop-blur" nativeButton={false} render={<a href={d.REPO} />}>
             <HugeiconsIcon icon={GithubIcon} strokeWidth={2} data-icon="inline-start" />
-            v0.2.0
+            v{VERSION}
           </Button>
           <ThemeToggle />
         </nav>
@@ -288,11 +328,15 @@ export default function Page() {
               <Button size="lg" nativeButton={false} render={<a href="#use" />}>
                 Use it
               </Button>
+              <Button size="lg" variant="outline" className="bg-background/40 backdrop-blur" nativeButton={false} render={<Link href="/docs/" />}>
+                Read the docs
+              </Button>
               <Button size="lg" variant="outline" className="bg-background/40 backdrop-blur" nativeButton={false} render={<a href="#results" />}>
                 See the numbers
                 <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} data-icon="inline-end" />
               </Button>
             </div>
+            <WhatsNew />
           </Section>
 
           {/* ---------- why ---------- */}
@@ -870,7 +914,7 @@ export default function Page() {
               </TabsContent>
             </Tabs>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              <Badge variant="secondary" className="mr-2 align-[1px]">0.2.0 alpha</Badge>
+              <Badge variant="secondary" className="mr-2 align-[1px]">{VERSION} alpha</Badge>
               On <a className="underline underline-offset-4" href="https://pypi.org/project/packmem/">PyPI</a>,{" "}
               <a className="underline underline-offset-4" href="https://www.npmjs.com/package/packmem">npm</a> and{" "}
               <a className="underline underline-offset-4" href="https://crates.io/crates/packmem">crates.io</a>, with prebuilt Python and Node builds for Linux (glibc
@@ -896,7 +940,7 @@ export default function Page() {
           <footer className="flex flex-col gap-1 font-mono text-xs text-muted-foreground">
             <p>{"// packmem · Apache-2.0 · "}<a className="underline underline-offset-4" href={d.REPO}>github.com/HamedMP/packmem</a></p>
             <p>{`// built from the results files on ${d.builtOn}`}</p>
-            <p>{"// are you an agent? read "}<a className="underline underline-offset-4" href={`${d.REPO}/blob/main/docs/report.md`}>docs/report.md</a>{" instead"}</p>
+            <p>{"// are you an agent? read "}<a className="underline underline-offset-4" href={`${BASE}/llms.txt`}>llms.txt</a>{" and "}<a className="underline underline-offset-4" href={`${d.REPO}/blob/main/docs/report.md`}>docs/report.md</a>{" instead"}</p>
           </footer>
         </div>
       </main>

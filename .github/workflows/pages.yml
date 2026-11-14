@@ -7,6 +7,8 @@ on:
       - "benchmarks/results/**"
       - "demos/bench/results/**"
       - "experiments/results/**"
+      - "node/package.json" # the version shown on the site
+      - "skills/**" # the skill file on the agents page
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
