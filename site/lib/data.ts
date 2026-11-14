@@ -313,6 +313,53 @@ export const hfDatasets = (() => {
   }
 })()
 
+// ---------- the same comparison on published packmem 0.2.0 (benchmarks/ml_swaps/hf-datasets/pypi-0.2.0, Linux) ----------
+// 4 DataLoader workers over the 665,298 LLaVA records, 3 runs per arm and start method, medians. "Extra" subtracts the
+// anonymous memory of a loader serving a constant record with the same imports: E (datasets imported) for Hugging Face,
+// E0 (packmem only) for the others. Memory-mapped file pages are page cache and are not in "extra".
+const HF020 = "benchmarks/ml_swaps/hf-datasets/pypi-0.2.0/out-0.2.0"
+const hf020Runs = (arm: string, start: string): Rec[] =>
+  existsSync(file(HF020))
+    ? readdirSync(file(HF020)).filter((f) => new RegExp(`^dl_${arm}_${start}_\\d+\\.json$`).test(f)).map((f) => json(`${HF020}/${f}`))
+    : []
+export const hfLinux = (() => {
+  const ARMS = { list: "A", hf: "B1", share: "V2S", open: "V2O" } as const
+  const BASE = { list: "E0", hf: "E", share: "E0", open: "E0" } as const
+  const at = (start: string) => {
+    const runs = Object.fromEntries(Object.entries(ARMS).map(([k, a]) => [k, hf020Runs(a, start)])) as Record<keyof typeof ARMS, Rec[]>
+    if (Object.values(runs).some((r) => !r.length)) return null
+    const anon = (rs: Rec[]) => median(rs.map((r) => r.peak_pss_anon_sum / 1e6))
+    const arm = (k: keyof typeof ARMS) => {
+      const rs = runs[k]
+      const parent = (r: Rec) => Math.max(...Object.values(r.per_process as Record<string, Rec>).filter((p) => p.role === "parent").map((p) => p.peak_USS))
+      return {
+        machineMb: median(rs.map((r) => r.peak_pss_sum / 1e6)),
+        extraMb: anon(rs) - anon(hf020Runs(BASE[k], start)),
+        parentMb: median(rs.map((r) => parent(r) / 1e6)),
+        firstBatchS: median(rs.map((r) => r.first_batch_s)),
+        sentBytes: median(rs.map((r) => r.pickled_dataset_bytes)),
+      }
+    }
+    const digests = new Set(Object.values(runs).flat().map((r) => r.batch_digest))
+    return { list: arm("list"), hf: arm("hf"), share: arm("share"), open: arm("open"), sameBatches: digests.size === 1 }
+  }
+  const forkserver = at("forkserver")
+  const fork = at("fork")
+  const conv = read(`${HF020}/conv_B1.json`)
+  const cost = read(`${HF020}/import_cost.json`)
+  const pkm = hf020Runs("V2O", "forkserver")[0]?.extra?.file?.size as number | undefined
+  if (!forkserver || !fork || !conv || !cost || !pkm) return null
+  return {
+    workers: 4,
+    records: conv.n as number,
+    forkserver,
+    fork,
+    fileMb: { arrow: (conv.arrow_bytes as number) / 1e6, packmem: pkm / 1e6 },
+    importMb: { datasets: cost.extra_over_torch_mb["torch,datasets"].Pss_Anon as number, packmem: cost.extra_over_torch_mb["torch,packmem"].Pss_Anon as number },
+    versions: cost.versions as Record<string, string>,
+  }
+})()
+
 // ---------- Cloudflare Workers (demos/workers/bench.mjs, local workerd under wrangler dev) ----------
 type WorkersRow = { mode: "plain" | "packmem"; rows: number; held_mb: number; wasm_mb: number; first_request_ms: number; stats_ms: number; export_ms: number; packed_mb: number | null }
 const workersRun = read("demos/workers/results/darwin-arm64.json") as { packmem: string; responses_identical: boolean; summary: WorkersRow[]; runs: { loadavg_at_start: number }[] } | null

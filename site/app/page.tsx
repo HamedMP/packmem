@@ -31,6 +31,7 @@ const ml = d.mlLoader
 const hf = d.hfDatasets
 const share = d.mlShare
 const ld = d.loaderDemo
+const hl = d.hfLinux
 const wk = d.workers?.sizes.at(-1) ?? null
 const workersVersion = d.workers?.version
 const workersLoad = d.workers ? `${d.workers.load.lo.toFixed(1)} to ${d.workers.load.hi.toFixed(1)}` : ""
@@ -623,57 +624,65 @@ export default function Page() {
                   </p>
                 </Fit>
               )}
-              {ld?.spawn.open020 && ld.spawn.hf && ld.spawn.list && ld.fork.open020 && ld.fork.hf && ld.costs && (
+              {hl && (
                 <Fit
                   wide
                   title="Against Hugging Face datasets"
-                  tag="0.2.0, verified"
-                  stat={`${mb(ld.costs.mapped_file_mb.datasets_arrow_cache)} → ${mb(ld.costs.mapped_file_mb.packmem_saved_table)}`}
-                  statSub="The file every worker maps: datasets' Arrow cache against packmem's saved table"
+                  tag="0.2.0, verified on Linux"
+                  stat={`${mb(hl.forkserver.hf.machineMb)} → ${mb(hl.forkserver.open.machineMb)}`}
+                  statSub={`Whole-machine memory, ${hl.workers} DataLoader workers over ${hl.records.toLocaleString("en-US")} LLaVA records: memory-mapped Arrow against packmem.open()`}
                   figure={
                     <div className="flex flex-col gap-6">
                     <WorkersDiagram left="List or pickled table: a copy per worker" right="packmem.open(): one file for all" />
                     <CompareBars
-                      unit="size"
-                      caption={`What the loader adds above one holding no data, ${ld.workers} spawn workers, ${ld.records.toLocaleString("en-US")} LLaVA records; a list took ${size(ld.spawn.list.aboveMb)}. Most of datasets' bar is each worker importing the library (${mb(ld.costs.import_extra_mb["torch+datasets"])} a process), not data.`}
+                      caption={`Peak memory of the parent and its ${hl.workers} forkserver workers together (PSS), Linux. A plain list took ${size(hl.forkserver.list.machineMb)}, and its first batch ${hl.forkserver.list.firstBatchS.toFixed(0)} s.`}
                       rows={[
-                        ...(ld.spawn.share012 ? [{ label: "packmem 0.1.2 share()", value: ld.spawn.share012.aboveMb }] : []),
-                        { label: "Hugging Face datasets, memory-mapped Arrow", value: ld.spawn.hf.aboveMb },
-                        ...(ld.spawn.share020 ? [{ label: "packmem 0.2.0 share()", value: ld.spawn.share020.aboveMb, hi: true }] : []),
-                        { label: "packmem 0.2.0 open()", value: ld.spawn.open020.aboveMb, hi: true },
+                        { label: "Hugging Face datasets, memory-mapped Arrow", value: hl.forkserver.hf.machineMb },
+                        { label: "packmem 0.2.0 share()", value: hl.forkserver.share.machineMb, hi: true },
+                        { label: "packmem 0.2.0 save() + open()", value: hl.forkserver.open.machineMb, hi: true },
                       ]}
                     />
                     </div>
                   }
                 >
                   <div className="flex flex-col gap-2">
-                    <p className="font-medium text-foreground">The same zero-copy sharing as memory-mapped Arrow, from a file half the size.</p>
-                    <p>
-                      Save the packed table once, then <code className="font-mono text-xs">packmem.open()</code> it in every run: the parent and
-                      every worker read one mapped file, as with Hugging Face datasets, and neither keeps the records in a worker&apos;s private
-                      memory. packmem&apos;s file is {mb(ld.costs.mapped_file_mb.packmem_saved_table)} against a{" "}
-                      {mb(ld.costs.mapped_file_mb.datasets_arrow_cache)} Arrow cache, so half the page cache per machine, with no schema to declare.
-                      Under spawn each worker also imports the library it reads with ({mb(ld.costs.import_extra_mb["torch+datasets"])} for datasets,{" "}
-                      {mb(ld.costs.import_extra_mb["torch+packmem"])} for packmem), so in our fine-tuning loader demo on{" "}
-                      {ld.records.toLocaleString("en-US")} LLaVA records, {ld.workers} spawn workers added {mb(ld.spawn.open020.aboveMb)} with packmem
-                      against {mb(ld.spawn.hf.aboveMb)} with datasets and {gb(ld.spawn.list.aboveMb)} with a list; with fork,{" "}
-                      {mb(ld.fork.open020.aboveMb)} against {mb(ld.fork.hf.aboveMb)}. The first batch arrived in {ld.spawn.open020.firstBatchS.toFixed(1)} s
-                      against {ld.spawn.hf.firstBatchS.toFixed(1)} s.
+                    <p className="font-medium text-foreground">
+                      {Math.round((1 - hl.forkserver.open.machineMb / hl.forkserver.hf.machineMb) * 100)}% less memory than memory-mapped Arrow, from a file{" "}
+                      {(hl.fileMb.arrow / hl.fileMb.packmem).toFixed(1)} times smaller.
                     </p>
+                    <p>
+                      Save the packed table once, then <code className="font-mono text-xs">packmem.open()</code> it: the parent and every worker
+                      read one mapped file, as with Hugging Face datasets. Above a loader serving no data, packmem added{" "}
+                      {mb(hl.forkserver.open.extraMb)} ({mb(hl.forkserver.share.extraMb)} with <code className="font-mono text-xs">share()</code>)
+                      against {mb(hl.forkserver.hf.extraMb)} for datasets and {size(hl.forkserver.list.extraMb)} for a list. Most of
+                      datasets&apos; extra is not data: each worker imports the library, {mb(hl.importMb.datasets)} a process against{" "}
+                      {mb(hl.importMb.packmem)} for packmem. The file is {mb(hl.fileMb.packmem)} against a {mb(hl.fileMb.arrow)} Arrow cache, so
+                      less page cache per machine, with no schema to declare. With fork workers the machine held {mb(hl.fork.open.machineMb)} against{" "}
+                      {mb(hl.fork.hf.machineMb)}, and the first batch arrived in {hl.forkserver.open.firstBatchS.toFixed(1)} s against{" "}
+                      {hl.forkserver.hf.firstBatchS.toFixed(1)} s and {hl.forkserver.list.firstBatchS.toFixed(0)} s for a list.
+                    </p>
+                    {ld?.spawn.open020 && ld.spawn.hf && (
+                      <p>
+                        Our fine-tuning loader demo shows the same on a Mac with spawn workers: {mb(ld.spawn.open020.aboveMb)} above the floor
+                        with packmem against {mb(ld.spawn.hf.aboveMb)} with datasets.{" "}
+                        <a className="underline underline-offset-4" href={`${d.REPO}/tree/main/demos/finetune-loader`}>The demo and its results</a>.
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-col gap-2">
                     <p className="font-medium text-foreground">Where datasets still wins.</p>
                     <p>
                       Its batched access (<code className="font-mono text-xs">ds[i:i+64]</code>, <code className="font-mono text-xs">ds.iter()</code>)
                       was about twice as fast in our earlier comparison, its compressed Parquet source is smaller at rest, and parsing JSON
-                      into packmem is slower than <code className="font-mono text-xs">json.load</code> the first time. That earlier Linux
-                      comparison, on 665,298 records and packmem 0.1.1 before open() existed, is being re-run on 0.2.0.
+                      into packmem is slower than <code className="font-mono text-xs">json.load</code> the first time.
                     </p>
                     <p className="text-xs leading-relaxed">
-                      packmem 0.1.2 and 0.2.0 from PyPI, datasets 5.2.0, Apple M4 Pro, medians of 3 spawn runs and 1 fork run, load average{" "}
-                      {ld.load.lo.toFixed(1)} to {ld.load.hi.toFixed(1)}; annotations only, no model or GPU.
-                      {ld.sameBatches && " Every variant produced identical batches."}{" "}
-                      <a className="underline underline-offset-4" href={`${d.REPO}/tree/main/demos/finetune-loader`}>The demo, its code and results</a>.
+                      packmem {hl.versions.packmem} and datasets {hl.versions.datasets} from PyPI, torch {hl.versions.torch}, one shared Linux server,
+                      medians of 3 runs per arm. Annotations only: no images, model or GPU. Memory held to within about 1 MB across runs; the
+                      server&apos;s load was 10 to 27, so timings are indicative. share() keeps its file in /dev/shm, which is RAM; the
+                      whole-machine figure counts the pages the processes touched.
+                      {hl.forkserver.sameBatches && " Every variant produced identical batches."}{" "}
+                      <a className="underline underline-offset-4" href={`${d.REPO}/blob/main/benchmarks/ml_swaps/hf-datasets/pypi-0.2.0/RESULT_0.2.0.md`}>Write-up, scripts and raw results</a>.
                     </p>
                   </div>
                 </Fit>
