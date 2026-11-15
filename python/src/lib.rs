@@ -389,6 +389,14 @@ fn object_end(data: &[u8], at: usize) -> Option<usize> {
 /// Files smaller than this load on one thread.
 const PARALLEL_LOAD_BYTES: u64 = 8 << 20;
 
+/// Input bytes a load thread may have unpacked at once, on average, before the loader waits for one to finish.
+fn inflight_bytes() -> usize {
+    std::env::var("PACKMEM_LOAD_INFLIGHT_MB")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .map_or(32 << 20, |mb| mb.max(1) << 20)
+}
+
 /// Threads a file load parses on. Each one holds a chunk's worth of unpacked rows while it works, so the default
 /// stops at four however many cores there are; a caller that asks for a number gets it, up to eight.
 fn load_threads(asked: Option<usize>) -> usize {
@@ -919,6 +927,8 @@ impl PyTable {
             drop(done_tx);
             let mut pending = std::collections::BTreeMap::new();
             let (mut more, mut sent, mut joined, mut n) = (true, 0usize, 0usize, 0usize);
+            // one more than the threads, so a piece can wait ready while they are all busy
+            let (mut flying, budget) = (0usize, (threads + 1) * inflight_bytes());
             let r = (|| -> PyResult<Result<usize, Redo>> {
                 while more || joined < sent {
                     if more {
@@ -930,6 +940,19 @@ impl PyTable {
                         };
                         match next_piece(want) {
                             Ok(Some(piece)) => {
+                                // a stretch of long records makes every piece large; wait there instead of
+                                // unpacking several of them at once
+                                let size = piece.span().len();
+                                while flying > 0 && flying + size > budget {
+                                    let (i, piece, t) = done_rx.recv().map_err(|_| {
+                                        pyo3::exceptions::PyRuntimeError::new_err(
+                                            "a load thread stopped early",
+                                        )
+                                    })?;
+                                    flying -= piece.span().len();
+                                    pending.insert(i, (piece, t));
+                                }
+                                flying += size;
                                 work_tx.send((sent, piece)).expect("load threads stopped");
                                 sent += 1
                             }
@@ -945,6 +968,7 @@ impl PyTable {
                         done_rx.try_recv().ok()
                     };
                     while let Some((i, piece, t)) = next {
+                        flying -= piece.span().len();
                         pending.insert(i, (piece, t));
                         next = done_rx.try_recv().ok()
                     }
