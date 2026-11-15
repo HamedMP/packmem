@@ -1,0 +1,2 @@
+ghcr.io/paperless-ngx/paperless-ngx:<none>@d704e84f8830
+postgres:18@2ea8630df176

@@ -1,5 +1,7 @@
 # Paperless-ngx `document_exporter`: document manifest as a list vs packmem.Table
 
+> These runs used packmem **0.2.0** (arm B) and a pre-release main build, 0.3.0.dev0 at b48a519 (arms C and D). The re-run on the released 0.3.2 is [`RESULT-0.3.2.md`](RESULT-0.3.2.md).
+
 **Headline (measured):** `document_exporter --data-only` on 100,000 seeded documents, peak RSS of the exporter process (median of 5 runs): A (list) 1,191 MiB; B 825 MiB (1.4x lower); C 766 MiB (1.6x lower); D 673 MiB (1.8x lower). See the tables for the manifest held in memory and for correctness.
 
 MiB = 2^20 bytes. Peak RSS is `Maximum resident set size` from GNU `time -v` around `python3 manage.py document_exporter`. Held manifest is RSS after `gc.collect()` once every document is in the manifest, minus RSS after `gc.collect()` just before the first record is read (probe lines in the patched exporter).

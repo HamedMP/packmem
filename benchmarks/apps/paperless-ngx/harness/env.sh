@@ -17,6 +17,15 @@ PACKMEM_020_SHA256=09c5ba04ee380af34600af1c9d6fac3f3a0337ebeb19f75292eb642363361
 PACKMEM_MAIN_COMMIT=b48a51992985c8d2a441c191550b18265f27963a
 MATURIN_VERSION=1.9.6
 
+# Released packmem for re-runs. PM_B and PM_CD name the build arms B and C/D load from /opt/packmem
+# (the first run used 0.2.0 for B and a main build for C/D; the 0.3.2 re-run sets both to 0.3.2).
+PACKMEM_REL_VERSION=0.3.2
+PACKMEM_REL_WHEEL=packmem-0.3.2-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+PACKMEM_REL_URL="https://files.pythonhosted.org/packages/5c/ed/db3ef96ef6375a751bb3ce304235e3062713acdcdf7a6348854070b92097/$PACKMEM_REL_WHEEL"
+PACKMEM_REL_SHA256=2176dd4ab52db80657d74874a2efeb6deaa4706d783c3e3d6659e8197bd0e163
+PM_B=${PM_B:-0.2.0}
+PM_CD=${PM_CD:-main}
+
 SEED=20261114
 DB_100K=paperless
 DB_20K=paperless_20k

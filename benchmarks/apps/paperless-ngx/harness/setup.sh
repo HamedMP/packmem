@@ -61,6 +61,13 @@ rm -rf "$WORK/pm/0.2.0"
 python3 -m zipfile -e "$WORK/wheels/$PACKMEM_020_WHEEL" "$WORK/pm/0.2.0"
 echo "packmem 0.2.0: $PACKMEM_020_WHEEL sha256=$PACKMEM_020_SHA256" > "$RES/env/packmem-0.2.0.txt"
 
+log "fetching packmem $PACKMEM_REL_VERSION from PyPI"
+curl -fsSL -o "$WORK/wheels/$PACKMEM_REL_WHEEL" "$PACKMEM_REL_URL"
+echo "$PACKMEM_REL_SHA256  $WORK/wheels/$PACKMEM_REL_WHEEL" | sha256sum -c -
+rm -rf "$WORK/pm/$PACKMEM_REL_VERSION"
+python3 -m zipfile -e "$WORK/wheels/$PACKMEM_REL_WHEEL" "$WORK/pm/$PACKMEM_REL_VERSION"
+echo "packmem $PACKMEM_REL_VERSION: $PACKMEM_REL_WHEEL sha256=$PACKMEM_REL_SHA256" > "$RES/env/packmem-$PACKMEM_REL_VERSION.txt"
+
 log "starting Paperless"
 dc up -d
 for i in $(seq 1 120); do
@@ -76,5 +83,10 @@ ensure_time | tee "$RES/env/gnu-time.txt"
 log "smoke test of arm B in the container"
 in_web env PYTHONPATH=/opt/packmem/0.2.0 python3 /harness/smoke.py "$SRC/documents/management/commands/document_exporter.py" b \
   | tee "$RES/env/smoke-b.txt"
+if [[ $PM_CD == "$PACKMEM_REL_VERSION" ]]; then
+  log "smoke test of arms B, C and D with packmem $PACKMEM_REL_VERSION"
+  in_web env PYTHONPATH=/opt/packmem/$PACKMEM_REL_VERSION python3 /harness/smoke.py "$SRC/documents/management/commands/document_exporter.py" b c d \
+    | tee "$RES/env/smoke-$PACKMEM_REL_VERSION.txt"
+fi
 dc ps
 log "setup done; next: bash $H/build_main_wheel.sh"

@@ -5,13 +5,15 @@
 source "$(dirname "$0")/env.sh"
 
 ROUNDS=${ROUNDS:-5}
+SPLIT=${SPLIT:-1}   # 0 skips the --split-manifest runs
+MAXLOAD=${MAXLOAD:-} # if set, each run waits up to 10 min for the 1-minute load average to fall to it
 TSV="$RES/runs.tsv"
 COLS="label	arm	mode	scale	split	round	start_utc	load_start	load_end	exit	wall_s	user_s	sys_s	maxrss_kb	start_rss_kb	held_rss_kb	done_hwm_kb	table_nbytes	packmem	manifest_sha256	manifest_bytes	files	vs_ref"
 [[ -s "$TSV" ]] || echo "$COLS" > "$TSV"
 ensure_time > /dev/null
 
 arm_of() { case $1 in off) echo A ;; b) echo B ;; c) echo C ;; d) echo D ;; esac; }
-pp_of() { case $1 in b) echo /opt/packmem/0.2.0 ;; c|d) echo /opt/packmem/main ;; esac; }
+pp_of() { case $1 in b) echo /opt/packmem/$PM_B ;; c|d) echo /opt/packmem/$PM_CD ;; esac; }
 
 wall_seconds() { # "h:mm:ss" or "m:ss.ss"
   awk -F: '{ s = 0; for (i = 1; i <= NF; i++) s = s * 60 + $i; printf "%.2f", s }' <<< "$1"
@@ -35,7 +37,10 @@ run_one() {
   [[ -n $pp ]] && envs+=(PYTHONPATH="$pp")
 
   in_web bash -c "rm -rf '$target' && mkdir -p '$target'"
-  local l0 l1 t0 rc=0
+  local l0 l1 t0 rc=0 waited=0
+  if [[ -n $MAXLOAD ]]; then
+    while ((waited < 600)) && awk -v m="$MAXLOAD" '{exit !($1 > m)}' /proc/loadavg; do sleep 15; waited=$((waited + 15)); done
+  fi
   l0=$(loadavg); t0=$(date -u +%FT%TZ)
   log "run $label: mode=$mode scale=$scale split=$split load=$l0"
   in_web env "${envs[@]}" nice -n 10 /usr/bin/time -v \
@@ -85,7 +90,7 @@ for ((r = 1; r <= ROUNDS; r++)); do
     run_one "r$r-$(arm_of "$m")-100k" "$m" 100k 0 "$r"
   done
 done
-for m in "${MODES[@]}"; do run_one "split-$(arm_of "$m")-100k" "$m" 100k 1 1; done
+[[ $SPLIT == 1 ]] && for m in "${MODES[@]}"; do run_one "split-$(arm_of "$m")-100k" "$m" 100k 1 1; done
 run_one warmup-20k off 20k 0 0
 for m in "${MODES[@]}"; do run_one "s20k-$(arm_of "$m")" "$m" 20k 0 1; done
 
