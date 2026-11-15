@@ -15,12 +15,12 @@ rows the usual way, as JSON with `res.json()`, so the two can be compared on the
 
 ## Run it
 
-Build the packmem package in this repository first (it needs Rust and wasm-bindgen; see `../../node/README.md`):
-
 ```sh
-cd ../../node && npm ci && npm run build && npm run build:wasm
-cd ../demos/log-viewer && npm install && npm run build && npm start
+npm install && npm run build && npm start
 ```
+
+The demo uses `packmem` from npm (0.3.2 or later). To run it against the code in this repository instead, build the
+package (it needs Rust and wasm-bindgen; see `../../node/README.md`) and install it with `npm install ../../node`.
 
 Then open http://localhost:3000 in Chrome. The JS heap figure comes from `performance.memory`, which only Chrome
 reports.
@@ -33,33 +33,33 @@ reports.
 | JS heap | Chrome's used JS heap. packmem's rows are in WebAssembly memory instead, shown as "Packed table" |
 | Over the network | the response body as it arrived, compressed if the server compressed it |
 
-One run on a Linux server, Chromium over localhost, 1,000,000 rows (one-off numbers, not a benchmark; they change with
-the machine and the network):
+1,000,000 rows on a Linux server, served by `next start` over localhost, with packmem 0.3.2 from npm. Sizes are exact and
+the same on every run; the times are three runs in headless Chromium while the machine had a 1-minute load of 3.6 to 4.3,
+so they are one-off numbers, not a benchmark. Output: `results/check-0.3.2.txt`.
 
 | | packmem bytes | plain JSON |
 | --- | ---: | ---: |
-| Until usable | 309 ms | 4,335 ms |
-| JS heap after loading | 3.9 MB, plus a 49.2 MB packed table | 193.6 MB |
-| Over the network | 49.1 MB (not compressed) | 32.7 MB (gzip) |
+| Over the network | 31.7 MB (31,686,533 B, gzip inside the payload) | 32.7 MB (32,658,189 B, gzip by Next.js) |
+| Not compressed | 49.1 MB | 222.1 MB |
+| Until usable | 1,327 to 1,471 ms | 3,275 to 3,287 ms |
+| Held in the page | a 49.2 MB packed table, in WebAssembly memory | 1,000,000 objects in the JS heap |
+
+An earlier run with the build from this repository, before 0.3.2 and without compression, took 309 ms against 4,335 ms
+in headed Chromium, with 3.9 MB against 193.6 MB of JS heap. The heap figures from the headless runs were not consistent
+between the page's own reading and a reading after garbage collection, so they are left out here.
 
 Two things to know:
 
-- **Next.js compresses the JSON but not the bytes.** Its compression only applies to content types it knows, and it
-  removes a `content-encoding` header that a route handler sets, so a route cannot gzip the bytes itself. Gzipped,
-  these bytes would be 28 MB against 33 MB of gzipped JSON. Behind a CDN or proxy that compresses
-  `application/vnd.packmem`, the bytes travel compressed.
+- **Next.js compresses the JSON but not the bytes**, because its compression only applies to content types it knows and
+  it removes a `content-encoding` header that a route handler sets. From 0.3.2, `respond` gzips the bytes itself, inside
+  the payload, when the client asks for it (`fetchTable` and `useTable` do), so they travel compressed through Next.js too.
+  On these rows that makes them about the same size as gzipped JSON; the gain is the time until usable and the memory.
 - With a filter, both forms are small and quick: the 40,071 error lines take about 0.1 to 0.2 s either way. The gap
   grows with the number of rows the page holds.
 
 ## Deploy to Vercel
 
-The `packmem` dependency here is `file:../../node`, the package built from this repository, so the demo runs against
-the code next to it. Vercel cannot build that (the native addon and the WebAssembly build need Rust), so to deploy,
-change it to the published package once a release with `useTable` is on npm (after 0.3.1):
-
-```sh
-npm install packmem@latest
-```
+The demo depends on the published `packmem`, so Vercel can build it as it is:
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FHamedMP%2Fpackmem%2Ftree%2Fmain%2Fdemos%2Flog-viewer&project-name=packmem-log-viewer)
 
@@ -67,7 +67,7 @@ Notes for Vercel:
 
 - The server and the browser get packmem from the same `npm install`, so they read the same byte format. If the
   server ever runs a newer packmem than the page, `fetchTable` falls back to JSON.
-- Vercel Functions limit a response to 4.5 MB unless it is streamed. The JSON form is streamed. The bytes form is
-  one buffer, so with the full million rows it may hit that limit; filtered views are well under it. This has not
-  been tried on Vercel yet.
+- Vercel Functions limit a response to 4.5 MB unless it is streamed. The JSON form is streamed, and so are gzipped
+  bytes (what `useTable` asks for). Uncompressed bytes are one buffer, so with the full million rows they may hit that
+  limit; filtered views are well under it. This has not been tried on Vercel yet.
 - The table is built per function instance, on its first request.

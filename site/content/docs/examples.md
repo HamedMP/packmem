@@ -47,8 +47,7 @@ with `res.json()`, so the two can be compared on one page: time until usable, th
 the network. The records come from a seeded generator, so nothing is downloaded.
 
 ```sh
-cd node && npm ci && npm run build && npm run build:wasm   # the package from this repository
-cd ../demos/log-viewer && npm install && npm run build && npm start   # http://localhost:3000, in Chrome
+cd demos/log-viewer && npm install && npm run build && npm start   # packmem from npm; http://localhost:3000, in Chrome
 ```
 
 Shows: the whole browser path with the two hooks, and where packed bytes pay off and where they do not. Its

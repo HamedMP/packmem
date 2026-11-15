@@ -1,0 +1,23 @@
+log viewer, 1,000,000 rows (ROWS default), packmem 0.3.2 from npm, next 16.4.6, `next start` on localhost
+date: 2026-11-15, Linux x86_64 server, node v24.22.0, Chromium headless shell 141.0.7390.37 (playwright 1.56.1)
+
+response sizes from curl on /api/logs (load 0.38):
+bytes gzip (fetchTable Accept): 31686533 B type=application/vnd.packmem; enc=gzip
+bytes plain: 49123279 B type=application/vnd.packmem
+json gzip: 32658189 B type=application/json
+json plain: 222051218 B
+
+page check, three runs (stats as the page shows them; "heap after gc" read with --enable-precise-memory-info
+after gc(); the two heap readings disagree, so neither is quoted in the README):
+load: 3.62
+packmem: Rows | 1,000,000 | Over the network | 31.7 MB | Until usable | 1,390 ms | JS heap | 71.7 MB | Packed table | 49.2 MB | heap after gc: 154.2 MB
+json: Rows | 1,000,000 | Over the network | 32.7 MB | Until usable | 3,285 ms | JS heap | 516.1 MB | heap after gc: 294.2 MB
+errors: []
+load: 4.29
+packmem: Rows | 1,000,000 | Over the network | 31.7 MB | Until usable | 1,327 ms | JS heap | 5.9 MB | Packed table | 49.2 MB | heap after gc: 154.2 MB
+json: Rows | 1,000,000 | Over the network | 32.7 MB | Until usable | 3,287 ms | JS heap | 516.0 MB | heap after gc: 294.1 MB
+errors: []
+load: 4.33
+packmem: Rows | 1,000,000 | Over the network | 31.7 MB | Until usable | 1,471 ms | JS heap | 67.1 MB | Packed table | 49.2 MB | heap after gc: 154.6 MB
+json: Rows | 1,000,000 | Over the network | 32.7 MB | Until usable | 3,275 ms | JS heap | 516.0 MB | heap after gc: 294.2 MB
+errors: []
