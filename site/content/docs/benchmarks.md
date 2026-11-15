@@ -6,7 +6,7 @@ compared against, and where packmem is slower or only level. Every number below 
 
 | | Without packmem | With packmem | |
 | --- | ---: | ---: | --- |
-| VLM training data, 8 ranks x 4 workers, node memory | 47.81 GiB | 5.77 GiB | 8.3x less |
+| VLM training data, 8 ranks x 4 workers, node memory | 47.81 GiB | 4.47 GiB | 10.7x less |
 | Lightdash, 100,000 rows held in the browser | 115.25 MB | 15.52 MB | 7.4x less |
 | paperless-ngx exporter, 100,000 documents, peak RSS | 1,191 MiB | 580 MiB | 2.05x less, 2.0x slower |
 | Log viewer, 1,000,000 rows until usable | 3,275 ms | 1,327 ms | about the same bytes over the network |
@@ -23,15 +23,15 @@ MiniCPM-V read the LLaVA-1.5 665k annotations (1 GB of JSON) through a patch tha
 `packmem.load_json` instead. The patch for Qwen3-VL is +29/-12 lines in `data_processor.py`.
 
 8 torchrun ranks with 4 fork workers each. Memory for the whole job (PSS summed over every process), median of 3
-runs, packmem 0.3.2:
+runs, packmem 0.3.3:
 
 | Model | Samples per rank | List (`json.load`) | packmem | |
 | --- | ---: | ---: | ---: | --- |
-| Qwen3-VL | 20,000 | 47.81 GiB | 5.77 GiB | 8.3x less |
-| Qwen3-VL | 83,163 (full shard, 1 run) | 54.88 GiB | 6.21 GiB | 8.8x less |
-| MiniCPM-V | 20,000 | 37.82 GiB | 7.31 GiB | 5.2x less |
+| Qwen3-VL | 20,000 | 47.81 GiB | 4.47 GiB | 10.7x less |
+| Qwen3-VL | 83,163 (full shard, 1 run) | 54.88 GiB | 6.12 GiB | 9.0x less |
+| MiniCPM-V | 20,000 | 37.82 GiB | 7.25 GiB | 5.2x less |
 
-One rank reading a full shuffled epoch through 4 workers, median of 3:
+One rank reading a full shuffled epoch through 4 workers, median of 3, packmem 0.3.2:
 
 | | List | packmem | |
 | --- | ---: | ---: | --- |
@@ -41,8 +41,12 @@ One rank reading a full shuffled epoch through 4 workers, median of 3:
 
 - The batches are bit-identical between the two arms, for all 8 ranks, in every run.
 - The figures are host RAM for the annotations and the processes around them: no images, no model, no GPU.
-- The Qwen3-VL peak at 20,000 samples is higher than 0.1.0's 4.86 GiB. The 0.3.2 loader parses on up to 4 threads and
-  briefly holds more while it does. A fix to that loader is coming in 0.3.3.
+- In 0.3.2 the Qwen3-VL peak at 20,000 samples was 5.77 GiB, above 0.1.0's 4.86 GiB: its loader parses on up to 4
+  threads, and glibc kept each thread's freed buffers. 0.3.3 returns them, so the 8 simultaneous loads peak lower.
+  The full-shard and MiniCPM-V peaks come from iteration and barely moved (6.21 to 6.12 and 7.31 to 7.25 GiB).
+- The 0.3.3 rows were measured on a build of commit 4bf9c3e, which has the same code as the 0.3.3 release; the
+  published wheel gives the same one-process loader peak (441 against 442 MiB). The list arms are the 0.3.2 runs,
+  since list memory does not depend on packmem.
 
 Details and raw files:
 [RESULT-0.3.2.md](https://github.com/HamedMP/packmem/blob/main/benchmarks/ml_swaps/linux-node/RESULT-0.3.2.md).
