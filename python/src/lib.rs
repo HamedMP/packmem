@@ -192,13 +192,18 @@ impl<'de, 'a, R: Raw<'de>> Visitor<'de> for RowSeed<'a, R> {
     }
 }
 
+/// Blocks of `BIG` bytes or more get a mapping of their own, which goes back to the system the moment it is freed.
 /// macOS goes on counting memory against a process after it is freed, so the buffers a load needs only while it runs
-/// would stay in the process's footprint for good. Blocks of `BIG` bytes or more therefore get a mapping of their own,
-/// which goes back to the system the moment it is freed.
-#[cfg(target_os = "macos")]
+/// would stay in the process's footprint for good. glibc raises its own mapping threshold, up to 32 MiB, each time a
+/// large block is freed; after that the buffers of the load threads come from per-thread arenas that keep them, which
+/// put four threads' worth of freed buffers into a load's peak.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 mod big_alloc {
     use std::alloc::{GlobalAlloc, Layout, System};
+    #[cfg(target_os = "macos")]
     const BIG: usize = 32 << 10;
+    #[cfg(target_os = "linux")]
+    const BIG: usize = 1 << 20;
     pub struct Alloc;
     fn big(l: Layout) -> bool {
         l.size() >= BIG && l.align() <= 4096
@@ -246,6 +251,16 @@ mod big_alloc {
             if !big(l) && !big(new) {
                 return unsafe { System.realloc(p, l, size) };
             }
+            #[cfg(target_os = "linux")]
+            if big(l) && big(new) {
+                // SAFETY: `p` is a mapping of `l.size()` bytes made by `alloc`; the kernel moves or resizes it.
+                let q = unsafe { libc::mremap(p.cast(), l.size(), size, libc::MREMAP_MAYMOVE) };
+                return if q == libc::MAP_FAILED {
+                    std::ptr::null_mut()
+                } else {
+                    q.cast()
+                };
+            }
             let q = unsafe { self.alloc(new) };
             if !q.is_null() {
                 unsafe {
@@ -257,7 +272,7 @@ mod big_alloc {
         }
     }
 }
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 #[global_allocator]
 static ALLOC: big_alloc::Alloc = big_alloc::Alloc;
 
@@ -388,14 +403,6 @@ fn object_end(data: &[u8], at: usize) -> Option<usize> {
 
 /// Files smaller than this load on one thread.
 const PARALLEL_LOAD_BYTES: u64 = 8 << 20;
-
-/// Input bytes a load thread may have unpacked at once, on average, before the loader waits for one to finish.
-fn inflight_bytes() -> usize {
-    std::env::var("PACKMEM_LOAD_INFLIGHT_MB")
-        .ok()
-        .and_then(|v| v.parse::<usize>().ok())
-        .map_or(32 << 20, |mb| mb.max(1) << 20)
-}
 
 /// Threads a file load parses on. Each one holds a chunk's worth of unpacked rows while it works, so the default
 /// stops at four however many cores there are; a caller that asks for a number gets it, up to eight.
@@ -930,8 +937,6 @@ impl PyTable {
             drop(done_tx);
             let mut pending = std::collections::BTreeMap::new();
             let (mut more, mut sent, mut joined, mut n) = (true, 0usize, 0usize, 0usize);
-            // one more than the threads, so a piece can wait ready while they are all busy
-            let (mut flying, budget) = (0usize, (threads + 1) * inflight_bytes());
             let r = (|| -> PyResult<Result<usize, Redo>> {
                 while more || joined < sent {
                     if more {
@@ -943,19 +948,6 @@ impl PyTable {
                         };
                         match next_piece(want) {
                             Ok(Some(piece)) => {
-                                // a stretch of long records makes every piece large; wait there instead of
-                                // unpacking several of them at once
-                                let size = piece.span().len();
-                                while flying > 0 && flying + size > budget {
-                                    let (i, piece, t) = done_rx.recv().map_err(|_| {
-                                        pyo3::exceptions::PyRuntimeError::new_err(
-                                            "a load thread stopped early",
-                                        )
-                                    })?;
-                                    flying -= piece.span().len();
-                                    pending.insert(i, (piece, t));
-                                }
-                                flying += size;
                                 work_tx.send((sent, piece)).expect("load threads stopped");
                                 sent += 1
                             }
@@ -971,7 +963,6 @@ impl PyTable {
                         done_rx.try_recv().ok()
                     };
                     while let Some((i, piece, t)) = next {
-                        flying -= piece.span().len();
                         pending.insert(i, (piece, t));
                         next = done_rx.try_recv().ok()
                     }
