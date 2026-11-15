@@ -13,6 +13,11 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
   Turning every row into an object takes 2 to 3 times as long as `JSON.parse`.
 - Benchmarks: `benchmarks/wire-size/` breaks down where the bytes go and compares what 0.3.0 writes with JSON
   (`benchmarks/wire-size/results/sizes-0.3.0.jsonl`).
+- Benchmarks: `benchmarks/apps/lightdash/` runs Lightdash 3.261.1's own query-results endpoint with a 25-line
+  patch, at 100,000 rows. Against gzipped JSON at the 2,500-row page cap, packmem in one response holds 7.4 times
+  less memory in the browser (15.5 against 115.3 MB) and sends 1.26 times fewer bytes (3.25 against 4.09 MB). Time
+  until usable is only 1.16 times shorter (11.8 against 13.7 s), because the server's own row formatting
+  dominates. At the same 2,500-row pages packmem is no faster and needs 1.2 s more server time.
 
 ### Changed
 - Demos: `demos/log-viewer` depends on packmem ^0.3.2 from npm, so it deploys without a Rust toolchain. Its
