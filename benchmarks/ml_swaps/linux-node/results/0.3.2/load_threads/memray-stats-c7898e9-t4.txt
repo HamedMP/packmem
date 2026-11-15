@@ -1,0 +1,56 @@
+
+📏 Total allocations:
+	10993701
+
+📦 Total memory allocated:
+	6.251GB
+
+📈 Peak memory usage:
+	1.644GB
+
+📊 Histogram of allocation size:
+	min: 1.000B
+	----------------------------------------------
+	< 7.000B   :  207827 ▇▇
+	< 63.000B  : 4853282 ▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇
+	< 505.000B : 5072936 ▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇
+	< 4.028kB  :  823208 ▇▇▇▇▇
+	< 32.091kB :   32246 ▇
+	< 255.666kB:    2762 ▇
+	< 2.037MB  :    1048 ▇
+	< 16.227MB :     370 ▇
+	< 129.274MB:      21 ▇
+	<=1.030GB  :       1 ▇
+	----------------------------------------------
+	max: 1.030GB
+
+📂 Allocator type distribution:
+	 MALLOC: 8905192
+	 REALLOC: 2088109
+	 CALLOC: 395
+	 MMAP: 3
+	 POSIX_MEMALIGN: 2
+
+🥇 Top 5 largest allocating locations (by size):
+	- <stack trace unavailable> -> 4.717GB
+	- load_json:~/packmem-ljpeak2/venv-dbg/lib/python3.12/site-packages/packmem/__init__.py:760 -> 1.529GB
+	- _compile_bytecode:<frozen importlib._bootstrap_external>:753 -> 1.597MB
+	- get_data:<frozen importlib._bootstrap_external>:1187 -> 1.138MB
+	- PathDistribution:/usr/lib/python3.12/importlib/metadata/__init__.py:823 -> 1.049MB
+
+🥇 Top 5 largest allocating locations (by number of allocations):
+	- <stack trace unavailable> -> 10407881
+	- load_json:~/packmem-ljpeak2/venv-dbg/lib/python3.12/site-packages/packmem/__init__.py:760 -> 584498
+	- _compile_bytecode:<frozen importlib._bootstrap_external>:753 -> 483
+	- get_data:<frozen importlib._bootstrap_external>:1187 -> 70
+	- get_data:<frozen importlib._bootstrap_external>:1186 -> 70
+
+🥇 Top 5 allocating modules (by size):
+	- <root>: 4.718GB total | 10407958 allocations
+	- packmem: 1.533GB total | 585697 allocations
+	- prof: 1.208MB total | 46 allocations
+
+🥇 Top 5 allocating modules (by number of allocations):
+	- <root>: 4.718GB total | 10407958 allocations
+	- packmem: 1.533GB total | 585697 allocations
+	- prof: 1.208MB total | 46 allocations

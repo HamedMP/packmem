@@ -1,0 +1,5 @@
+c7898e9 Let go of mapped input behind each load thread as it parses
+8a0b2b48e329db1908178c8b731f7f3b3af28dfa5d63ef68aa79bbc9148cd34d  wheels-dbg/packmem-0.3.2-cp310-abi3-manylinux_2_34_x86_64.whl
+d4edad31b0592d4fa3870519e4e07a5c8c17ce1bacd085b51dbb858dbd7c132f  wheels-rel/packmem-0.3.2-cp310-abi3-manylinux_2_34_x86_64.whl
+rustc 1.100.0 (0ef1bc386 2026-11-09)
+1.20.0

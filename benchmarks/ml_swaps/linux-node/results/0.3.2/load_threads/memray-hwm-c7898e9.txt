@@ -1,0 +1,70 @@
+== hwm-t4.csv: 1567.5 MiB live at the high-water mark
+   982.2  [mmap] (outside packmem) <>::new
+   287.3  <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> <- <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<>> <- _packmem::push_line
+   261.7  _packmem::push_line
+    31.1  (outside packmem) std::sys::alloc::unix::realloc
+     2.4  <packmem::buf::Buf<> as core::iter::traits::collect::FromIterator<>>::from_iter::<core::iter::adapters::map::Map<core::iter::adapters::map::Map<core::slice::iter::Iter<>, <>::encode<>::{closure#3}>, <>::pack<core::iter::adapters::map::Map<c
+     2.0  [mmap] (outside packmem) <>
+     0.4  (outside packmem) PyObject_Malloc
+     0.2  (outside packmem) alloc::alloc::alloc
+     0.0  packmem::dynamic::from_text
+     0.0  _packmem::_packmem <- _packmem::_packmem::__pyo3_init::{closure#0} <- <_packmem::_packmem::__pyo3_init::{closure#0} as core::ops::function::FnOnce<>>::call_once
+     0.0  (outside packmem) PyMem_Malloc
+     0.0  (outside packmem) std::sys::alloc::unix::alloc_zeroed
+     0.0  (outside packmem) std::sys::alloc::unix::alloc
+     0.0  (outside packmem) _PyUnicodeWriter_Finish
+     0.0  (outside packmem) <>
+     0.0  (outside packmem) std::sys::alloc::unix::aligned_malloc
+     0.0  (outside packmem) __cxa_thread_atexit_impl
+     0.0  packmem::dynamic::SPARE_TAILS::{K#0}::{closure#0} <- <packmem::dynamic::SPARE_TAILS::{K#0}::{closure#0} as core::ops::function::FnOnce<(core::option::Option<&mut core::option::Option<core::cell::RefCell<alloc::vec::Vec<>>>>,)>>::call_once <
+     0.0  (outside packmem) _Py_hashtable_set
+     0.0  packmem::dynamic::SPARE_TAILS::{K#0}::{closure#0} <- <packmem::dynamic::SPARE_TAILS::{K#0}::{closure#0} as core::ops::function::FnOnce<(core::option::Option<&mut core::option::Option<core::cell::RefCell<alloc::vec::Vec<>>>>,)>>::call_once
+per thread:
+  tid 1: 1016.1 MiB
+         982.2  [mmap] (outside packmem) <>::new
+          31.1  (outside packmem) std::sys::alloc::unix::realloc
+           2.0  [mmap] (outside packmem) <>
+           0.4  (outside packmem) PyObject_Malloc
+  tid 3: 321.6 MiB
+         241.3  _packmem::push_line
+          80.3  <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> <- <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<
+  tid 5: 125.8 MiB
+         125.0  <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> <- <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<
+           0.8  _packmem::push_line
+           0.0  (outside packmem) std::sys::alloc::unix::alloc_zeroed
+           0.0  (outside packmem) <>
+  tid 2: 81.3 MiB
+          80.9  <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> <- <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<
+           0.4  <packmem::buf::Buf<> as core::iter::traits::collect::FromIterator<>>::from_iter::<core::iter::adapters::map::Map<core::iter::adapters::map::Map<core::slice::iter::Iter<>, <>::encode<>::{closure#3}>, <
+           0.0  _packmem::push_line
+           0.0  (outside packmem) std::sys::alloc::unix::alloc
+  tid 4: 22.7 MiB
+          19.6  _packmem::push_line
+           2.0  <packmem::buf::Buf<> as core::iter::traits::collect::FromIterator<>>::from_iter::<core::iter::adapters::map::Map<core::iter::adapters::map::Map<core::slice::iter::Iter<>, <>::encode<>::{closure#3}>, <
+           1.1  <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> <- <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<
+           0.0  (outside packmem) std::sys::alloc::unix::alloc
+
+== hwm-t1.csv: 389.7 MiB live at the high-water mark
+   258.5  (outside packmem) std::sys::alloc::unix::realloc
+    92.9  <_packmem::RowSeed<alloc::boxed::Box<>> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<serde_json::read::IoRead<alloc::io::buffered::bufreader::BufReader<>>>> <- <_packmem::RowSeed<alloc::boxed::Box<>> as serde_core::de:
+    26.5  (outside packmem) std::sys::alloc::unix::alloc
+     5.2  (outside packmem) alloc::alloc::alloc_zeroed
+     2.4  <packmem::buf::Buf<> as core::iter::traits::collect::FromIterator<>>::from_iter::<core::iter::adapters::map::Map<core::iter::adapters::map::Map<core::slice::iter::Iter<>, <>::encode<>::{closure#3}>, <>::pack<core::iter::adapters::map::Map<c
+     2.0  [mmap] (outside packmem) <>
+     1.5  (outside packmem) alloc::alloc::alloc
+     0.4  (outside packmem) PyObject_Malloc
+     0.2  packmem::strs::rebuild <- <packmem::strs::rebuild as core::ops::function::FnOnce<>>::call_once
+     0.1  (outside packmem) std::sys::alloc::unix::alloc_zeroed
+     0.0  _packmem::_packmem <- _packmem::_packmem::__pyo3_init::{closure#0} <- <_packmem::_packmem::__pyo3_init::{closure#0} as core::ops::function::FnOnce<>>::call_once
+     0.0  (outside packmem) PyMem_Malloc
+     0.0  (outside packmem) _PyUnicodeWriter_Finish
+     0.0  (outside packmem) <>
+     0.0  (outside packmem) _Py_hashtable_set
+     0.0  packmem::dynamic::SPARE_TAILS::{K#0}::{closure#0} <- <packmem::dynamic::SPARE_TAILS::{K#0}::{closure#0} as core::ops::function::FnOnce<(core::option::Option<&mut core::option::Option<core::cell::RefCell<alloc::vec::Vec<>>>>,)>>::call_once <
+per thread:
+  tid 1: 389.7 MiB
+         258.5  (outside packmem) std::sys::alloc::unix::realloc
+          92.9  <_packmem::RowSeed<alloc::boxed::Box<>> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<serde_json::read::IoRead<alloc::io::buffered::bufreader::BufReader<>>>> <- <_packmem::RowSeed
+          26.5  (outside packmem) std::sys::alloc::unix::alloc
+           5.2  (outside packmem) alloc::alloc::alloc_zeroed
+

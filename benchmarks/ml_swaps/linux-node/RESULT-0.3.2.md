@@ -258,6 +258,21 @@ the same way, it gave the same figures: 380, 580 and 726 MiB peak VmRSS at 1, 2 
 1.47 s. The table was the same size (`nbytes` 296,187,892) in all 18 runs. The 8-rank node runs above were not
 repeated with one thread.
 
+Main at c7898e9 (unreleased) releases the mapped input behind each parser thread as it goes. Built from that commit
+and run the same way with `threads=` (3 runs each, `runs-c7898e9.jsonl`), medians in MiB:
+
+| Threads | `load_json` time | Peak RssAnon | Peak RssFile | Peak VmRSS | c358143 peak VmRSS |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | 6.45 s | 372 | 9 | 381 | 380 |
+| 2 | 2.22 s | 480 | 135 | 492 | 580 |
+| 4 | 1.49 s | 611 | 144 | 623 | 726 |
+
+File pages fell by 50 MiB at 2 threads and by 117 MiB at 4. Anonymous memory and time did not change. A memray 1.20
+`--native` profile of a build with debug symbols (`memray-*-c7898e9*`; grouped by `memray_hwm.py`) puts the extra
+anonymous memory at 4 threads in the parser threads' column builders (`push_line` and `RowSeed::visit_map`), which are
+still alive when the high-water mark is reached. memray counts reserved capacity, so its 1.64 GB peak is well above
+the 623 MiB that is resident.
+
 ## Not measured here
 
 - forkserver and spawn at 8 or 2 ranks, which 0.1.0 also ran. Their 0.1.0 figures remain without raw files.
