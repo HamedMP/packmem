@@ -605,6 +605,7 @@ def test_large_json_array_loads_on_threads_like_json_load():
             assert all(t[i] == rows[i] for i in range(0, len(rows), 499)) and t[-1] == rows[-1] and t[50001] == rows[50001]
             assert t.col("conversations").list.len() == [len(r["conversations"]) for r in rows]
             assert t.count(id="050001") == 1 and packmem.load_json(path, fields=["id"])[70000] == {"id": "070000"}
+            for n in (1, 2, 8): assert packmem.load_json(path, threads=n).to_bytes() == t.to_bytes()
 
         path = os.path.join(d, "nan.json")
         with open(path, "w", encoding="utf-8") as f:

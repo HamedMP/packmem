@@ -721,16 +721,19 @@ def _only(fields):
     return list(fields)
 
 
-def load_jsonl(src, hint="balanced", fields=None):
+def load_jsonl(src, hint="balanced", fields=None, threads=None):
     """Load JSON lines from a path or an iterable of lines. Paths are parsed natively.
 
     `fields` keeps only those top-level keys; the others are skipped while parsing and never stored.
+
+    `threads` sets how many threads parse a file of 8 MB or more (default: up to four). Each one holds a chunk of
+    rows unpacked while it works, so more threads load faster and peak higher; `threads=1` has the lowest peak.
     """
     t = Table(hint=hint)
     t._t.set_fields(_only(fields))
     try:
         if isinstance(src, (str, _os.PathLike)):
-            t._t.load_jsonl_path(_os.fspath(src))
+            t._t.load_jsonl_path(_os.fspath(src), threads)
         else:
             t._t.extend_json(src)
     finally:
@@ -738,11 +741,14 @@ def load_jsonl(src, hint="balanced", fields=None):
     return t
 
 
-def load_json(src, hint="balanced", fields=None):
+def load_json(src, hint="balanced", fields=None, threads=None):
     """Load one JSON array of objects from a path or an open file, streaming element by element.
 
     Replaces `json.load(f)` when the file holds a list of records; the full list of dicts is never built.
     `fields` keeps only those top-level keys; the others are skipped while parsing and never stored.
+
+    `threads` sets how many threads parse a file of 8 MB or more (default: up to four). Each one holds a chunk of
+    rows unpacked while it works, so more threads load faster and peak higher; `threads=1` has the lowest peak.
     """
     fields = _only(fields)
     path = isinstance(src, (str, _os.PathLike))
@@ -751,7 +757,7 @@ def load_json(src, hint="balanced", fields=None):
     t._t.set_fields(fields)
     try:
         if path:
-            t._t.load_json_array_path(_os.fspath(src))
+            t._t.load_json_array_path(_os.fspath(src), threads)
         else:
             t._t.load_json_array_file(src)
         t._t.set_fields(None)
@@ -775,19 +781,22 @@ def load_json(src, hint="balanced", fields=None):
     return t
 
 
-def read_csv(path, hint="balanced", infer=False, **csv_kwargs):
+def read_csv(path, hint="balanced", infer=False, threads=None, **csv_kwargs):
     """Load a CSV file as records of strings, like list(csv.DictReader(f)).
 
     `infer=True` turns integer and decimal columns into numbers instead (codes with a leading zero stay text).
     Plain UTF-8 files are parsed natively; other encodings, csv dialect options and files whose rows vary in
     length go through csv.DictReader.
+
+    `threads` sets how many threads parse a file of 8 MB or more (default: up to four). Each one holds a chunk of
+    rows unpacked while it works, so more threads load faster and peak higher; `threads=1` has the lowest peak.
     """
     import csv
     encoding = csv_kwargs.pop("encoding", "utf-8")
     if encoding.lower().replace("_", "-") in ("utf-8", "utf8") and set(csv_kwargs) <= {"delimiter"}:
         t = Table(hint=hint)
         try:
-            t._t.load_csv_path(_os.fspath(path), csv_kwargs.get("delimiter", ","), infer)
+            t._t.load_csv_path(_os.fspath(path), csv_kwargs.get("delimiter", ","), infer, threads)
             return t
         except ValueError:
             if infer:

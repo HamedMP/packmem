@@ -5,6 +5,11 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 ## Unreleased
 
 ### Added
+- Python: `load_json`, `load_jsonl` and `read_csv` take `threads=`. A file of 8 MB or more is parsed on up to
+  four threads by default, and each thread holds a chunk of rows unpacked while it works, so the load is faster
+  and its peak memory higher than on one thread. `threads=1` gives the one-thread load and the lowest peak
+  without turning off threaded queries (which `PACKMEM_THREADS=1` also does); up to 8 can be asked for. The table
+  is the same, byte for byte, at any count.
 - Benchmarks: `benchmarks/browser/` measures JSON against packmem bytes in headless Chromium on five datasets,
   uncompressed, Brotli-compressed and at 20 Mbit/s, with packmem 0.3.0. Every run is in
   `benchmarks/browser/results/runs.jsonl`. From 10,000 rows, tables are usable 2.6 to 7.6 times sooner on

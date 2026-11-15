@@ -372,6 +372,15 @@ fn object_end(data: &[u8], at: usize) -> Option<usize> {
 /// Files smaller than this load on one thread.
 const PARALLEL_LOAD_BYTES: u64 = 8 << 20;
 
+/// Threads a file load parses on. Each one holds a chunk's worth of unpacked rows while it works, so the default
+/// stops at four however many cores there are; a caller that asks for a number gets it, up to eight.
+fn load_threads(asked: Option<usize>) -> usize {
+    match asked {
+        Some(n) => n.clamp(1, 8),
+        None => packmem::dynamic::query_threads().min(4),
+    }
+}
+
 fn push_line(t: &mut DynTable, line: &str, only: Only<'_>) -> Result<(), String> {
     let mut de = serde_json::Deserializer::from_str(line);
     match RowSeed::<&RawValue>(&mut *t, only, PhantomData)
@@ -1254,12 +1263,14 @@ impl PyTable {
         })
     }
     /// Parse a CSV file in native code. Without `infer` every value is a string, as csv.DictReader gives.
+    #[pyo3(signature = (path, delimiter, infer, threads = None))]
     fn load_csv_path(
         &mut self,
         py: Python<'_>,
         path: &str,
         delimiter: &str,
         infer: bool,
+        threads: Option<usize>,
     ) -> PyResult<usize> {
         self.guard()?;
         let &[delimiter] = delimiter.as_bytes() else {
@@ -1273,7 +1284,7 @@ impl PyTable {
             default_type: if infer { ColType::Infer } else { ColType::Text },
             ..Default::default()
         };
-        let threads = packmem::dynamic::query_threads().min(4);
+        let threads = load_threads(threads);
         if threads > 1 && self.t.len() == 0 && f.metadata()?.len() >= PARALLEL_LOAD_BYTES {
             if let Ok(n) = self.bulk(py, |s| s.load_csv_threads(py, &f, threads, &opts))? {
                 return Ok(n);
@@ -1296,12 +1307,18 @@ impl PyTable {
         })
     }
     /// Parse a JSON-lines file in native code; no Python objects are created per record.
-    fn load_jsonl_path(&mut self, py: Python<'_>, path: &str) -> PyResult<usize> {
+    #[pyo3(signature = (path, threads = None))]
+    fn load_jsonl_path(
+        &mut self,
+        py: Python<'_>,
+        path: &str,
+        threads: Option<usize>,
+    ) -> PyResult<usize> {
         self.guard()?;
         let f = std::fs::File::open(path)?;
         // each load thread keeps its own row buffers, and macOS goes on counting them after they are freed, so loading
         // uses at most four threads however many cores there are
-        let threads = packmem::dynamic::query_threads().min(4);
+        let threads = load_threads(threads);
         if threads > 1 && f.metadata()?.len() >= PARALLEL_LOAD_BYTES {
             return self.bulk(py, |s| s.load_jsonl_threads(py, &f, threads));
         }
@@ -1349,10 +1366,16 @@ impl PyTable {
         })
     }
     /// Parse a file holding one JSON array of objects, streaming element by element.
-    fn load_json_array_path(&mut self, py: Python<'_>, path: &str) -> PyResult<usize> {
+    #[pyo3(signature = (path, threads = None))]
+    fn load_json_array_path(
+        &mut self,
+        py: Python<'_>,
+        path: &str,
+        threads: Option<usize>,
+    ) -> PyResult<usize> {
         self.guard()?;
         let f = std::fs::File::open(path)?;
-        let threads = packmem::dynamic::query_threads().min(4);
+        let threads = load_threads(threads);
         if threads > 1 && self.t.len() == 0 && f.metadata()?.len() >= PARALLEL_LOAD_BYTES {
             if let Ok(n) = self.bulk(py, |s| s.load_json_array_threads(py, &f, threads))? {
                 return Ok(n);
