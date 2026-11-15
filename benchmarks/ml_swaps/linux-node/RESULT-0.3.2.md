@@ -273,6 +273,26 @@ anonymous memory at 4 threads in the parser threads' column builders (`push_line
 still alive when the high-water mark is reached. memray counts reserved capacity, so its 1.64 GB peak is well above
 the 623 MiB that is resident.
 
+The next three commits tested where that memory comes from. All were measured the same way, at 4 threads unless a
+row says otherwise. Raw files are in [`f6973f1/`](results/0.3.2/load_threads/f6973f1/) and
+[`752a515/`](results/0.3.2/load_threads/752a515/). Medians, MiB:
+
+| Build | Time | Peak RssAnon | RssAnon after |
+| --- | ---: | ---: | ---: |
+| f6973f1: cap on input being unpacked at once, off / 32 / 8 MiB per thread | 1.46 / 1.53 / 3.50 s | 612 / 611 / 630 | 322 / 310 / 320 |
+| f6973f1 with row buffers never reused (`exp-drop-spare.diff`, not pushed) | 1.48 s | 622 | 322 |
+| 752a515: buffers over 16 MiB freed after each piece | 1.47 s | 669 | 361 |
+| f6973f1, `MALLOC_MMAP_THRESHOLD_=1048576` | 1.69 s | 521 | 296 |
+| 752a515, `MALLOC_MMAP_THRESHOLD_=1048576` | 1.56 s | 441 | 299 |
+| 752a515, `MALLOC_MMAP_THRESHOLD_=1048576`, 2 threads / 1 thread | 2.37 / 6.55 s | 384 / 365 | 298 / 299 |
+
+Limiting the input being unpacked at once and dropping reused buffers did not lower the peak. Freeing more made it
+higher. Fixing glibc's mmap threshold brought 4 threads to within 76 MiB of one thread. glibc raises that threshold
+each time a large mapped block is freed, after which the parser threads' multi-MiB buffers come from per-thread arenas
+and are not returned. The per-piece JSON sizes (5 to 54 MB per 16,384 records, heaviest at the end of the file) are in
+`f6973f1/piece_bytes.json`. 5f4b8e3 gives packmem's own large blocks their own mapping on Linux instead of changing
+glibc settings for the whole process; it is measured below once built.
+
 ## Not measured here
 
 - forkserver and spawn at 8 or 2 ranks, which 0.1.0 also ran. Their 0.1.0 figures remain without raw files.

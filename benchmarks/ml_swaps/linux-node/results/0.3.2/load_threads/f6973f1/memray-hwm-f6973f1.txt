@@ -1,0 +1,175 @@
+== hwm-t4-mb8.csv: 1593.5 MiB live at the high-water mark
+   982.2  [mmap] (outside packmem) <>::new
+   313.3  <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> <- <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<>> <- _packmem::push_line
+   261.7  _packmem::push_line
+    31.1  (outside packmem) std::sys::alloc::unix::realloc
+     2.4  <packmem::buf::Buf<> as core::iter::traits::collect::FromIterator<>>::from_iter::<core::iter::adapters::map::Map<core::iter::adapters::map::Map<core::slice::iter::Iter<>, <>::encode<>::{closure#3}>, <>::pack<core::iter::adapters::map::Map<c
+     1.0  [mmap] (outside packmem) <>
+     1.0  [mmap] (outside packmem) __new__
+     0.4  (outside packmem) PyObject_Malloc
+     0.2  (outside packmem) alloc::alloc::alloc
+     0.0  packmem::dynamic::from_text
+     0.0  (outside packmem) PyMem_Malloc
+     0.0  _packmem::_packmem <- _packmem::_packmem::__pyo3_init::{closure#0} <- <_packmem::_packmem::__pyo3_init::{closure#0} as core::ops::function::FnOnce<>>::call_once
+     0.0  (outside packmem) std::sys::alloc::unix::alloc_zeroed
+     0.0  (outside packmem) std::sys::alloc::unix::alloc
+     0.0  (outside packmem) _PyUnicodeWriter_Finish
+     0.0  (outside packmem) <>
+     0.0  (outside packmem) std::sys::alloc::unix::aligned_malloc
+     0.0  (outside packmem) __cxa_thread_atexit_impl
+     0.0  packmem::dynamic::SPARE_TAILS::{K#0}::{closure#0} <- <packmem::dynamic::SPARE_TAILS::{K#0}::{closure#0} as core::ops::function::FnOnce<(core::option::Option<&mut core::option::Option<core::cell::RefCell<alloc::vec::Vec<>>>>,)>>::call_once <
+     0.0  (outside packmem) _Py_hashtable_set
+     0.0  packmem::dynamic::SPARE_TAILS::{K#0}::{closure#0} <- <packmem::dynamic::SPARE_TAILS::{K#0}::{closure#0} as core::ops::function::FnOnce<(core::option::Option<&mut core::option::Option<core::cell::RefCell<alloc::vec::Vec<>>>>,)>>::call_once
+per thread:
+  tid 1: 1016.1 MiB
+         982.2  [mmap] (outside packmem) <>::new
+          31.1  (outside packmem) std::sys::alloc::unix::realloc
+           1.0  [mmap] (outside packmem) <>
+           1.0  [mmap] (outside packmem) __new__
+  tid 5: 296.1 MiB
+         295.6  <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> <- <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<
+           0.5  _packmem::push_line
+           0.0  (outside packmem) std::sys::alloc::unix::alloc
+           0.0  (outside packmem) __cxa_thread_atexit_impl
+  tid 2: 248.1 MiB
+         241.5  _packmem::push_line
+           6.3  <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> <- <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<
+           0.4  <packmem::buf::Buf<> as core::iter::traits::collect::FromIterator<>>::from_iter::<core::iter::adapters::map::Map<core::iter::adapters::map::Map<core::slice::iter::Iter<>, <>::encode<>::{closure#3}>, <
+           0.0  (outside packmem) std::sys::alloc::unix::alloc
+  tid 4: 29.6 MiB
+          19.1  _packmem::push_line
+           8.4  <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> <- <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<
+           2.0  <packmem::buf::Buf<> as core::iter::traits::collect::FromIterator<>>::from_iter::<core::iter::adapters::map::Map<core::iter::adapters::map::Map<core::slice::iter::Iter<>, <>::encode<>::{closure#3}>, <
+           0.0  (outside packmem) std::sys::alloc::unix::alloc
+  tid 3: 3.6 MiB
+           3.0  <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> <- <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<
+           0.6  _packmem::push_line
+           0.0  (outside packmem) std::sys::alloc::unix::alloc_zeroed
+           0.0  (outside packmem) <>
+
+== hwm-t4-mb4096.csv: 1568.5 MiB live at the high-water mark
+   982.2  [mmap] (outside packmem) <>::new
+   288.3  <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> <- <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<>> <- _packmem::push_line
+   261.7  _packmem::push_line
+    31.1  (outside packmem) std::sys::alloc::unix::realloc
+     2.4  <packmem::buf::Buf<> as core::iter::traits::collect::FromIterator<>>::from_iter::<core::iter::adapters::map::Map<core::iter::adapters::map::Map<core::slice::iter::Iter<>, <>::encode<>::{closure#3}>, <>::pack<core::iter::adapters::map::Map<c
+     2.0  [mmap] (outside packmem) <>
+     0.4  (outside packmem) PyObject_Malloc
+     0.2  (outside packmem) alloc::alloc::alloc
+     0.0  packmem::dynamic::from_text
+     0.0  (outside packmem) PyMem_Malloc
+     0.0  _packmem::_packmem <- _packmem::_packmem::__pyo3_init::{closure#0} <- <_packmem::_packmem::__pyo3_init::{closure#0} as core::ops::function::FnOnce<>>::call_once
+     0.0  (outside packmem) std::sys::alloc::unix::alloc_zeroed
+     0.0  (outside packmem) std::sys::alloc::unix::alloc
+     0.0  (outside packmem) _PyUnicodeWriter_Finish
+     0.0  (outside packmem) <>
+     0.0  (outside packmem) std::sys::alloc::unix::aligned_malloc
+     0.0  (outside packmem) __cxa_thread_atexit_impl
+     0.0  packmem::dynamic::SPARE_TAILS::{K#0}::{closure#0} <- <packmem::dynamic::SPARE_TAILS::{K#0}::{closure#0} as core::ops::function::FnOnce<(core::option::Option<&mut core::option::Option<core::cell::RefCell<alloc::vec::Vec<>>>>,)>>::call_once <
+     0.0  (outside packmem) _Py_hashtable_set
+     0.0  packmem::dynamic::SPARE_TAILS::{K#0}::{closure#0} <- <packmem::dynamic::SPARE_TAILS::{K#0}::{closure#0} as core::ops::function::FnOnce<(core::option::Option<&mut core::option::Option<core::cell::RefCell<alloc::vec::Vec<>>>>,)>>::call_once
+per thread:
+  tid 1: 1016.1 MiB
+         982.2  [mmap] (outside packmem) <>::new
+          31.1  (outside packmem) std::sys::alloc::unix::realloc
+           2.0  [mmap] (outside packmem) <>
+           0.4  (outside packmem) PyObject_Malloc
+  tid 4: 368.2 MiB
+         260.4  _packmem::push_line
+         105.8  <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> <- <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<
+           2.0  <packmem::buf::Buf<> as core::iter::traits::collect::FromIterator<>>::from_iter::<core::iter::adapters::map::Map<core::iter::adapters::map::Map<core::slice::iter::Iter<>, <>::encode<>::{closure#3}>, <
+           0.0  packmem::dynamic::SPARE_TAILS::{K#0}::{closure#0} <- <packmem::dynamic::SPARE_TAILS::{K#0}::{closure#0} as core::ops::function::FnOnce<(core::option::Option<&mut core::option::Option<core::cell::RefCe
+  tid 2: 102.4 MiB
+         101.1  <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> <- <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<
+           1.3  _packmem::push_line
+           0.0  (outside packmem) std::sys::alloc::unix::alloc_zeroed
+           0.0  (outside packmem) std::sys::alloc::unix::alloc
+  tid 3: 80.9 MiB
+          80.9  <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> <- <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<
+           0.0  (outside packmem) <>
+           0.0  (outside packmem) std::sys::alloc::unix::alloc
+  tid 5: 1.0 MiB
+           0.6  <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> <- <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<
+           0.4  <packmem::buf::Buf<> as core::iter::traits::collect::FromIterator<>>::from_iter::<core::iter::adapters::map::Map<core::iter::adapters::map::Map<core::slice::iter::Iter<>, <>::encode<>::{closure#3}>, <
+           0.0  _packmem::push_line
+           0.0  (outside packmem) std::sys::alloc::unix::alloc
+
+--- 208.5 MiB x4
+    <>::intern dynamic.rs:393
+    <>::enc dynamic.rs:404
+    <>::push dynamic.rs:471
+    <>::put dynamic.rs:728
+    <>::visit_map::<serde_json::de::MapAccess<>> dynamic.rs:786
+    <&mut serde_json::de::Deserializer<> as serde_core::de::Deserializer>::deserialize_map::<> de.rs:1803
+    <>::deserialize::<&mut serde_json::de::Deserializer<>> dynamic.rs:775
+    <serde_json::de::SeqAccess<> as serde_core::de::SeqAccess>::next_element_seed::<> de.rs:1965
+    <>::visit_seq::<serde_json::de::SeqAccess<>> dynamic.rs:805
+    <&mut serde_json::de::Deserializer<> as serde_core::de::Deserializer>::deserialize_seq::<> de.rs:1752
+    <>::deserialize::<&mut serde_json::de::Deserializer<>> dynamic.rs:796
+    <>::nest_push dynamic.rs:440
+    <>::put_nested_at dynamic.rs:1651
+    <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> lib.rs:186
+    <&mut serde_json::de::Deserializer<> as serde_core::de::Deserializer>::deserialize_map::<_packmem::RowSeed<>> de.rs:1803
+    <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<>> lib.rs:165
+    _packmem::push_line lib.rs:412
+    <>::load::{closure#1}::{closure#0} lib.rs:305
+    <core::result::Result<>>::is_ok_and::<<>::load::{closure#1}::{closure#0}> result.rs:628
+    <>::load::{closure#1} lib.rs:305
+    <>::records::<<>::load::{closure#1}>::{closure#2} lib.rs:281
+    <core::slice::iter::Iter<> as core::iter::traits::iterator::Iterator>::all::<<>::records<<>::load::{closure#1}>::{closure#2}> macros.rs:310
+    <>::records::<<>::load::{closure#1}> lib.rs:281
+    <>::load lib.rs:296
+    <>::load_pieces::<<>::load_csv_threads::{closure#0}>::{closure#0}::{closure#0} lib.rs:919
+    <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<<>::load_pieces<<>::load_csv_threads::{closure#0}>::{closure#0}::{ unwind_safe.rs:275
+    <std::thread::lifecycle::spawn_unchecked<<>::load_pieces<<>::load_csv_threads::{closure#0}>::{closure#0}::{closure#0}, ()>::{closure#1} as core::ops:: function.rs:250
+--- 36.0 MiB x7
+    <>::intern dynamic.rs:394
+    <>::put dynamic.rs:717
+    <>::visit_map::<serde_json::de::MapAccess<>> dynamic.rs:786
+    <&mut serde_json::de::Deserializer<> as serde_core::de::Deserializer>::deserialize_map::<> de.rs:1803
+    <>::deserialize::<&mut serde_json::de::Deserializer<>> dynamic.rs:775
+    <serde_json::de::SeqAccess<> as serde_core::de::SeqAccess>::next_element_seed::<> de.rs:1965
+    <>::visit_seq::<serde_json::de::SeqAccess<>> dynamic.rs:805
+    <&mut serde_json::de::Deserializer<> as serde_core::de::Deserializer>::deserialize_seq::<> de.rs:1752
+    <>::deserialize::<&mut serde_json::de::Deserializer<>> dynamic.rs:796
+    <>::nest_push dynamic.rs:440
+    <>::put_nested_at dynamic.rs:1651
+    <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> lib.rs:186
+    <&mut serde_json::de::Deserializer<> as serde_core::de::Deserializer>::deserialize_map::<_packmem::RowSeed<>> de.rs:1803
+    <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<>> lib.rs:165
+    _packmem::push_line lib.rs:412
+    <>::load::{closure#1}::{closure#0} lib.rs:305
+    <core::result::Result<>>::is_ok_and::<<>::load::{closure#1}::{closure#0}> result.rs:628
+    <>::load::{closure#1} lib.rs:305
+    <>::records::<<>::load::{closure#1}>::{closure#2} lib.rs:281
+    <core::slice::iter::Iter<> as core::iter::traits::iterator::Iterator>::all::<<>::records<<>::load::{closure#1}>::{closure#2}> macros.rs:310
+    <>::records::<<>::load::{closure#1}> lib.rs:281
+    <>::load lib.rs:296
+    <>::load_pieces::<<>::load_csv_threads::{closure#0}>::{closure#0}::{closure#0} lib.rs:919
+    <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<<>::load_pieces<<>::load_csv_threads::{closure#0}>::{closure#0}::{ unwind_safe.rs:275
+    <std::thread::lifecycle::spawn_unchecked<<>::load_pieces<<>::load_csv_threads::{closure#0}>::{closure#0}::{closure#0}, ()>::{closure#1} as core::ops:: function.rs:250
+--- 36.0 MiB x7
+    <>::put dynamic.rs:719
+    <>::visit_map::<serde_json::de::MapAccess<>> dynamic.rs:786
+    <&mut serde_json::de::Deserializer<> as serde_core::de::Deserializer>::deserialize_map::<> de.rs:1803
+    <>::deserialize::<&mut serde_json::de::Deserializer<>> dynamic.rs:775
+    <serde_json::de::SeqAccess<> as serde_core::de::SeqAccess>::next_element_seed::<> de.rs:1965
+    <>::visit_seq::<serde_json::de::SeqAccess<>> dynamic.rs:805
+    <&mut serde_json::de::Deserializer<> as serde_core::de::Deserializer>::deserialize_seq::<> de.rs:1752
+    <>::deserialize::<&mut serde_json::de::Deserializer<>> dynamic.rs:796
+    <>::nest_push dynamic.rs:440
+    <>::put_nested_at dynamic.rs:1651
+    <_packmem::RowSeed<> as serde_core::de::Visitor>::visit_map::<serde_json::de::MapAccess<>> lib.rs:186
+    <&mut serde_json::de::Deserializer<> as serde_core::de::Deserializer>::deserialize_map::<_packmem::RowSeed<>> de.rs:1803
+    <_packmem::RowSeed<> as serde_core::de::DeserializeSeed>::deserialize::<&mut serde_json::de::Deserializer<>> lib.rs:165
+    _packmem::push_line lib.rs:412
+    <>::load::{closure#1}::{closure#0} lib.rs:305
+    <core::result::Result<>>::is_ok_and::<<>::load::{closure#1}::{closure#0}> result.rs:628
+    <>::load::{closure#1} lib.rs:305
+    <>::records::<<>::load::{closure#1}>::{closure#2} lib.rs:281
+    <core::slice::iter::Iter<> as core::iter::traits::iterator::Iterator>::all::<<>::records<<>::load::{closure#1}>::{closure#2}> macros.rs:310
+    <>::records::<<>::load::{closure#1}> lib.rs:281
+    <>::load lib.rs:296
+    <>::load_pieces::<<>::load_csv_threads::{closure#0}>::{closure#0}::{closure#0} lib.rs:919
+    <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<<>::load_pieces<<>::load_csv_threads::{closure#0}>::{closure#0}::{ unwind_safe.rs:275
+    <std::thread::lifecycle::spawn_unchecked<<>::load_pieces<<>::load_csv_threads::{closure#0}>::{closure#0}::{closure#0}, ()>::{closure#1} as core::ops:: function.rs:250

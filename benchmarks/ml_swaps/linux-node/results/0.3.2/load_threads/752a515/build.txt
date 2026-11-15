@@ -1,0 +1,3 @@
+752a515 Free the large buffers a load thread grew once its piece is done
+a8799a78c67feeb5ef4632a56a2028001887381942143d4fc4dbde04a71a6905  wheels/packmem-0.3.2-cp310-abi3-manylinux_2_34_x86_64.whl
+rustc 1.100.0 (0ef1bc386 2026-11-09)

@@ -1,0 +1,4 @@
+f6973f1 Bound how much input the load threads unpack at once
+a97a0ed29aff99c153d34d116d3f72758cd9440cd713c53c788ada525d867301  wheels/packmem-0.3.2-cp310-abi3-manylinux_2_34_x86_64.whl
+rustc 1.100.0 (0ef1bc386 2026-11-09)
+445fcdd34f82f6520d06eedf88de697f12f5cdfe9cb5a4d912705dba94829c62  wheels-dbg/packmem-0.3.2-cp310-abi3-manylinux_2_34_x86_64.whl

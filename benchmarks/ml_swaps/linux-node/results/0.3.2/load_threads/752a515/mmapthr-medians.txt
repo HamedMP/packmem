@@ -1,0 +1,4 @@
+mmapthr-t1-mb32.jsonl                    n=3 load_s 6.55 anon 365 file 9 vmrss 374 after 299 nbytes {296187892} load 3.15
+mmapthr-t2-mb4096.jsonl                  n=3 load_s 2.37 anon 384 file 139 vmrss 435 after 298 nbytes {296187892} load 3.18
+mmapthr-t4-mb4096.jsonl                  n=3 load_s 1.56 anon 441 file 150 vmrss 486 after 299 nbytes {296187892} load 3.20
+mmapthr-t4-mb32.jsonl                    n=3 load_s 1.61 anon 441 file 124 vmrss 459 after 300 nbytes {296187892} load 3.10

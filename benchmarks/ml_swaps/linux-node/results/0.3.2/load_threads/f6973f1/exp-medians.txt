@@ -1,0 +1,4 @@
+exp-t2-mb4096.jsonl    n=3 load_s 2.17 anon 477 file 135 vmrss 488 after 309 nbytes {296187892} load 1.50-1.65
+exp-t4-mb32.jsonl      n=3 load_s 1.54 anon 618 file 115 vmrss 630 after 320 nbytes {296187892} load 1.38-1.51
+exp-t4-mb4096.jsonl    n=3 load_s 1.48 anon 622 file 142 vmrss 633 after 322 nbytes {296187892} load 1.06-1.38
+exp-t4-mb8.jsonl       n=3 load_s 3.52 anon 622 file 99 vmrss 634 after 340 nbytes {296187892} load 1.51-1.50

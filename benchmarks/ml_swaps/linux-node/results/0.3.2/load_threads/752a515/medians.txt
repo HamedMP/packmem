@@ -1,0 +1,6 @@
+runs-t1-mb32.jsonl     n=3 load_s 6.48 anon 376 file 9 vmrss 384 after 311 nbytes {296187892} load 1.98-2.01
+runs-t2-mb32.jsonl     n=3 load_s 2.51 anon 495 file 110 vmrss 516 after 337 nbytes {296187892} load 2.12-2.19
+runs-t2-mb4096.jsonl   n=3 load_s 2.38 anon 508 file 137 vmrss 559 after 330 nbytes {296187892} load 1.87-2.12
+runs-t4-mb16.jsonl     n=3 load_s 2.45 anon 637 file 101 vmrss 684 after 392 nbytes {296187892} load 1.86-1.87
+runs-t4-mb32.jsonl     n=3 load_s 1.52 anon 677 file 122 vmrss 695 after 380 nbytes {296187892} load 1.93-1.86
+runs-t4-mb4096.jsonl   n=3 load_s 1.47 anon 669 file 148 vmrss 687 after 361 nbytes {296187892} load 2.01-1.93

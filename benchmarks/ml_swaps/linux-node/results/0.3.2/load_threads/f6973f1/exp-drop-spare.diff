@@ -1,0 +1,13 @@
+diff --git a/python/src/lib.rs b/python/src/lib.rs
+index 3b111bb..7a07d62 100644
+--- a/python/src/lib.rs
++++ b/python/src/lib.rs
+@@ -917,7 +917,7 @@ impl PyTable {
+                         t.reuse_buffers(std::mem::take(&mut spare));
+                         t.set_bulk(true);
+                         let ok = piece.load(&mut t, only.as_ref(), map);
+-                        spare = t.take_buffers();
++                        drop(t.take_buffers());
+                         if done_tx.send((i, piece, ok.then_some(t))).is_err() {
+                             return;
+                         }
