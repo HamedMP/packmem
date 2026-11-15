@@ -14,6 +14,11 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - Benchmarks: `benchmarks/wire-size/` breaks down where the bytes go and compares what 0.3.0 writes with JSON
   (`benchmarks/wire-size/results/sizes-0.3.0.jsonl`).
 
+### Changed
+- Demos: `demos/log-viewer` depends on packmem ^0.3.2 from npm, so it deploys without a Rust toolchain. Its
+  README figures are re-measured on 0.3.2 at 1,000,000 rows: 31.7 MB of gzipped packmem bytes against 32.7 MB of
+  gzipped JSON (`demos/log-viewer/results/check-0.3.2.txt`).
+
 ## 0.3.2 - 2026-11-15
 
 ### Added
