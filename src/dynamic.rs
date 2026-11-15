@@ -331,6 +331,15 @@ struct Nest {
     ends: Vec<u32>,
     is_record: bool,
 }
+impl Tail {
+    /// Bytes this buffer holds on to, used or not.
+    fn reserved(&self) -> usize {
+        self.tags.capacity()
+            + self.vals.capacity() * 8
+            + self.text.capacity()
+            + self.ends.capacity() * std::mem::size_of::<usize>()
+    }
+}
 impl Nest {
     fn range(&self, j: usize) -> (usize, usize) {
         (
@@ -616,6 +625,19 @@ thread_local! {
 /// Drop the buffers kept between chunks; called when a bulk load ends.
 fn release_spare_tails() {
     SPARE_TAILS.with(|s| *s.borrow_mut() = Vec::new())
+}
+
+/// Empty the reusable buffers that have grown past `keep` bytes each, on this thread and in `b`. A load thread calls
+/// this between pieces: the buffers a stretch of long records grew would otherwise stay resident on every thread
+/// until the load ends, while ordinary pieces only need small ones.
+pub fn trim_buffers(b: &mut Buffers, keep: usize) {
+    let trim = |tails: &mut Vec<Tail>| {
+        for t in tails.iter_mut().filter(|t| t.reserved() > keep) {
+            *t = Tail::default()
+        }
+    };
+    trim(&mut b.0);
+    SPARE_TAILS.with(|s| trim(&mut s.borrow_mut()))
 }
 
 /// Drop this thread's reusable buffers; for a worker thread that has finished building tables.

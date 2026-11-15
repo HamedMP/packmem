@@ -898,6 +898,8 @@ impl PyTable {
     ) -> PyResult<Result<usize, Redo>> {
         use std::sync::mpsc;
         const ROWS: usize = packmem::dynamic::CHUNK;
+        // a worker keeps buffers up to this size from one piece to the next
+        const KEEP: usize = 16 << 20;
         let hint = self.t.hint;
         let only = self.only.clone();
         let (work_tx, work_rx) = mpsc::sync_channel::<(usize, Piece<'a>)>(1);
@@ -918,6 +920,7 @@ impl PyTable {
                         t.set_bulk(true);
                         let ok = piece.load(&mut t, only.as_ref(), map);
                         spare = t.take_buffers();
+                        packmem::dynamic::trim_buffers(&mut spare, KEEP);
                         if done_tx.send((i, piece, ok.then_some(t))).is_err() {
                             return;
                         }
