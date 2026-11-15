@@ -1,8 +1,8 @@
 # Benchmarks
 
-packmem's gain is memory. These four measurements put it inside real code: two training scripts, two open-source apps
-and a demo. Each one names the code it changed, what it compared against, and where packmem is slower or only
-level. Every number below comes from a results file in the repository, next to its raw output.
+packmem's gain is memory. These measurements put it inside real code: two training scripts, two open-source apps
+and a demo, plus a direct comparison with Hugging Face `datasets`. Each one names the code it changed, what it
+compared against, and where packmem is slower or only level. Every number below comes from a results file in the repository, next to its raw output.
 
 | | Without packmem | With packmem | |
 | --- | ---: | ---: | --- |
@@ -10,8 +10,9 @@ level. Every number below comes from a results file in the repository, next to i
 | Lightdash, 100,000 rows held in the browser | 115.25 MB | 15.52 MB | 7.4x less |
 | paperless-ngx exporter, 100,000 documents, peak RSS | 1,191 MiB | 580 MiB | 2.05x less, 2.0x slower |
 | Log viewer, 1,000,000 rows until usable | 3,275 ms | 1,327 ms | about the same bytes over the network |
+| DataLoader, 4 forkserver workers, vs HF `datasets` (Arrow) | 1,810 MB | 1,144 MB | 37% less; HF faster in batches |
 
-The machine for all four is a shared Linux server (AMD Ryzen 9 7950X3D, 16 cores, 124 GiB RAM) that also runs CI.
+The machine for all of these is a shared Linux server (AMD Ryzen 9 7950X3D, 16 cores, 124 GiB RAM) that also runs CI.
 Memory figures held steady across runs; times are noisier and are marked where the load was high.
 
 ## VLM fine-tuning: annotation lists in every rank
@@ -45,6 +46,47 @@ One rank reading a full shuffled epoch through 4 workers, median of 3:
 
 Details and raw files:
 [RESULT-0.3.2.md](https://github.com/HamedMP/packmem/blob/main/benchmarks/ml_swaps/linux-node/RESULT-0.3.2.md).
+
+## Against Hugging Face `datasets` (memory-mapped Arrow)
+
+packmem replaces lists of Python records. It is not a replacement for Arrow, and a memory-mapped Arrow table is
+already far smaller than a list. This compares the two directly: one PyTorch DataLoader of 4 workers serving 20,000
+random LLaVA-1.5 records (batch size 8, no images or model), with the data from `datasets` 5.2.0 / pyarrow 26.0.1 and
+from packmem 0.2.0 saved to a file and opened with `packmem.open()`. Median of 3 runs.
+
+| Forkserver workers | Python list | HF `datasets` | packmem | packmem vs HF |
+| --- | ---: | ---: | ---: | --- |
+| Memory for the whole job (PSS) | 15,961 MB | 1,810 MB | 1,144 MB | 37% less |
+| Anonymous memory above an empty DataLoader | +15,099 MB | +243 MB | +5 MB | |
+| Sent to each worker | 687 MB pickle | 2.2 KB | 134 B | |
+| First batch | 63.5 s | 1.80 s | 1.02 s | indicative (shared host) |
+
+| | HF `datasets` | packmem | |
+| --- | ---: | ---: | --- |
+| File on disk (Arrow cache / `.pkm`) | 785 MB | 309 MB | 2.54x smaller |
+| The same data as zstd Parquet | 164 MB | | Parquet is smaller at rest |
+| Memory each worker adds by importing the library, over torch | +55 MB | +0.2 MB | anonymous memory |
+| Memory for the whole job with fork workers | 994 MB | 549 MB | |
+| Random row to a Python dict, `x[i]` (packmem 0.1.1) | 22.2 us | 6.05 us | 3.7x faster |
+| Batched reads, 64 rows at a time, per row (packmem 0.1.1) | 2.25 us | 4.96 us | HF 2.2x faster |
+| One pass in batches of 1,000 (packmem 0.1.1) | 2.0 s | 2.8 s | HF faster |
+| First build from the JSON | 22.4 s (conversion) | a `load_json` plus 0.2 s `save()` | |
+
+- Most of HF's gap here is per-process: every forkserver worker imports `datasets` and pyarrow again (about 55 MB
+  each), and touches 407 MB of the Arrow file against 176 MB of the `.pkm` file for the same rows.
+- HF's batched and columnar paths are faster than packmem's. packmem is faster on the per-row path, which is what
+  a map-style DataLoader dataset uses.
+- For storage at rest, zstd Parquet is the smaller format. packmem's file is for opening and querying in place.
+- packmem took the JSON as it is and round-tripped every record exactly. `datasets` 5.2.0 silently rewrote 158,383
+  mixed-type `id` values, even with a string type declared for `id`, so the HF arm reads a copy with the ids written
+  as strings first.
+- Every arm returned the same batches (one digest over all 24 runs), and the full table's per-record digest is equal
+  for HF and packmem.
+
+Details and raw files:
+[RESULT_0.2.0.md](https://github.com/HamedMP/packmem/blob/main/benchmarks/ml_swaps/hf-datasets/pypi-0.2.0/RESULT_0.2.0.md)
+(memory, file size, import cost) and
+[RESULT.md](https://github.com/HamedMP/packmem/blob/main/benchmarks/ml_swaps/hf-datasets/RESULT.md) (access speed).
 
 ## Lightdash: a large query in the browser
 
