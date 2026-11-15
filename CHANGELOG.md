@@ -2,7 +2,21 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased
+## 0.3.3 - 2026-11-15
+
+### Fixed
+- Python on Linux: loading a large file on several threads no longer leaves each thread's freed buffers in the
+  peak. `load_json` on the 1.03 GB LLaVA-665k file, peak anonymous memory at 1 / 2 / 4 threads: 372 / 479 / 613
+  MiB in 0.3.2, 376 / 384 / 442 MiB now, with load times unchanged within 4% (6.4 / 2.4 / 1.5 s) and about 20
+  MiB less held after a threaded load (`benchmarks/ml_swaps/linux-node/results/0.3.2/load_threads/`). With
+  eight trainer ranks loading that file at once, the Qwen3-VL node peak at 20,000 samples per rank goes from
+  5.77 GiB in 0.3.2 to 4.47 GiB, below the 4.86 GiB of 0.1.0; the full-shard and MiniCPM-V peaks, which come
+  from iteration, barely move (6.21 to 6.12 and 7.31 to 7.25 GiB;
+  `benchmarks/ml_swaps/linux-node/results/4bf9c3e-8x4/`). Three changes: load threads give large buffers their
+  own mapping, which returns to the system when freed, where glibc kept them in per-thread arenas; a thread
+  drops buffers over 16 MiB between pieces; and the mapped input is released behind each thread as it parses,
+  which takes peak file-backed memory at four threads from 261 to 146 MiB. Dropping a whole table built this
+  way takes about 3 ms longer on 665,000 rows.
 
 ### Added
 - Python: `load_json`, `load_jsonl` and `read_csv` take `threads=`. A file of 8 MB or more is parsed on up to
