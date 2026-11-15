@@ -202,8 +202,10 @@ mod big_alloc {
     use std::alloc::{GlobalAlloc, Layout, System};
     #[cfg(target_os = "macos")]
     const BIG: usize = 32 << 10;
+    // On Linux only the buffers a load thread drops between pieces (`KEEP`) need this. A lower limit also catches
+    // query results of a few MiB, and a fresh mapping costs those more than it saves: zero-filled pages on every call.
     #[cfg(target_os = "linux")]
-    const BIG: usize = 1 << 20;
+    const BIG: usize = super::KEEP;
     pub struct Alloc;
     fn big(l: Layout) -> bool {
         l.size() >= BIG && l.align() <= 4096
@@ -275,6 +277,9 @@ mod big_alloc {
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 #[global_allocator]
 static ALLOC: big_alloc::Alloc = big_alloc::Alloc;
+
+/// A load thread keeps buffers up to this size from one piece to the next and drops larger ones.
+const KEEP: usize = 16 << 20;
 
 /// The threaded load cannot take this input; load it on one thread instead.
 struct Redo;
@@ -905,8 +910,6 @@ impl PyTable {
     ) -> PyResult<Result<usize, Redo>> {
         use std::sync::mpsc;
         const ROWS: usize = packmem::dynamic::CHUNK;
-        // a worker keeps buffers up to this size from one piece to the next
-        const KEEP: usize = 16 << 20;
         let hint = self.t.hint;
         let only = self.only.clone();
         let (work_tx, work_rx) = mpsc::sync_channel::<(usize, Piece<'a>)>(1);
