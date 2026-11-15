@@ -23,6 +23,18 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
   less memory in the browser (15.5 against 115.3 MB) and sends 1.26 times fewer bytes (3.25 against 4.09 MB). Time
   until usable is only 1.16 times shorter (11.8 against 13.7 s), because the server's own row formatting
   dominates. At the same 2,500-row pages packmem is no faster and needs 1.2 s more server time.
+- Benchmarks: the 8-rank Linux run (8 torchrun ranks, 4 fork workers each, the real LLaVA-665k file) is re-run
+  on 0.3.2 (`benchmarks/ml_swaps/linux-node/results/0.3.2-8x4/`). Node PSS peak at 20,000 samples per rank,
+  median of 3: Qwen3-VL 47.81 to 5.77 GiB, MiniCPM-V 37.82 to 7.31 GiB; full shard 54.88 to 6.21 GiB (one run).
+  Batches are identical on all 8 ranks. At 20,000 samples the packmem peak is above what 0.1.0 measured (4.86
+  and 7.13 GiB): 0.3.x parses `load_json` on four threads, and with 8 ranks loading at once that transient now
+  sets the peak. `threads=1` on the loader avoids it at the cost of load time.
+- Benchmarks: one rank, a full shuffled epoch, 4 workers, on 0.3.2: fork 10.24 to 1.05 GiB, spawn 15.32 to
+  2.68 GiB (`benchmarks/ml_swaps/linux-node/RESULT-0.3.2.md`).
+- Benchmarks: paperless-ngx `document_exporter` at 100,000 documents on 0.3.2: peak RSS 1,191 MiB with the list
+  against 664 (JSON round trip), 660 (`default=`) and 580 MiB (`hint="compact"`), output byte-identical. At
+  20,000 documents packmem still peaks 15 to 39 MiB above the list
+  (`benchmarks/apps/paperless-ngx/RESULT-0.3.2.md`).
 
 ### Changed
 - Demos: `demos/log-viewer` depends on packmem ^0.3.2 from npm, so it deploys without a Rust toolchain. Its
