@@ -192,20 +192,13 @@ impl<'de, 'a, R: Raw<'de>> Visitor<'de> for RowSeed<'a, R> {
     }
 }
 
-/// Blocks of `BIG` bytes or more get a mapping of their own, which goes back to the system the moment it is freed.
 /// macOS goes on counting memory against a process after it is freed, so the buffers a load needs only while it runs
-/// would stay in the process's footprint for good. glibc raises its own mapping threshold, up to 32 MiB, each time a
-/// large block is freed; after that the buffers of the load threads come from per-thread arenas that keep them, which
-/// put four threads' worth of freed buffers into a load's peak.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+/// would stay in the process's footprint for good. Blocks of `BIG` bytes or more therefore get a mapping of their own,
+/// which goes back to the system the moment it is freed.
+#[cfg(all(target_os = "macos", not(packmem_test_load_alloc)))]
 mod big_alloc {
     use std::alloc::{GlobalAlloc, Layout, System};
-    #[cfg(target_os = "macos")]
     const BIG: usize = 32 << 10;
-    // On Linux only the buffers a load thread drops between pieces (`KEEP`) need this. A lower limit also catches
-    // query results of a few MiB, and a fresh mapping costs those more than it saves: zero-filled pages on every call.
-    #[cfg(target_os = "linux")]
-    const BIG: usize = super::KEEP;
     pub struct Alloc;
     fn big(l: Layout) -> bool {
         l.size() >= BIG && l.align() <= 4096
@@ -253,16 +246,6 @@ mod big_alloc {
             if !big(l) && !big(new) {
                 return unsafe { System.realloc(p, l, size) };
             }
-            #[cfg(target_os = "linux")]
-            if big(l) && big(new) {
-                // SAFETY: `p` is a mapping of `l.size()` bytes made by `alloc`; the kernel moves or resizes it.
-                let q = unsafe { libc::mremap(p.cast(), l.size(), size, libc::MREMAP_MAYMOVE) };
-                return if q == libc::MAP_FAILED {
-                    std::ptr::null_mut()
-                } else {
-                    q.cast()
-                };
-            }
             let q = unsafe { self.alloc(new) };
             if !q.is_null() {
                 unsafe {
@@ -274,9 +257,155 @@ mod big_alloc {
         }
     }
 }
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(all(target_os = "macos", not(packmem_test_load_alloc)))]
 #[global_allocator]
 static ALLOC: big_alloc::Alloc = big_alloc::Alloc;
+
+/// glibc raises its own mapping threshold, up to 32 MiB, each time a large block is freed. After that the buffers of
+/// the load threads come from per-thread arenas that keep what is freed into them, which put every thread's largest
+/// buffers into a load's peak. On a load thread, blocks of `BIG` bytes or more therefore get a mapping of their own,
+/// which goes back to the system the moment it is freed. Other threads keep the system allocator: for a query result
+/// of a few MiB a fresh mapping costs more than it saves.
+#[cfg(any(target_os = "linux", packmem_test_load_alloc))]
+mod load_alloc {
+    use std::alloc::{GlobalAlloc, Layout, System};
+    use std::sync::atomic::{AtomicUsize, Ordering::*};
+    const BIG: usize = 1 << 20;
+    /// The mapped blocks alive. A block is freed long after its thread has gone, by whoever drops the table, so the
+    /// address has to say where it came from. When the table is full, further blocks come from the system allocator.
+    static MAPPED: [AtomicUsize; 4096] = [const { AtomicUsize::new(0) }; 4096];
+    thread_local! {
+        static LOADING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    }
+    /// Map this thread's large blocks from now on.
+    pub fn on_load_thread() {
+        LOADING.with(|l| l.set(true))
+    }
+    fn slot(p: usize) -> usize {
+        (p >> 12).wrapping_mul(0x9E37_79B9_7F4A_7C15) >> 52
+    }
+    fn note(p: usize) -> bool {
+        let at = slot(p);
+        (0..MAPPED.len()).any(|k| {
+            MAPPED[(at + k) % MAPPED.len()]
+                .compare_exchange(0, p, AcqRel, Relaxed)
+                .is_ok()
+        })
+    }
+    /// Forget `p`; false when it was never a mapped block.
+    fn take(p: usize) -> bool {
+        let at = slot(p);
+        (0..MAPPED.len()).any(|k| {
+            MAPPED[(at + k) % MAPPED.len()]
+                .compare_exchange(p, 0, AcqRel, Relaxed)
+                .is_ok()
+        })
+    }
+    unsafe fn map(size: usize) -> *mut u8 {
+        let p = unsafe {
+            libc::mmap(
+                std::ptr::null_mut(),
+                size,
+                libc::PROT_READ | libc::PROT_WRITE,
+                libc::MAP_PRIVATE | libc::MAP_ANON,
+                -1,
+                0,
+            )
+        };
+        if p == libc::MAP_FAILED {
+            return std::ptr::null_mut();
+        }
+        if !note(p as usize) {
+            unsafe { libc::munmap(p, size) };
+            return std::ptr::null_mut();
+        }
+        p.cast()
+    }
+    fn wanted(l: Layout) -> bool {
+        l.size() >= BIG && l.align() <= 4096 && LOADING.with(|x| x.get())
+    }
+    pub struct Alloc;
+    // SAFETY: a block is a mapping exactly when its address is in `MAPPED`, which `dealloc` and `realloc` consult
+    // before choosing how to release or resize it; every other block belongs to the system allocator.
+    unsafe impl GlobalAlloc for Alloc {
+        unsafe fn alloc(&self, l: Layout) -> *mut u8 {
+            if wanted(l) {
+                let p = unsafe { map(l.size()) };
+                if !p.is_null() {
+                    return p;
+                }
+            }
+            unsafe { System.alloc(l) }
+        }
+        unsafe fn alloc_zeroed(&self, l: Layout) -> *mut u8 {
+            if wanted(l) {
+                let p = unsafe { map(l.size()) };
+                if !p.is_null() {
+                    return p;
+                }
+            }
+            unsafe { System.alloc_zeroed(l) }
+        }
+        unsafe fn dealloc(&self, p: *mut u8, l: Layout) {
+            if l.size() >= BIG && take(p as usize) {
+                unsafe { libc::munmap(p.cast(), l.size()) };
+            } else {
+                unsafe { System.dealloc(p, l) }
+            }
+        }
+        unsafe fn realloc(&self, p: *mut u8, l: Layout, size: usize) -> *mut u8 {
+            // SAFETY: the caller guarantees `size` is valid for this alignment.
+            let new = unsafe { Layout::from_size_align_unchecked(size, l.align()) };
+            let mapped = l.size() >= BIG && take(p as usize);
+            if !mapped && !wanted(new) {
+                return unsafe { System.realloc(p, l, size) };
+            }
+            #[cfg(target_os = "linux")]
+            if mapped && size >= BIG {
+                // SAFETY: `p` is a mapping of `l.size()` bytes made by `map`; the kernel moves or resizes it.
+                let q = unsafe { libc::mremap(p.cast(), l.size(), size, libc::MREMAP_MAYMOVE) };
+                if q != libc::MAP_FAILED && note(q as usize) {
+                    return q.cast();
+                }
+                // out of address space or of table slots: carry on as an ordinary block
+                let (from, len) = if q == libc::MAP_FAILED {
+                    (p, l.size())
+                } else {
+                    (q.cast(), size)
+                };
+                let r = unsafe { System.alloc(new) };
+                if !r.is_null() {
+                    unsafe {
+                        std::ptr::copy_nonoverlapping(from, r, l.size().min(size));
+                        libc::munmap(from.cast(), len);
+                    }
+                } else if q == libc::MAP_FAILED {
+                    note(p as usize);
+                }
+                return r;
+            }
+            let q = unsafe { self.alloc(new) };
+            if q.is_null() {
+                if mapped {
+                    note(p as usize);
+                }
+                return q;
+            }
+            unsafe {
+                std::ptr::copy_nonoverlapping(p, q, l.size().min(size));
+                if mapped {
+                    libc::munmap(p.cast(), l.size());
+                } else {
+                    System.dealloc(p, l)
+                }
+            }
+            q
+        }
+    }
+}
+#[cfg(any(target_os = "linux", packmem_test_load_alloc))]
+#[global_allocator]
+static ALLOC: load_alloc::Alloc = load_alloc::Alloc;
 
 /// A load thread keeps buffers up to this size from one piece to the next and drops larger ones.
 const KEEP: usize = 16 << 20;
@@ -919,6 +1048,8 @@ impl PyTable {
             for _ in 0..threads {
                 let (work_rx, done_tx, only) = (&work_rx, done_tx.clone(), &only);
                 sc.spawn(move || {
+                    #[cfg(any(target_os = "linux", packmem_test_load_alloc))]
+                    load_alloc::on_load_thread();
                     let mut spare = packmem::dynamic::Buffers::default();
                     loop {
                         let Ok((i, piece)) = work_rx.lock().unwrap().recv() else {
