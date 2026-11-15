@@ -22,6 +22,7 @@ export const DOCS: DocPage[] = [
   { slug: "", group: "Start", title: "Overview", description: "What packmem is, when it helps and when it does not." },
   { slug: "install", group: "Start", title: "Install", description: "Python, Node, browsers and edge runtimes, Rust." },
   { slug: "quickstart", group: "Start", title: "Quickstart", description: "Load, query and serve records in each language." },
+  { slug: "benchmarks", group: "Start", title: "Benchmarks", description: "Memory, time and bytes in training scripts, Lightdash, paperless-ngx and a log viewer." },
   { slug: "python", group: "Libraries", title: "Python", description: "packmem.Table: a list of dicts in packed columns." },
   { slug: "node", group: "Libraries", title: "Node", description: "Table and View for Node, Bun and Deno." },
   { slug: "browser", group: "Libraries", title: "Browsers and edge", description: "packmem/wasm in browsers, Cloudflare Workers and Deno." },
