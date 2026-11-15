@@ -1,0 +1,74 @@
+# examples/full-jaffle-shop-demo/docker-compose.yml at the pinned commit, plus what the published image needs
+# that the demo leaves to its defaults (MinIO for results, from the repository's root docker-compose.yml) and a
+# compressing proxy in front. Postgres is both Lightdash's database and the warehouse, as in the demo.
+services:
+    lightdash:
+        build:
+            context: .
+            args:
+                LD_IMAGE: ${LD_IMAGE}
+                PACKMEM_VERSION: ${PACKMEM_VERSION}
+        image: packmem-lightdash:${LD_VERSION}-packmem${PACKMEM_VERSION}
+        depends_on: [db, minio]
+        environment:
+            - PGHOST=db
+            - PGPASSWORD=password
+            - PGUSER=postgres
+            - PGPORT=5432
+            - PGDATABASE=postgres
+            - SECURE_COOKIES=false
+            - TRUST_PROXY=false
+            - LIGHTDASH_SECRET='not very secret'
+            - SAVED_METRICS_TREE_ENABLED=false
+            - SITE_URL=${LDB_URL}
+            # The demo seed (01_initial_user) needs it and reads the dbt project from $DBT_DEMO_DIR/dbt; the demo's
+            # compose file does not set it.
+            - DBT_DEMO_DIR=/usr/app
+            - S3_ENDPOINT=http://minio:9000
+            - S3_REGION=us-east-1
+            - S3_BUCKET=default
+            - S3_ACCESS_KEY=minioadmin
+            - S3_SECRET_KEY=minioadmin
+            - S3_FORCE_PATH_STYLE=true
+            # Self-hosted default 5,000 rows per query; raised so one query can return the ~91k-row size of lightdash#31919.
+            - LIGHTDASH_QUERY_MAX_LIMIT=100000
+            # Default 2,500. Raised only so arm D can ask for every row in one page; A, B and C ask for 500 or 2,500.
+            - LIGHTDASH_QUERY_MAX_PAGE_SIZE=100000
+            - RUDDERSTACK_ANALYTICS_DISABLED=true
+            - HEADWAY_ENABLED=false
+        volumes:
+            - ./profiles:/usr/app/profiles
+            - ./dbt:/usr/app/dbt
+        cpus: 4
+        mem_limit: 16g
+        memswap_limit: 16g
+
+    db:
+        image: ${PG_IMAGE}
+        restart: always
+        environment:
+            POSTGRES_PASSWORD: password
+        cpus: 2
+
+    minio:
+        image: ${MINIO_IMAGE}
+        volumes:
+            - ./init-minio.sh:/init-minio.sh:ro
+        entrypoint: /init-minio.sh
+        environment:
+            - MINIO_ROOT_USER=minioadmin
+            - MINIO_ROOT_PASSWORD=minioadmin
+            - MINIO_DEFAULT_BUCKETS=default
+            - MINIO_EXPIRATION_DAYS=1
+        cpus: 2
+
+    proxy:
+        image: ${NGINX_IMAGE}
+        depends_on: [lightdash]
+        volumes:
+            - ./nginx.conf:/etc/nginx/nginx.conf:ro
+            - ./bench:/usr/share/nginx/bench:ro
+            - ./logs:/var/log/nginx
+        ports:
+            - 127.0.0.1:${LDB_PORT}:80
+        cpus: 2

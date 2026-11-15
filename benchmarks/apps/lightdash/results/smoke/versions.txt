@@ -1,0 +1,18 @@
+date: 2026-11-15T13:14:19Z
+kernel: Linux 6.8.0-139-generic x86_64
+cpus: 32
+mem: 124 GB
+docker: 29.1.3
+lightdash: 3.261.1 commit 7d257bd93b7f312c5a63732c82956d870546da4a
+image: lightdash/lightdash:3.261.1@sha256:047a0512ca611b1d8c470a8889a84e9fda60a060023f098bb8c0b3156f6918be lightdash/lightdash@sha256:047a0512ca611b1d8c470a8889a84e9fda60a060023f098bb8c0b3156f6918be
+image: postgres:17.6 postgres@sha256:00bc86618629af00d2937fdc5a5d63db3ff8450acf52f0636ec813c7f4902929
+image: coollabsio/minio@sha256:69b55a1c1c5dc285ce04db96689f5b2102317fc77a50680a1874ca6efd1c87f9 coollabsio/minio@sha256:69b55a1c1c5dc285ce04db96689f5b2102317fc77a50680a1874ca6efd1c87f9
+image: nginx:1.29.3-alpine nginx@sha256:b3c656d55d7ad751196f21b7fd2e8d4da9cb430e32f646adcf92441b72f82b14
+container node: v24.22.1
+container packmem: 0.3.2
+client packmem: 0.3.2
+playwright: 1.56.1 chromium 141.0.7390.37
+host node: v24.22.0
+seed: source_rows=36827 rows=100000 sha256=814d31d81b9baf1dca297848b8f647e0a62c97333d8b7c4cf74251a3b977fc9b
+transpile check: unpatched QueryController.ts transpiles to the image copy, comments and Sentry debug id aside
+controller sha256: image 00f83ea1f919c268fd1c5d7d8d52ee68a62397a9397e555a6ff3599f32950f40 patched 63860c14072fe3f5ee6979c2550cef638fd928bfc5971f43bd07b1284ccb901a

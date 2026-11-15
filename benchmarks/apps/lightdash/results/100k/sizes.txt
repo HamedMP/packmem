@@ -1,0 +1,13 @@
+query 76c8f2f5-efe8-492c-a86c-dcf78e2857ab, measured 2026-11-15T17:32:43Z, load 0.27 0.17 0.63
+page 1, pageSize 500, json: 671079 B, type=application/json; charset=utf-8, time=0.108651s
+page 1, pageSize 500, json-gzip: 20630 B, type=application/json; charset=utf-8, time=0.102027s
+page 1, pageSize 500, packmem: 51615 B, type=application/vnd.packmem, time=0.104617s
+page 1, pageSize 500, packmem-gzip: 16197 B, type=application/vnd.packmem; enc=gzip, time=0.066067s
+page 1, pageSize 2500, json: 3344174 B, type=application/json; charset=utf-8, time=0.293327s
+page 1, pageSize 2500, json-gzip: 98059 B, type=application/json; charset=utf-8, time=0.278969s
+page 1, pageSize 2500, packmem: 250055 B, type=application/vnd.packmem, time=0.293413s
+page 1, pageSize 2500, packmem-gzip: 76200 B, type=application/vnd.packmem; enc=gzip, time=0.305326s
+page 1, pageSize 100000, json: 134506783 B, type=application/json; charset=utf-8, time=10.402353s
+page 1, pageSize 100000, json-gzip: 3874874 B, type=application/json; charset=utf-8, time=11.162715s
+page 1, pageSize 100000, packmem: 6606607 B, type=application/vnd.packmem, time=11.388198s
+page 1, pageSize 100000, packmem-gzip: 3246870 B, type=application/vnd.packmem; enc=gzip, time=11.004291s

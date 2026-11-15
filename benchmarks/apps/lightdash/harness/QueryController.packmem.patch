@@ -1,0 +1,48 @@
+--- a/packages/backend/src/controllers/v2/QueryController.ts
++++ b/packages/backend/src/controllers/v2/QueryController.ts
+@@ -68,6 +68,8 @@
+     Tags,
+ } from '@tsoa/runtime';
+ import express from 'express';
++import { Table } from 'packmem';
++import { send, wantsPackmem } from 'packmem/http';
+ import { getContextFromHeader } from '../../analytics/LightdashAnalytics';
+ import { requireOAuthScopeOperation } from '../../auth/oauthScopes/unchecked';
+ import {
+@@ -77,6 +79,19 @@
+ } from '../authentication';
+ import { BaseController } from '../baseController';
+ 
++// One column per cell part: `<field>.raw` and `<field>.formatted`.
++const packResultRows = (rows: Record<string, { value: { raw: unknown; formatted: string } }>[]) =>
++    new Table(
++        rows.map((row) => {
++            const flat: Record<string, AnyType> = {};
++            for (const [field, { value }] of Object.entries(row)) {
++                flat[`${field}.raw`] = value.raw;
++                flat[`${field}.formatted`] = value.formatted;
++            }
++            return flat;
++        }),
++    );
++
+ export type ApiGetAsyncQueryResultsResponse = {
+     status: 'ok';
+     results: ApiGetAsyncQueryResults;
+@@ -192,6 +207,16 @@
+                 pageSize,
+             });
+ 
++        // A ready page goes out as packmem bytes to a client that asks for them (Accept: application/vnd.packmem).
++        if (
++            req.res &&
++            results.status === QueryHistoryStatus.READY &&
++            wantsPackmem(req)
++        ) {
++            await send(req, req.res, packResultRows(results.rows));
++            return undefined as never;
++        }
++
+         return {
+             status: 'ok',
+             results,
