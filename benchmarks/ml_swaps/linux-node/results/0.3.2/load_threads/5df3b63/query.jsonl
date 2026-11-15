@@ -1,0 +1,4 @@
+{"build": "5df3b63", "query": "col(\"conversations\").list.len()", "times_s": [0.0062, 0.0045, 0.004, 0.004, 0.004], "median_s": 0.004, "rows": 665298}
+{"build": "f6973f1", "query": "col(\"conversations\").list.len()", "times_s": [0.0039, 0.0038, 0.0037, 0.0038, 0.0038], "median_s": 0.0038, "rows": 665298}
+{"build": "5df3b63", "query": "col(\"conversations\").list.len()", "times_s": [0.0045, 0.0039, 0.0039, 0.0039, 0.004], "median_s": 0.0039, "rows": 665298}
+{"build": "f6973f1", "query": "col(\"conversations\").list.len()", "times_s": [0.0063, 0.0064, 0.0038, 0.0038, 0.0038], "median_s": 0.0038, "rows": 665298}

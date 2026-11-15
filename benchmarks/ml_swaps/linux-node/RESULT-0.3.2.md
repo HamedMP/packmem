@@ -294,6 +294,19 @@ and are not returned. The per-piece JSON sizes (5 to 54 MB per 16,384 records, h
 glibc settings for the whole process. 4bf9c3e keeps that only on the load threads, so queries and the one-thread load
 stay on malloc.
 
+Those three builds, measured the same way with no `MALLOC_` variables (raw files in `5f4b8e3/`, `5df3b63/` and
+`4bf9c3e/`; `query.jsonl` times `t.col("conversations").list.len()` 5 times in each of two processes per build, against
+f6973f1 in the same session). Medians, MiB:
+
+| Build | Peak RssAnon, 1 / 2 / 4 threads | RssAnon after, 4 threads | Time, 1 / 4 threads | `list.len()` | f6973f1 `list.len()` |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 5f4b8e3: blocks of 1 MiB or more mapped, every thread | 365 / 384 / 445 | 299 | 6.65 / 1.54 s | 7.0 to 7.9 ms | 3.8 ms |
+| 5df3b63: mapped from 16 MiB | 389 / 486 / 615 | 334 | 7.04 / 1.50 s (load 3.5) | 3.9 to 4.0 ms | 3.8 ms |
+| 4bf9c3e: from 1 MiB on load threads only | 376 / 384 / 442 | 303 | 6.39 / 1.54 s | 3.8 to 3.9 ms | 3.8 to 4.0 ms |
+
+On 4bf9c3e, dropping the loaded table (`del t` with `gc.collect()`) took 20.6 and 21.6 ms against 17.0 and 18.9 ms
+on f6973f1.
+
 ### 8 ranks x 4 fork workers on main 4bf9c3e
 
 The packmem arms of the 8-rank study, re-run on main at 4bf9c3e (unreleased) on 2026-11-15, 22:27 to 22:49 CET.

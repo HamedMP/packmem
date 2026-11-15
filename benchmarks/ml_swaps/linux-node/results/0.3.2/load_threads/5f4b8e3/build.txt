@@ -1,0 +1,3 @@
+5f4b8e3 Give large blocks their own mapping on Linux too
+d50a77e804c0cfb5270ff0ab903326806ebab818342fa7aa747be9a28011c023  wheels/packmem-0.3.2-cp310-abi3-manylinux_2_34_x86_64.whl
+rustc 1.100.0 (0ef1bc386 2026-11-09)

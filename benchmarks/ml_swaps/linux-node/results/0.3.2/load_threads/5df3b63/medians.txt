@@ -1,0 +1,3 @@
+runs-t1.jsonl                            n=3 load_s 7.04 anon 389 file 9 vmrss 398 after 319 nbytes {296187892} load 3.49
+runs-t2.jsonl                            n=3 load_s 2.54 anon 486 file 137 vmrss 537 after 332 nbytes {296187892} load 3.90
+runs-t4.jsonl                            n=3 load_s 1.50 anon 615 file 144 vmrss 633 after 334 nbytes {296187892} load 3.83

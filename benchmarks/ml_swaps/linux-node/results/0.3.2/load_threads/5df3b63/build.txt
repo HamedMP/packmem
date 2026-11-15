@@ -1,0 +1,3 @@
+5df3b63 Map only the blocks a load thread would drop
+41640e57c88681e01480082b37438ae98f1f8fe78520624475a67925061919a7  wheels/packmem-0.3.2-cp310-abi3-manylinux_2_34_x86_64.whl
+rustc 1.100.0 (0ef1bc386 2026-11-09)
