@@ -1,0 +1,4 @@
+c358143 Let a file load choose its thread count
+cbd04e25cd434654add366d8ac0a78c74460ceeda27f00037ae78ba1d14a7664  wheels/packmem-0.3.2-cp310-abi3-manylinux_2_34_x86_64.whl
+rustc 1.100.0 (0ef1bc386 2026-11-09)
+main 0.3.2 True

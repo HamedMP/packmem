@@ -233,9 +233,30 @@ once per rank.
 On 8 ranks at once this transient sets the node peak at 20k samples per rank: 5.77 GiB against 0.1.0's
 4.86 (above). MiniCPM-V at 8x4 is also 0.18 GiB higher at the peak and 0.22 GiB higher in the steady state.
 
-Workaround today: `PACKMEM_THREADS=1` selects the one-thread loader, which also turns off threaded queries. It was
-not measured in these runs. On main (unreleased, c358143) the Python loaders take `threads=`, and `threads=1`
-gives the one-thread load without turning off threaded queries. It was not measured here either.
+### The transient by thread count
+
+Measured afterwards (2026-11-15, one process, 3 runs per row, the file warm in the page cache, 1-minute load 2.4 to 3.0
+at every start). A separate process read the loader's `/proc/<pid>/status` every 2 ms; its sampled VmRSS peak is
+within 2 MiB of the loader's own VmHWM in every run. Harness: `harness/load_threads.py`. Raw output and versions:
+[`results/0.3.2/load_threads/`](results/0.3.2/load_threads/). Medians, MiB:
+
+| Threads | `load_json` time | Peak RssAnon | Peak RssFile | Peak VmRSS | RssAnon after |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | 6.42 s | 372 | 9 | 381 | 308 |
+| 2 | 2.19 s | 479 | 185 | 577 | 309 |
+| 4 (default) | 1.48 s | 613 | 261 | 741 | 332 |
+
+- **Anonymous memory** grows by about 80 MiB per extra parser thread (372 to 613 MiB from 1 to 4 threads), and this
+  is what raises node PSS at 8 ranks.
+- **File pages** are the memory-mapped input (9 MiB at 1 thread, 185 to 261 MiB with more). All ranks map the same
+  file, so across the node they count about once.
+- **At one thread,** 0.3.2 peaks at 381 MiB in 6.4 s, against 0.1.0's 399 MiB in 8.3 s.
+
+These rows use packmem 0.3.2 from PyPI with `PACKMEM_THREADS` set, which also turns off threaded queries. Main at
+c358143 (unreleased) adds `load_json(path, threads=n)`, which leaves queries threaded. Built from that commit and run
+the same way, it gave the same figures: 380, 580 and 726 MiB peak VmRSS at 1, 2 and 4 threads, in 6.45, 2.19 and
+1.47 s. The table was the same size (`nbytes` 296,187,892) in all 18 runs. The 8-rank node runs above were not
+repeated with one thread.
 
 ## Not measured here
 
