@@ -7,8 +7,9 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 ### Fixed
 - Python on Linux: loading a large file on several threads no longer leaves each thread's freed buffers in the
   peak. `load_json` on the 1.03 GB LLaVA-665k file, peak anonymous memory at 1 / 2 / 4 threads: 372 / 479 / 613
-  MiB in 0.3.2, 376 / 384 / 442 MiB now, with load times unchanged within 4% (6.4 / 2.4 / 1.5 s) and about 20
-  MiB less held after a threaded load (`benchmarks/ml_swaps/linux-node/results/0.3.2/load_threads/`). With
+  MiB in 0.3.2, 376 / 384 / 442 MiB now. The load takes 6.42 / 2.19 / 1.48 s in 0.3.2 and 6.39 / 2.38 / 1.54 s
+  now, so two threads are 9% slower and four 4%; a threaded load holds 6 to 29 MiB less afterwards
+  (`benchmarks/ml_swaps/linux-node/results/0.3.2/load_threads/`). With
   eight trainer ranks loading that file at once, the Qwen3-VL node peak at 20,000 samples per rank goes from
   5.77 GiB in 0.3.2 to 4.47 GiB, below the 4.86 GiB of 0.1.0; the full-shard and MiniCPM-V peaks, which come
   from iteration, barely move (6.21 to 6.12 and 7.31 to 7.25 GiB;
