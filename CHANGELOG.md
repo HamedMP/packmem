@@ -2,6 +2,18 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+### Added
+- Python: `keep_key_order=True` on `Table`, `load_jsonl` and `load_json` remembers the order of each row's keys,
+  so a row reads back with its keys as they were written instead of in the table's column order. With it,
+  `json.dumps(row, separators=(",", ":"), ensure_ascii=False)` reproduces a line that `json.dumps` wrote. The
+  order is kept through `append`, `extend`, item assignment, `insert`, `sort`, `take`, `to_json`, `save`,
+  `share` and pickling; a key added later with `update` comes last. Columns and queries are unaffected. It costs
+  a few bits a row while rows share a handful of orders, more when nearly every row has its own. A table that
+  keeps key orders is written as byte format 6, which 0.3.3 and earlier refuse with "written by a newer
+  packmem"; every other table is still written as format 5.
+
 ## 0.3.3 - 2026-11-15
 
 ### Fixed

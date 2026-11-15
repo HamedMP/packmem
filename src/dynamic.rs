@@ -267,6 +267,10 @@ fn dec_bounds(lo: f64, hi: f64, lo_incl: bool, hi_incl: bool, scale: usize) -> O
 /// Absent keys are simply not reported.
 pub trait RowVisitor {
     fn begin(&mut self);
+    /// A row whose keys arrive in the order they were written in, not in column order (`DynTable::keep_key_order`).
+    fn begin_ordered(&mut self) {
+        self.begin()
+    }
     fn end(&mut self);
     fn null(&mut self, col: usize);
     fn boolean(&mut self, col: usize, v: bool);
@@ -1560,7 +1564,17 @@ fn par_runs<R: Send>(chunks: &[Chunk], f: impl Fn(usize, &[Chunk]) -> R + Sync) 
 #[derive(Default)]
 pub struct Buffers(Vec<Tail>);
 
+/// The column that holds, for a row loaded with `keep_key_order`, its keys in the order they were written: a JSON
+/// array of names. It rides along with the row through every edit and is never shown as a field of the row.
+pub const KEY_ORDER: &str = "\u{0}keys";
+
 pub struct DynTable {
+    /// Record the key order of rows as they are added.
+    keep_order: bool,
+    order_col: Option<usize>,
+    /// The columns of the row being built, in the order they were put.
+    row_order: Vec<u32>,
+    order_text: HashMap<Vec<u32>, String>,
     names: Vec<String>,
     index: HashMap<String, usize>,
     cols: Vec<Column>,
@@ -1580,6 +1594,10 @@ pub struct DynTable {
 impl DynTable {
     pub fn new(hint: Hint) -> Self {
         DynTable {
+            keep_order: false,
+            order_col: None,
+            row_order: Vec::new(),
+            order_text: HashMap::new(),
             names: vec![],
             index: HashMap::new(),
             cols: vec![],
@@ -1631,7 +1649,57 @@ impl DynTable {
         });
         self.names.push(name.to_string());
         self.index.insert(name.to_string(), self.cols.len() - 1);
+        if name == KEY_ORDER {
+            self.order_col = Some(self.cols.len() - 1);
+            self.keep_order = true
+        }
         self.cols.len() - 1
+    }
+    /// Remember the order of each row's keys from now on, so that rows read back with their keys as written and not
+    /// in the table's column order. Costs a few bits a row while rows share a handful of orders.
+    pub fn keep_key_order(&mut self) {
+        self.keep_order = true
+    }
+    /// Give an existing row its key order, after its cells were replaced.
+    pub fn set_key_order(&mut self, row: usize, names: &[&str]) {
+        let oc = self.col_or_create(KEY_ORDER);
+        self.set(row, oc, Cell::Str(serde_json::to_string(names).unwrap()))
+    }
+    pub fn keeps_key_order(&self) -> bool {
+        self.keep_order
+    }
+    /// The column holding key orders, if any row has one; not a field of the rows.
+    pub fn key_order_col(&self) -> Option<usize> {
+        self.order_col
+    }
+    fn note_order(&mut self) {
+        if self.row_order.is_empty()
+            || self
+                .order_col
+                .is_some_and(|oc| self.row_order.contains(&(oc as u32)))
+        {
+            return self.row_order.clear();
+        }
+        let key = std::mem::take(&mut self.row_order);
+        let mut texts = std::mem::take(&mut self.order_text);
+        if !texts.contains_key(&key) {
+            let mut names: Vec<&str> = Vec::with_capacity(key.len());
+            for &c in &key {
+                let name = self.names[c as usize].as_str();
+                if !names.contains(&name) {
+                    names.push(name)
+                }
+            }
+            if texts.len() >= 4096 {
+                texts.clear()
+            }
+            texts.insert(key.clone(), serde_json::to_string(&names).unwrap());
+        }
+        let oc = self.col_or_create(KEY_ORDER);
+        self.put_str_at(oc, &texts[&key]);
+        self.order_text = texts;
+        self.row_order = key;
+        self.row_order.clear()
     }
     /// Append one record. Unknown keys create a column; keys absent from this record read back as `Missing`.
     pub fn append<'a>(&mut self, row: impl IntoIterator<Item = (&'a str, Cell)>) {
@@ -1654,6 +1722,9 @@ impl DynTable {
     }
     /// Set one cell of the row being built (`col_for`, `put_at`..., then `end_row`; `abort_row` discards it).
     pub fn put_at(&mut self, c: usize, v: Cell) {
+        if self.keep_order {
+            self.row_order.push(c as u32)
+        }
         let slot = self.tail_len();
         let t = &mut self.cols[c].tail;
         if t.len() == slot {
@@ -1674,6 +1745,9 @@ impl DynTable {
             Some(j) => {
                 t.tags.push(T_NEST);
                 t.vals.push(j);
+                if self.keep_order {
+                    self.row_order.push(c as u32)
+                }
                 true
             }
             None => false,
@@ -1681,6 +1755,9 @@ impl DynTable {
     }
     /// Same as `put_at` with a string cell, without building a `Cell`.
     pub fn put_str_at(&mut self, c: usize, s: &str) {
+        if self.keep_order {
+            self.row_order.push(c as u32)
+        }
         let slot = self.tail_len();
         let t = &mut self.cols[c].tail;
         let v = t.intern(s);
@@ -1693,6 +1770,9 @@ impl DynTable {
         }
     }
     pub fn end_row(&mut self) {
+        if self.keep_order {
+            self.note_order()
+        }
         let slot = self.tail_len();
         self.cur = 0;
         for c in &mut self.cols {
@@ -1739,6 +1819,7 @@ impl DynTable {
         }
     }
     pub fn abort_row(&mut self) {
+        self.row_order.clear();
         let slot = self.tail_len();
         self.cur = 0;
         for c in &mut self.cols {
@@ -1795,6 +1876,9 @@ impl DynTable {
         let nfull = self.len / CHUNK;
         let mut r = a;
         let mut buf = Vec::new();
+        // the last key order met, as text and as columns; and which columns the current row has emitted
+        let mut order: (String, Vec<usize>) = Default::default();
+        let (mut placed, mut stamp) = (Vec::<u32>::new(), 0u32);
         while r < b {
             let (k, o) = (r / CHUNK, r % CHUNK);
             let (seg_end, tail) = if k < nfull {
@@ -1807,8 +1891,8 @@ impl DynTable {
             let e = seg_end.min(b);
             for row in r..e {
                 let o = row % CHUNK;
-                v.begin();
-                for (ci, c) in self.cols.iter().enumerate() {
+                let mut emit = |ci: usize, v: &mut V| {
+                    let c = &self.cols[ci];
                     if tail {
                         c.tail.emit(o - self.plen, ci, v)
                     } else {
@@ -1818,6 +1902,44 @@ impl DynTable {
                             c.partial.as_ref().unwrap()
                         };
                         ch.emit(o, ci, k, v, &mut buf)
+                    }
+                };
+                let written = self.order_col.and_then(|oc| match self.get(row, oc) {
+                    Cell::Str(s) => Some(s),
+                    _ => None,
+                });
+                let Some(written) = written else {
+                    v.begin();
+                    for ci in (0..self.cols.len()).filter(|&ci| Some(ci) != self.order_col) {
+                        emit(ci, v)
+                    }
+                    v.end();
+                    continue;
+                };
+                if written != order.0 {
+                    let names: Vec<String> = serde_json::from_str(&written).unwrap_or_default();
+                    order.1 = names
+                        .iter()
+                        .filter_map(|n| self.index.get(n).copied())
+                        .collect();
+                    order.0 = written
+                }
+                stamp += 1;
+                placed.resize(self.cols.len(), 0);
+                if let Some(oc) = self.order_col {
+                    placed[oc] = stamp
+                }
+                v.begin_ordered();
+                for &ci in &order.1 {
+                    if placed[ci] != stamp {
+                        placed[ci] = stamp;
+                        emit(ci, v)
+                    }
+                }
+                // keys set after the row was written
+                for ci in 0..self.cols.len() {
+                    if placed[ci] != stamp {
+                        emit(ci, v)
                     }
                 }
                 v.end()
@@ -2376,7 +2498,7 @@ use crate::wire::{R, Res, W, bad};
 const MAGIC: &[u8; 4] = b"PKMT";
 const MAGIC_0_2: &[u8; 4] = b"PKM2";
 /// Raised whenever a reader built before the change could misread the bytes.
-pub const FORMAT: u8 = 5;
+pub const FORMAT: u8 = 6;
 
 fn write_cell(w: &mut W, c: &Cell) {
     match c {
@@ -2580,7 +2702,8 @@ impl DynTable {
     }
     fn write(&self, w: &mut W) {
         w.raw(MAGIC);
-        w.u8(FORMAT);
+        // 6 only says "rows carry a key order"; without one the bytes are format 5 and older readers take them
+        w.u8(if self.order_col.is_some() { FORMAT } else { 5 });
         w.u8(match self.hint {
             Hint::Memory => 0,
             Hint::Balanced => 1,
@@ -2665,6 +2788,8 @@ impl DynTable {
             return bad("trailing bytes");
         }
         (t.len, t.plen) = (len, plen);
+        t.order_col = t.index.get(KEY_ORDER).copied();
+        t.keep_order = t.order_col.is_some();
         Ok(t)
     }
 }

@@ -147,9 +147,11 @@ class Table:
 
     __slots__ = ("_t", "_share")
 
-    def __init__(self, records=None, hint="balanced", default=None):
+    def __init__(self, records=None, hint="balanced", default=None, keep_key_order=False):
         self._t = _Table(hint)
         self._share = None
+        if keep_key_order:
+            self._t.keep_key_order()
         if records is not None:
             self._t.extend(records, default)
 
@@ -721,7 +723,7 @@ def _only(fields):
     return list(fields)
 
 
-def load_jsonl(src, hint="balanced", fields=None, threads=None):
+def load_jsonl(src, hint="balanced", fields=None, threads=None, keep_key_order=False):
     """Load JSON lines from a path or an iterable of lines. Paths are parsed natively.
 
     `fields` keeps only those top-level keys; the others are skipped while parsing and never stored.
@@ -729,7 +731,7 @@ def load_jsonl(src, hint="balanced", fields=None, threads=None):
     `threads` sets how many threads parse a file of 8 MB or more (default: up to four). Each one holds a chunk of
     rows unpacked while it works, so more threads load faster and peak higher; `threads=1` has the lowest peak.
     """
-    t = Table(hint=hint)
+    t = Table(hint=hint, keep_key_order=keep_key_order)
     t._t.set_fields(_only(fields))
     try:
         if isinstance(src, (str, _os.PathLike)):
@@ -741,7 +743,7 @@ def load_jsonl(src, hint="balanced", fields=None, threads=None):
     return t
 
 
-def load_json(src, hint="balanced", fields=None, threads=None):
+def load_json(src, hint="balanced", fields=None, threads=None, keep_key_order=False):
     """Load one JSON array of objects from a path or an open file, streaming element by element.
 
     Replaces `json.load(f)` when the file holds a list of records; the full list of dicts is never built.
@@ -753,7 +755,7 @@ def load_json(src, hint="balanced", fields=None, threads=None):
     fields = _only(fields)
     path = isinstance(src, (str, _os.PathLike))
     start = src.tell() if not path and getattr(src, "seekable", lambda: False)() else None
-    t = Table(hint=hint)
+    t = Table(hint=hint, keep_key_order=keep_key_order)
     t._t.set_fields(fields)
     try:
         if path:
@@ -777,7 +779,7 @@ def load_json(src, hint="balanced", fields=None, threads=None):
         if fields is not None:
             keep = set(fields)
             data = ({k: v for k, v in r.items() if k in keep} for r in data)
-        t = Table(data, hint=hint)
+        t = Table(data, hint=hint, keep_key_order=keep_key_order)
     return t
 
 

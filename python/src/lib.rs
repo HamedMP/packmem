@@ -690,6 +690,10 @@ struct PyTable {
 
 /// Builds one dict per visited row by copying a template that already holds every key, then replacing values.
 struct DictSink<'a, 'py> {
+    /// The column that holds key orders: never a key of the row.
+    hidden: Option<usize>,
+    /// The row being built takes its keys in the order they arrive, not from the template.
+    ordered: bool,
     py: Python<'py>,
     keys: &'a [Py<PyString>],
     template: &'a Bound<'py, PyDict>,
@@ -723,12 +727,15 @@ impl<'a, 'py> DictSink<'a, 'py> {
         template: &'a Bound<'py, PyDict>,
         out: &'a Bound<'py, PyList>,
         use_cache: bool,
+        hidden: Option<usize>,
     ) -> Self {
         DictSink {
             py,
             keys,
             template,
             out,
+            hidden,
+            ordered: false,
             cur: None,
             seen: 0,
             stamp: 0,
@@ -768,9 +775,16 @@ impl<'a, 'py> DictSink<'a, 'py> {
     }
 }
 impl<'a, 'py> RowVisitor for DictSink<'a, 'py> {
+    fn begin_ordered(&mut self) {
+        self.seen = 0;
+        self.stamp += 1;
+        self.ordered = true;
+        self.cur = Some(PyDict::new(self.py))
+    }
     fn begin(&mut self) {
         self.seen = 0;
         self.stamp += 1;
+        self.ordered = false;
         self.cur = match self.template.copy() {
             Ok(d) => Some(d),
             Err(e) => {
@@ -781,9 +795,9 @@ impl<'a, 'py> RowVisitor for DictSink<'a, 'py> {
     }
     fn end(&mut self) {
         let Some(d) = self.cur.take() else { return };
-        if self.seen < self.keys.len() {
+        if !self.ordered && self.seen < self.keys.len() - self.hidden.is_some() as usize {
             for c in 0..self.keys.len() {
-                if self.mark[c] != self.stamp {
+                if self.mark[c] != self.stamp && Some(c) != self.hidden {
                     if let Err(e) = d.del_item(self.keys[c].bind(self.py)) {
                         self.err.get_or_insert(e);
                     }
@@ -796,7 +810,7 @@ impl<'a, 'py> RowVisitor for DictSink<'a, 'py> {
     }
     #[inline]
     fn null(&mut self, col: usize) {
-        if self.nest.is_some() {
+        if self.nest.is_some() || self.ordered {
             let none = self.py.None().into_bound(self.py);
             return self.put(col, Ok(none));
         }
@@ -946,8 +960,10 @@ impl PyTable {
             self.keys.push(k)
         }
         let d = PyDict::new(py);
-        for k in &self.keys {
-            d.set_item(k.bind(py), py.None())?
+        for (c, k) in self.keys.iter().enumerate() {
+            if Some(c) != self.t.key_order_col() {
+                d.set_item(k.bind(py), py.None())?
+            }
         }
         self.template = Some(d.unbind());
         Ok(())
@@ -1040,6 +1056,7 @@ impl PyTable {
         use std::sync::mpsc;
         const ROWS: usize = packmem::dynamic::CHUNK;
         let hint = self.t.hint;
+        let keep_order = self.t.keeps_key_order();
         let only = self.only.clone();
         let (work_tx, work_rx) = mpsc::sync_channel::<(usize, Piece<'a>)>(1);
         let work_rx = std::sync::Mutex::new(work_rx);
@@ -1057,6 +1074,9 @@ impl PyTable {
                             return;
                         };
                         let mut t = DynTable::new(hint);
+                        if keep_order {
+                            t.keep_key_order()
+                        }
                         t.reuse_buffers(std::mem::take(&mut spare));
                         t.set_bulk(true);
                         let ok = piece.load(&mut t, only.as_ref(), map);
@@ -1293,7 +1313,14 @@ impl PyTable {
                 &empty
             }
         };
-        let mut sink = DictSink::new(py, &self.keys, template, out, use_cache);
+        let mut sink = DictSink::new(
+            py,
+            &self.keys,
+            template,
+            out,
+            use_cache,
+            self.t.key_order_col(),
+        );
         for (a, b) in ranges {
             self.t.visit_rows(a, b, &mut sink)
         }
@@ -1664,13 +1691,29 @@ impl PyTable {
                 self.t.set(i, c, Cell::Missing)
             }
         }
+        let order: Vec<String> = cells.iter().map(|(k, _)| k.clone()).collect();
         for (k, v) in cells {
             self.t.set_by_name(i, &k, v)
+        }
+        if self.t.keeps_key_order() {
+            let order: Vec<&str> = order.iter().map(String::as_str).collect();
+            self.t.set_key_order(i, &order)
         }
         self.sync_keys(py)
     }
     fn names(&self) -> Vec<String> {
-        self.t.names().to_vec()
+        let hidden = self.t.key_order_col();
+        let names = self.t.names().iter().enumerate();
+        names
+            .filter(|(c, _)| Some(*c) != hidden)
+            .map(|(_, n)| n.clone())
+            .collect()
+    }
+    /// Remember each row's key order from now on (see `Table(keep_key_order=True)`).
+    fn keep_key_order(&mut self) -> PyResult<()> {
+        self.guard()?;
+        self.t.keep_key_order();
+        Ok(())
     }
     fn all(&self) -> Selection {
         Selection {

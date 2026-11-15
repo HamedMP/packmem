@@ -247,7 +247,7 @@ def test_byte_header_carries_a_format_version():
     new = packmem.Table(rows).to_bytes()
     assert len(new) <= len(old), "a column of small records must not cost more than it did as JSON text"
     assert new[:4] == b"PKMT" and list(packmem.Table.from_bytes(new)) == rows
-    try: packmem.Table.from_bytes(new[:4] + bytes([new[4] + 1]) + new[5:]); raise AssertionError("expected ValueError")
+    try: packmem.Table.from_bytes(new[:4] + bytes([new[4] + 2]) + new[5:]); raise AssertionError("expected ValueError")
     except ValueError as e: assert "newer packmem" in str(e)
 
 
@@ -759,6 +759,44 @@ def test_from_queryset():
     try: packmem.from_queryset(qs); raise AssertionError("expected TypeError without default")
     except TypeError: pass
 
+
+
+def test_keep_key_order_reproduces_each_line():
+    import json, os, pickle, random, tempfile
+    r = random.Random(5)
+    keys = ["type", "uuid", "timestamp", "message", "cwd", "sessionId", "version"]
+    lines = []
+    for i in range(70000):
+        ks = keys[:]
+        if i % 3 == 0: r.shuffle(ks)
+        ks = [k for k in ks if r.random() < 0.85] or ["type"]
+        row = {k: (i if k == "version" else {"role": "user", "content": "hi %d " % i * 40} if k == "message" else None if k == "cwd" and i % 7 == 0 else "%s-%d" % (k, i % 50)) for k in ks}
+        lines.append(json.dumps(row, separators=(",", ":"), ensure_ascii=False))
+    rows = [json.loads(l) for l in lines]
+    text = lambda it: [json.dumps(x, separators=(",", ":"), ensure_ascii=False) for x in it]
+    plain = packmem.Table(rows)
+    assert text(plain) != lines and plain.to_bytes()[4] == 5
+    t = packmem.Table(rows, keep_key_order=True)
+    assert text(t) == lines and t.columns == plain.columns and t.to_bytes()[4] == 6
+    assert text(packmem.Table.from_bytes(t.to_bytes())) == lines and text(pickle.loads(pickle.dumps(t))) == lines
+    assert text(json.loads(t.to_json(), object_pairs_hook=dict)) == lines and text(t[100:140]) == lines[100:140] and text([t[-1]]) == lines[-1:]
+    assert [list(x.keys()) for _, x in zip(range(50), t.lazy())] == [list(x) for x in rows[:50]]
+    assert t.count(type="type-3") == plain.count(type="type-3") and text(t.where(type="type-3")) == [l for l, x in zip(lines, rows) if x.get("type") == "type-3"]
+    with tempfile.TemporaryDirectory() as d:
+        p, pj, ps = (os.path.join(d, n) for n in ("a.jsonl", "a.json", "t.pkm"))
+        with open(p, "w", encoding="utf-8") as f: f.write("\n".join(lines) + "\n")
+        with open(pj, "w", encoding="utf-8") as f: f.write("[" + ",".join(lines) + "]")
+        assert os.path.getsize(p) > 8 << 20
+        for n in (1, 4):
+            assert text(packmem.load_jsonl(p, keep_key_order=True, threads=n)) == lines
+            assert text(packmem.load_json(pj, keep_key_order=True, threads=n)) == lines
+        t.save(ps); o = packmem.open(ps); assert text(o) == lines; del o
+    u = packmem.Table(keep_key_order=True); u.extend(t[100:200]); u.extend(rows[:10])
+    assert text(u) == lines[100:200] + lines[:10]
+    u[3] = {"zz": 1, "type": "q", "aa": None}; u.update(4, extra="x"); u.insert(0, {"q": 1, "cwd": 2}); u.append({"last": 1, "type": "t"})
+    assert list(u[4]) == ["zz", "type", "aa"] and list(u[5]) == list(rows[104]) + ["extra"] and list(u[0]) == ["q", "cwd"] and list(u[-1]) == ["last", "type"]
+    u.reverse(); assert list(u[0]) == ["last", "type"] and list(u[-1]) == ["q", "cwd"] and list(u.take([0])[0]) == ["last", "type"]
+    assert not any("\0" in c for c in u.columns)
 
 if __name__ == "__main__":
     for name, f in list(globals().items()):
