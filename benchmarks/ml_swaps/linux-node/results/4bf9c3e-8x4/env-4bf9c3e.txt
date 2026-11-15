@@ -1,0 +1,24 @@
+packmem: 4bf9c3e Map large blocks on load threads only, and remember which
+9e588b291449c21d0a44fed7928a51c2054e3d890932b1b57b7850982deec1ba  packmem-0.3.2-cp310-abi3-manylinux_2_34_x86_64.whl
+rustc 1.100.0 (0ef1bc386 2026-11-09)
+qwen3-vl: 96588727e44c78b25ba03ea03b8e12f7e64fd0da
+minicpm-v: 4dbbb6c58b6f8a004d6689028417296719f0831a
+72bcaf329a8ce9f96190176c0ae6fa05fe5b85ed2e3002da7877b6050b6694c8  qwen.v2.patch
+90ab45c9b1bd72a26b8f265f01282d77836d72ff8a16a2b5e98129e1cc2d7ba4  minicpm.v2.patch
+venv:
+  numpy==2.5.4
+  pillow==13.0.0
+  torch==2.15.0+cpu
+  torchvision==0.29.2+cpu
+  transformers==5.23.0
+venv-mcpm:
+  accelerate==0.30.1
+  deepspeed==0.20.0
+  numpy==2.5.4
+  peft==0.14.0
+  pillow==13.0.0
+  torch==2.15.0+cpu
+  torchvision==0.29.2+cpu
+  transformers==4.51.2
+Linux 6.8.0-139-generic
+ldd (Ubuntu GLIBC 2.39-0ubuntu8.12) 2.39

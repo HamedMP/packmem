@@ -291,7 +291,41 @@ higher. Fixing glibc's mmap threshold brought 4 threads to within 76 MiB of one 
 each time a large mapped block is freed, after which the parser threads' multi-MiB buffers come from per-thread arenas
 and are not returned. The per-piece JSON sizes (5 to 54 MB per 16,384 records, heaviest at the end of the file) are in
 `f6973f1/piece_bytes.json`. 5f4b8e3 gives packmem's own large blocks their own mapping on Linux instead of changing
-glibc settings for the whole process; it is measured below once built.
+glibc settings for the whole process. 4bf9c3e keeps that only on the load threads, so queries and the one-thread load
+stay on malloc.
+
+### 8 ranks x 4 fork workers on main 4bf9c3e
+
+The packmem arms of the 8-rank study, re-run on main at 4bf9c3e (unreleased) on 2026-11-15, 22:27 to 22:49 CET.
+Order: `results/4bf9c3e-8x4/seq_pm.sh`, 3 runs per configuration, 1 for the shard, 40 GiB cap. The list arms were not
+re-run, because list memory does not depend on packmem. The list column is the 0.3.2 run above.
+
+Setup: the same repository commits and patches (sha256 checked), data and harness as the 0.3.2 run. Two differences
+(`results/4bf9c3e-8x4/env-4bf9c3e.txt`):
+- the Qwen venv also has torchvision 0.29.2+cpu, which the 0.3.2 env file does not list;
+- packmem is a local `manylinux_2_34` build of 4bf9c3e (rustc 1.100.0), where 0.3.2 used the PyPI `manylinux2014` wheel.
+
+Node-wide PSS, GiB (median (min-max)):
+
+| model | samples / rank | list (0.3.2) | 0.1.0 packmem | 0.3.2 packmem | **4bf9c3e packmem** | list / 4bf9c3e |
+| --- | --- | --- | --- | --- | --- | --- |
+| Qwen | 20,000 | 47.81 | 4.86 | 5.77 | **4.47** (4.47-4.50) | 10.7x |
+| Qwen | 83,163 (shard) | 54.88 | 6.55 | 6.21 | **6.12** | 9.0x |
+| MiniCPM | 20,000 | 37.82 | 7.13 | 7.31 | **7.25** (7.23-7.25) | 5.2x |
+
+- **Qwen 20k:** the peak falls by 1.3 GiB from 0.3.2 and is now 0.4 GiB below 0.1.0. The peak before iteration (the
+  8 concurrent `load_json` calls) is 4.34 GiB, against 5.77 on 0.3.2.
+- **Shard:** 6.12 GiB. Here the peak comes from iteration, not from loading, so it barely moves.
+- **MiniCPM:** about the same as 0.3.2 and 0.12 GiB above 0.1.0. Its peak also comes from iteration (7.14 GiB
+  steady), not from the load.
+- **Batches:** identical. The per-rank `input_ids`, `labels` and `position_ids` hashes match across all 9 runs at
+  20k per rank (0.3.2 list, 0.3.2 packmem and 4bf9c3e packmem), for both models, and across 3 runs for the shard:
+  `results/4bf9c3e-8x4/compare_032_{q,m}.md`.
+- **Load:** the 1-minute load average was at or under 4 at each start. The MiniCPM runs pushed it to 38-46 by their
+  end (their loader runs about 160 s), so their times are indicative only. Memory is the result.
+
+Full tables: [`aggregate_q.md`](results/4bf9c3e-8x4/aggregate_q.md) and
+[`aggregate_m.md`](results/4bf9c3e-8x4/aggregate_m.md).
 
 ## Not measured here
 
