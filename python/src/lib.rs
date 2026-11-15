@@ -282,14 +282,31 @@ impl Piece<'_> {
             Piece::Csv(..) => false,
         }
     }
-    /// Parse every record into `t`; false when anything was rejected.
-    fn load(&self, t: &mut DynTable, only: Only<'_>) -> bool {
-        if let Piece::Csv(text, opts) = self {
-            return CsvLoader::new((*opts).clone())
+    /// Parse every record into `t`; false when anything was rejected. The mapped pages behind the parser are let go
+    /// as it advances, so a piece's text and its unpacked rows are not both resident for the whole piece.
+    fn load(&self, t: &mut DynTable, only: Only<'_>, map: &memmap2::Mmap) -> bool {
+        const STEP: usize = 2 << 20;
+        let ok = if let Piece::Csv(text, opts) = self {
+            CsvLoader::new((*opts).clone())
                 .and_then(|mut l| l.feed(t, text).and_then(|_| l.finish(t)))
-                .is_ok();
-        }
-        self.records(|r| std::str::from_utf8(r).is_ok_and(|r| push_line(t, r, only).is_ok()))
+                .is_ok()
+        } else {
+            let span = self.span().as_ptr_range();
+            let mut mark = span.start as usize;
+            self.records(|r| {
+                let at = r.as_ptr() as usize;
+                if at - mark >= STEP {
+                    // SAFETY: `mark..at` lies inside this piece's span of the mapping.
+                    forget(map, unsafe {
+                        std::slice::from_raw_parts(mark as *const u8, at - mark)
+                    });
+                    mark = at
+                }
+                std::str::from_utf8(r).is_ok_and(|r| push_line(t, r, only).is_ok())
+            })
+        };
+        forget(map, self.span());
+        ok
     }
 }
 impl Piece<'_> {
@@ -891,7 +908,7 @@ impl PyTable {
                         let mut t = DynTable::new(hint);
                         t.reuse_buffers(std::mem::take(&mut spare));
                         t.set_bulk(true);
-                        let ok = piece.load(&mut t, only.as_ref());
+                        let ok = piece.load(&mut t, only.as_ref(), map);
                         spare = t.take_buffers();
                         if done_tx.send((i, piece, ok.then_some(t))).is_err() {
                             return;
