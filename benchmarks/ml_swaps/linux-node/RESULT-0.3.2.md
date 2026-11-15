@@ -1,4 +1,15 @@
-# qwen-vl-finetune on Linux with packmem 0.3.2: one rank, a full shuffled epoch through 4 workers
+# qwen-vl-finetune and MiniCPM-V on Linux with packmem 0.3.2
+
+Two parts: one rank reading a full shuffled epoch through 4 workers (below), and the 0.1.0 headline
+configuration, [8 ranks x 4 fork workers](#8-ranks-x-4-fork-workers-the-010-headline-re-run), re-run with raw files.
+
+**8 ranks x 4 fork workers, 20k samples per rank (median of 3), node-wide PSS peak:** qwen-vl-finetune
+**47.81 -> 5.77 GiB** (8.3x lower; 0.1.0: 47.73 -> 4.86 GiB). MiniCPM-V **37.82 -> 7.31 GiB** (5.2x; 0.1.0:
+37.89 -> 7.13). Full 1/8 shard per rank, Qwen: **54.88 -> 6.21 GiB** (1 run; 0.1.0: 54.69 -> 6.55). Batches are
+bit-identical for all 8 ranks in every run. 0.3.2's packmem peak is higher than 0.1.0's at 20k because of the
+threaded `load_json` transient (see below).
+
+## One rank, a full shuffled epoch through 4 workers
 
 **Headline (measured, median of 3 fresh runs each):** qwen-vl-finetune's `LazySupervisedDataset` on the real
 LLaVA-1.5 665k annotations. One rank reads one full shuffled epoch (665,298 samples) through 4 DataLoader
@@ -22,11 +33,11 @@ no model and no GPU. GiB = 2^30 bytes. Raw files: [`results/0.3.2/`](results/0.3
 traces were lost, so it cannot be cited with raw files. This re-run:
 
 - uses **packmem 0.3.2 from PyPI** (wheel sha256 `2176dd4a...0e163`);
-- runs **one rank** with the full epoch, as on a single-GPU job, instead of 8 ranks. The list arm at 8x4 needs
-  about 48 GiB, more than this session's 40 GiB cap per run. Per rank, the two runs agree. Spawn, per rank (rank + 4
+- runs **one rank** with the full epoch, as on a single-GPU job. (The 8-rank configuration is re-run separately,
+  [below](#8-ranks-x-4-fork-workers-the-010-headline-re-run), with a 64 GiB cap.) Per rank, the two runs agree. Spawn, per rank (rank + 4
   workers at the peak): 0.1.0 at 2x4 with 20k samples, 14.85 against 2.41 GiB (6.2x). 0.3.2 at 1x4 with the full
   epoch, 15.17 against 2.52 GiB (6.0x);
-- caps every run with `systemd-run --user --scope -p MemoryMax=40G -p MemorySwapMax=0` and `nice -n 10`, one run at
+- caps every one-rank run with `systemd-run --user --scope -p MemoryMax=40G -p MemorySwapMax=0` and `nice -n 10`, one run at
   a time. Each run waits up to 10 minutes for the 1-minute load to reach 4.
 
 Same as before: the harness (`harness/qwen_rank.py`, `monitor.py`, `qstubs.py`), the stubs, the data, and
@@ -87,7 +98,7 @@ memory over the epoch. With packmem they stay at 0.08 GiB. Spawn workers each un
 
 | | list | packmem |
 | --- | --- | --- |
-| Dataset build (`json.load` / `load_json` + `data_path`) | 4.85 s | 2.50 s |
+| Dataset build (`json.load` / `load_json` + `data_path`) | 4.85 s | 2.50 s (up to 4 threads) |
 | Fork epoch, DataLoader pass | 185.5 s (178.6-305.1) | 166.7 s (164.1-335.4) |
 | Spawn epoch, DataLoader pass | 223.4 s (220.3-229.9) | 164.9 s (164.2-177.6) |
 | Spawn, `iter()` to each worker's first batch (median) | 40.8 s | 5.9 s |
@@ -119,16 +130,98 @@ main-process-only runs started at loads of 2.0-3.0.
   arms. 20k samples: `17a385696aedef5e... / d3337748ed932419... / 0b376123fa03495b...` in all 6 runs.
 - **Pickle**: the round trip is equal for both arms.
 
+## 8 ranks x 4 fork workers (the 0.1.0 headline), re-run
+
+The configuration of [`RESULT.md`](RESULT.md), whose raw traces were lost: 8 torchrun ranks, each with 4 fork
+workers. Raw files: [`results/0.3.2-8x4/`](results/0.3.2-8x4/). A second copy is kept on the benchmark server in
+the folder of benchmark inputs and raw results that its README says must not be deleted.
+
+Same harness, data and upstream commits as 0.1.0:
+- **Qwen3-VL:** `96588727e44c`. `harness/qwen_rank.py`, batch 4.
+- **MiniCPM-V:** `4dbbb6c58b6f`, `packmem.v2.patch` (+10/-7), `harness/mcpm_rank.py`, batch 8, the same stubs.
+  The MiniCPM-format data was regenerated with `harness/convert.py`. Its sha256 `1a59b9b1...00ef` is identical
+  to 0.1.0's.
+
+Both upstream commits were still `main` on 2026-11-15. The MiniCPM venv uses the 0.1.0 versions: transformers
+4.51.2, deepspeed 0.20.0, peft 0.14.0, accelerate 0.30.1, torchvision 0.29.2+cpu, plus packmem 0.3.2.
+
+**Cap:** the list arm needs about 48-55 GiB, so these runs used `systemd-run --user --scope -p MemoryMax=64G
+-p MemorySwapMax=0` and `nice -n 10` (0.1.0 used 70G). Each list run waited for `MemAvailable` >= 80 GiB. It
+was 94-113 GiB at every start, so no run waited for memory. Each run also waited up to 10 minutes for load <= 4.
+Order: `harness/seq_8x4_032.sh`, arms interleaved, 2026-11-15 18:41-20:33 CET.
+
+### Node-wide PSS, GiB (median (min-max); 0.1.0 from RESULT.md)
+
+| model | samples / rank | arm | 0.1.0 peak | **0.3.2 peak** | 0.1.0 steady | 0.3.2 steady | 0.3.2 before iteration | 0.3.2 per rank at peak | 0.3.2 sum of RSS |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Qwen | 20,000 | list | 47.73 (47.59-47.86) | **47.81** (47.81-47.97) | 46.62 | 46.96 | 30.67 | 5.96 | 116.4 |
+| Qwen | 20,000 | packmem | 4.86 (4.85-4.86) | **5.77** (5.57-5.92) | 4.83 | 4.53 | 5.77 | 0.71 | 20.8 |
+| Qwen | 83,163 (shard) | list | 54.69 | **54.88** | 52.04 | 52.67 | 30.67 | 6.84 | 117.0 |
+| Qwen | 83,163 (shard) | packmem | 6.55 | **6.21** | 6.45 | 6.10 | 5.84 | 0.76 | 21.4 |
+| MiniCPM | 20,000 | list | 37.89 (37.85-37.94) | **37.82** (37.81-37.82) | 37.01 | 36.96 | 32.23 | 4.71 | 124.2 |
+| MiniCPM | 20,000 | packmem | 7.13 (7.06-7.19) | **7.31** (7.27-7.40) | 6.99 | 7.21 | 6.93 | 0.89 | 26.6 |
+
+The shard rows are 1 run per arm, as in 0.1.0. Full tables:
+[`aggregate_q.md`](results/0.3.2-8x4/aggregate_q.md) and [`aggregate_m.md`](results/0.3.2-8x4/aggregate_m.md).
+
+Ratios, list / packmem peak:
+- Qwen 20k: 8.3x (0.1.0: 9.8x).
+- Qwen shard: 8.8x (0.1.0: 8.4x).
+- MiniCPM 20k: 5.2x (0.1.0: 5.3x).
+
+The list arm reproduces 0.1.0 to within 0.2 GiB.
+
+**Where the Qwen 20k peak comes from.** With packmem, the node peak equals the "before iteration" peak (5.77 GiB).
+All 8 ranks run `load_json` on the same 1 GB file at once, each on up to 4 threads. That transient is the peak.
+In 0.1.0 the one-thread loader peaked at 4.40 GiB before iteration, and the node peak (4.86) came during
+iteration. Once loaded, 0.3.2 holds less: steady 4.53 against 4.83 GiB. On the full shard the iteration peak
+(6.21) is above the load transient (5.84), so 0.3.2 comes out lower than 0.1.0 there. A `threads=`
+argument for the loaders is on main, unreleased; the transient at 1, 2 and 4 threads is being measured.
+
+**MiniCPM is 0.18 GiB higher at the peak and 0.22 GiB higher in the steady state** than 0.1.0 (7.31 against 7.13,
+and 7.21 against 6.99). Its load transient is also higher (6.93 against 5.34 before iteration). Why the steady
+state is higher was not investigated.
+
+### Correctness
+
+Collated `input_ids`, `labels` and `position_ids` are hashed per rank and batch, in order. This time all 8 ranks are
+compared in every run. Every rank has one hash triple:
+- Qwen 20k: across all 6 runs.
+- Qwen shard: across both runs.
+- MiniCPM 20k: across all 6 runs.
+
+The `DistributedSampler` index hashes match too.
+
+Ranks 0-2 match the 0.1.0 hashes quoted in RESULT.md:
+- Qwen rank 0: `619afe7b63985e93... / 776a1b7955fad35f... / bac2c498c1619d63...`.
+- MiniCPM ranks 0-2: `59416b8b...`, `93f554ef...`, `30053b6c...`.
+
+MiniCPM ranks 3-7, which 0.1.0 could not confirm, are now confirmed equal between arms.
+
+### Load and time
+
+The server also runs CI.
+- **Qwen:** the first list run started at 0.91. Four runs hit the 10-minute wait and started at loads up to 32.7:
+  pm r1 32.66, pm r3 30.77, and list r2 and the shard list at 3.3 and 5.5 after waiting.
+- **MiniCPM:** the r1 runs started near 3.7. r2 and r3 started at 21.7-39.8 and ended at 43-70.
+- **Per run:** `meta.json` in each run directory has the start and end load, the seconds waited and
+  `MemAvailable` at the start.
+
+Memory is summed over the job's own processes and stays consistent across runs (list within 0.2 GiB, packmem
+within 0.35 GiB). Times are not comparable between runs, and none are reported as results.
+
 ## Where 0.3.2 is worse than 0.1.0
 
-**`load_json` peaks higher.** It is 5.7x faster than in 0.1.0, but its transient peak is about 335 MiB higher.
-`harness/load_peak.py` loads the file in a fresh process, 3 runs per version. Raw output:
-[`results/0.3.2/load_peak/runs.jsonl`](results/0.3.2/load_peak/runs.jsonl).
+**`load_json` peaks higher.** It loads this file 5.7x faster than 0.1.0, but its transient peak is about 335 MiB
+higher. The two times are not like for like. Since 0.3.0, `load_json` memory-maps files of 8 MB or more and
+parses them on up to 4 threads (`PACKMEM_THREADS`), while 0.1.0 parsed on one thread. Those threads cost the
+higher transient peak. `harness/load_peak.py` loads the file in a fresh process, 3 runs per version, with the
+default thread count. Raw output: [`results/0.3.2/load_peak/runs.jsonl`](results/0.3.2/load_peak/runs.jsonl).
 
 | | packmem 0.1.0 | packmem 0.3.2 |
 | --- | --- | --- |
-| `load_json` time | 8.25-8.40 s | 1.43-1.51 s |
-| Peak RSS (ru_maxrss) | 398-399 MiB | 719-736 MiB |
+| `load_json` time | 8.25-8.40 s (1 thread) | 1.43-1.51 s (up to 4 threads, mmap) |
+| Peak RSS (ru_maxrss) | 398-399 MiB (1 thread) | 719-736 MiB (up to 4 threads) |
 | RSS after load | 354 MiB | 329-340 MiB |
 | `Table.nbytes` | 307.6 MB | 296.2 MB |
 
@@ -137,10 +230,17 @@ row's "before iteration" figure includes it too, and so does the rank peak PSS o
 0.53 GiB in the 0.1.0 run. The settled table is slightly smaller than in 0.1.0. The extra peak lasts only for the load,
 once per rank.
 
+On 8 ranks at once this transient sets the node peak at 20k samples per rank: 5.77 GiB against 0.1.0's
+4.86 (above). MiniCPM-V at 8x4 is also 0.18 GiB higher at the peak and 0.22 GiB higher in the steady state.
+
+Workaround today: `PACKMEM_THREADS=1` selects the one-thread loader, which also turns off threaded queries. It was
+not measured in these runs. On main (unreleased, c358143) the Python loaders take `threads=`, and `threads=1`
+gives the one-thread load without turning off threaded queries. It was not measured here either.
+
 ## Not measured here
 
-- 8 ranks on one node, and forkserver. Those configurations exceed this session's 40 GiB per-run cap, and their
-  0.1.0 figures (47.7 -> 4.9 GiB at 8x4 fork) remain without raw files.
-- MiniCPM-V, LLaVA-NeXT and NeMo Automodel were not re-run.
+- forkserver and spawn at 8 or 2 ranks, which 0.1.0 also ran. Their 0.1.0 figures remain without raw files.
+- MiniCPM-V spawn, single-rank runs and record check; LLaVA-NeXT and NeMo Automodel were not re-run.
+- `PACKMEM_THREADS=1` at 8 ranks.
 - Images, the model and real tokenization. The stubs are the same as in every earlier run, so the figures cover
   annotation storage only.
