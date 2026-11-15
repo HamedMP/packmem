@@ -1,0 +1,1 @@
+{"tree": "~/pm032-bench/repos/qwen", "build_s": 4.630905878264457, "n": 665298, "container": "list", "rss_after_build_mib": 2998.140625, "pickle_bytes": 689756294, "dumps_s": [6.611, 6.566, 6.926], "loads_s": 2.7108800262212753, "roundtrip_equal": true, "compare_s": 0.5918675288558006, "maxrss_mib": 6681.78125}

@@ -45,8 +45,9 @@ for cfg, rs in runs.items():
         continue
     r0 = ok[0]
     per_rank = rng(ok, "peak_per_rank_total_pss_gib", lambda x: statistics.median(x.values()))
-    wfb = (f"{med([r['worker_first_batch_s']['median'] for r in ok if r.get('worker_first_batch_s')]):.2f} / "
-           f"{med([r['worker_first_batch_s']['max'] for r in ok if r.get('worker_first_batch_s')]):.2f}")
+    wm = med([r['worker_first_batch_s']['median'] for r in ok if r.get('worker_first_batch_s')])
+    wx = med([r['worker_first_batch_s']['max'] for r in ok if r.get('worker_first_batch_s')])
+    wfb = "-" if wm is None else f"{wm:.2f} / {wx:.2f}"
     loads = "; ".join(f"{r['load_start'].split()[0]}->{r['load_end'].split()[0]}" for r in ok)
     print(f"| {cfg} | {len(ok)} | {r0['nproc']}x{r0['workers']} {r0['ctx']} | {r0['n_samples_per_rank']} | "
           f"{rng(ok, 'peak_pss_gib')} | {rng(ok, 'steady_pss_gib')} | {rng(ok, 'pre_iter_peak_pss_gib')} | "

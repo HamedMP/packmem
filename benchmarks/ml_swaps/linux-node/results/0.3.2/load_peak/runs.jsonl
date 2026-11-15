@@ -1,0 +1,6 @@
+{"packmem": "0.1.0", "rows": 665298, "nbytes": 307628126, "load_s": 8.25, "rss_before_mib": 11, "rss_after_mib": 354, "peak_mib": 399, "load": ["3.08", "4.25", "8.16"]}
+{"packmem": "0.3.2", "rows": 665298, "nbytes": 296187892, "load_s": 1.45, "rss_before_mib": 18, "rss_after_mib": 330, "peak_mib": 736, "load": ["3.08", "4.25", "8.16"]}
+{"packmem": "0.1.0", "rows": 665298, "nbytes": 307628126, "load_s": 8.4, "rss_before_mib": 12, "rss_after_mib": 354, "peak_mib": 398, "load": ["2.91", "4.20", "8.12"]}
+{"packmem": "0.3.2", "rows": 665298, "nbytes": 296187892, "load_s": 1.43, "rss_before_mib": 18, "rss_after_mib": 329, "peak_mib": 734, "load": ["2.76", "4.14", "8.08"]}
+{"packmem": "0.1.0", "rows": 665298, "nbytes": 307628126, "load_s": 8.36, "rss_before_mib": 12, "rss_after_mib": 354, "peak_mib": 399, "load": ["2.70", "4.11", "8.05"]}
+{"packmem": "0.3.2", "rows": 665298, "nbytes": 296187892, "load_s": 1.51, "rss_before_mib": 18, "rss_after_mib": 340, "peak_mib": 719, "load": ["2.72", "4.09", "8.02"]}

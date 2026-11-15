@@ -17,6 +17,10 @@ One naming trap in the raw files: keys ending `_mb` in the Qwen3-VL run files (f
 The patches are diffs of Apache-2.0 projects: QwenLM/Qwen3-VL, OpenBMB/MiniCPM-V and
 LLaVA-VL/LLaVA-NeXT.
 
+**Re-run on packmem 0.3.2 (Linux, raw files committed):** [`linux-node/RESULT-0.3.2.md`](linux-node/RESULT-0.3.2.md).
+Qwen3-VL, one rank, full shuffled epoch through 4 workers: fork 10.24 -> 1.05 GiB, spawn 15.32 -> 2.68 GiB (job PSS
+peak, median of 3). The tables below are the 0.1.0 runs.
+
 Patches: `packmem.v2.patch` in each `bench/<repo>/` directory. Wheel: packmem 0.1.0 at `b421aec`
 or later (sha256 `a258403d…07dde9` on macOS; the PyPI manylinux2014 x86_64 wheel on Linux).
 

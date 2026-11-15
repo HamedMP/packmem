@@ -1,5 +1,7 @@
 # packmem in qwen-vl-finetune (QwenLM/Qwen3-VL)
 
+> These are packmem **0.1.0** runs on macOS. The Linux re-run on 0.3.2 is [`../linux-node/RESULT-0.3.2.md`](../linux-node/RESULT-0.3.2.md).
+
 Commit benchmarked: `96588727e44c78b25ba03ea03b8e12f7e64fd0da` (shallow clone, branch `packmem-annotations`).
 Machine: Apple Silicon Mac, 48 GB, macOS, Python 3.13, torch 2.15.0, transformers 5.22.2, packmem 0.1.0 (local wheel).
 Everything was run locally. Nothing was pushed or posted.

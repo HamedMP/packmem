@@ -1,5 +1,7 @@
 # packmem on a Linux node: 8 torchrun ranks x 4 DataLoader workers, real LLaVA-665k
 
+> These are the packmem **0.1.0** runs (2026-11-13). The re-run on 0.3.2, with raw files committed, is [`RESULT-0.3.2.md`](RESULT-0.3.2.md).
+
 **Headline (qwen-vl-finetune, measured, not extrapolated):** 8 ranks x 4 fork workers, real
 LLaVA-1.5 665k annotations, 20k samples per rank: **47.7 GiB -> 4.9 GiB** node-wide PSS (peak,
 median of 3 runs, 9.8x lower). One full pass over each rank's 1/8 shard (83,163 samples per rank):

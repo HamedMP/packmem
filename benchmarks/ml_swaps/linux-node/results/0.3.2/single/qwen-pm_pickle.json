@@ -1,0 +1,18 @@
+{
+ "tree": "~/pm032-bench/repos/qwen-pm",
+ "build_s": 2.392482474911958,
+ "n": 665298,
+ "container": "Table",
+ "rss_after_build_mib": 586.546875,
+ "pickle_bytes": 297401336,
+ "dumps_s": [
+  0.304,
+  0.318,
+  0.314
+ ],
+ "loads_s": 0.26861025113612413,
+ "table_nbytes": 299234991,
+ "roundtrip_equal": true,
+ "compare_s": 4.645638345275074,
+ "maxrss_mib": 1435.5234375
+}

@@ -1,5 +1,7 @@
 # packmem in qwen-vl-finetune (QwenLM/Qwen3-VL): second pass (pickling, spawn workers, repeated epochs)
 
+> These are packmem **0.1.0** runs on macOS. The Linux re-run on 0.3.2 is [`../linux-node/RESULT-0.3.2.md`](../linux-node/RESULT-0.3.2.md).
+
 This pass re-measures `RESULT.md` with the packmem wheel that can pickle a `Table`, with one benchmark process
 running at a time. Everything ran locally. Nothing was pushed or posted.
 

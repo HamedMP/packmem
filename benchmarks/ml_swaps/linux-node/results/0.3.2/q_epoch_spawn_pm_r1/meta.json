@@ -1,0 +1,3 @@
+{"tag": "q_epoch_spawn_pm_r1", "tree": "qwen-pm", "nproc": 1, "workers": 4, "ctx": "spawn", "n": 0, "shards": 1, "rc": 0,
+ "wall_s": 182.577062475, "load_start": "3.45 8.50 17.20", "load_end": "6.77 7.74 15.32", "avail_gb_start": 113,
+ "memmax": "40G", "load_wait_s": 30}
