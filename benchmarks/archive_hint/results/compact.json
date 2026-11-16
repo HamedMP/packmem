@@ -1,0 +1,36 @@
+{
+ "arm": "compact",
+ "commit": "4f6f5ec",
+ "data": {
+  "bytes": 272943011,
+  "rows": 200000,
+  "generator": "nested_gen.py data.jsonl 200000"
+ },
+ "env": {
+  "python": "3.12.3",
+  "platform": "linux-x86_64",
+  "cpu": "AMD Ryzen 9 7950X3D 16-Core Processor",
+  "load_start": [
+   2.66,
+   7.97,
+   12.46
+  ],
+  "load_end": [
+   2.52,
+   7.68,
+   12.3
+  ]
+ },
+ "packmem": "0.3.4",
+ "options": {
+  "hint": "compact",
+  "threads": 1,
+  "keep_key_order": true
+ },
+ "build_s": 13.0,
+ "bytes": 77664927,
+ "row_read_median_us": 6.3,
+ "full_scan_s": 1.28,
+ "rows_reproducing_their_line": 200000,
+ "max_rss_bytes": 225513472
+}

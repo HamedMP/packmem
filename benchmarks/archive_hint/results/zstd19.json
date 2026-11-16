@@ -1,0 +1,27 @@
+{
+ "arm": "zstd19",
+ "commit": "4f6f5ec",
+ "data": {
+  "bytes": 272943011,
+  "rows": 200000,
+  "generator": "nested_gen.py data.jsonl 200000"
+ },
+ "env": {
+  "python": "3.12.3",
+  "platform": "linux-x86_64",
+  "cpu": "AMD Ryzen 9 7950X3D 16-Core Processor",
+  "load_start": [
+   2.19,
+   6.64,
+   11.65
+  ],
+  "load_end": [
+   2.54,
+   5.58,
+   10.78
+  ]
+ },
+ "compress_s": 95.8,
+ "bytes": 48774360,
+ "max_rss_bytes": 419430400
+}
