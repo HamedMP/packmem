@@ -13,6 +13,12 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
   53.3 MB against 77.7 MB for `compact` and 48.8 MB for zstd -19 of the whole file; 54.6 s to build against
   13.0 s; 58.8 µs to read one random row against 6.3 µs; a full scan takes the same 1.2 to 1.3 s, and every row
   reproduces its line (`benchmarks/archive_hint/`).
+- Node and WebAssembly: `{ keepKeyOrder: true }` on `new Table`, `from`, `parse`, `loadJsonl` and `loadJson`
+  reads rows back with their keys as written, and both builds now read byte format 6, including tables Python
+  saved with `keep_key_order`. Hidden key orders never show in `names` or rows. Loaders also take
+  `hint: "compact"` and `hint: "archive"`. The WebAssembly build has no Zstandard, so it cannot read a table whose
+  long text was compressed with those hints. JavaScript lists integer-like keys first whatever the table stored,
+  so a row with such keys does not re-serialise in its written order there.
 
 ## 0.3.4 - 2026-11-16
 
