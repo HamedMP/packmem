@@ -1566,12 +1566,6 @@ fn par_runs<R: Send>(chunks: &[Chunk], f: impl Fn(usize, &[Chunk]) -> R + Sync) 
 #[derive(Default)]
 pub struct Buffers(Vec<Tail>);
 
-/// `PACKMEM_ARCHIVE_SPLIT=1` keeps sub-columns under `Hint::Archive`, to compare the two.
-fn archive_splits() -> bool {
-    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    *ON.get_or_init(|| std::env::var("PACKMEM_ARCHIVE_SPLIT").is_ok_and(|v| v == "1"))
-}
-
 /// The column that holds, for a row loaded with `keep_key_order`, its keys in the order they were written: a JSON
 /// array of names. It rides along with the row through every edit and is never shown as a field of the row.
 pub const KEY_ORDER: &str = "\u{0}keys";
@@ -1734,7 +1728,7 @@ impl DynTable {
             self.row_order.push(c as u32)
         }
         let slot = self.tail_len();
-        let keep_text = self.hint == Hint::Archive && !archive_splits();
+        let keep_text = self.hint == Hint::Archive;
         let t = &mut self.cols[c].tail;
         t.keep_text = keep_text;
         if t.len() == slot {
@@ -1748,7 +1742,7 @@ impl DynTable {
     pub fn put_nested_at(&mut self, c: usize, json: &str) -> bool {
         // an archive keeps a nested value as one text: split into fields, each small field is compressed without
         // the rest of the value around it, which costs more than typed sub-columns save
-        if self.hint == Hint::Archive && !archive_splits() {
+        if self.hint == Hint::Archive {
             return false;
         }
         let slot = self.tail_len();
