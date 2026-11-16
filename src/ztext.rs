@@ -59,13 +59,22 @@ thread_local! {
     static DCTX: RefCell<DCtx<'static>> = RefCell::new(DCtx::create());
     /// The blocks decoded most recently, and which slot is refilled next.
     static LAST: RefCell<(Vec<Decoded>, usize)> = const { RefCell::new((Vec::new(), 0)) };
-    /// The dictionary trained for the previous chunk of text sealed on this thread. Consecutive chunks of one column
-    /// usually hold the same kind of text, and training costs far more than checking that the old one still fits.
-    static PREV: RefCell<Option<Trained>> = const { RefCell::new(None) };
+    /// The dictionary trained for the previous chunk of each column sealed on this thread. Consecutive chunks of one
+    /// column usually hold the same kind of text, and training costs far more than checking that the old one still
+    /// fits. Kept per column: a dictionary trained on another column's text can pass that check and still be a
+    /// clearly worse fit than one trained on this column.
+    static PREV: RefCell<Vec<(u64, Trained)>> = const { RefCell::new(Vec::new()) };
+    static COLUMN: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
 }
-/// Forget the dictionary kept between chunks; called when a bulk load ends.
+/// Dictionaries kept at once; a table with more text columns than this retrains for the ones that fall out.
+const KEPT: usize = 32;
+/// Say which column the text sealed next on this thread belongs to, and return what was set before.
+pub fn column(key: u64) -> u64 {
+    COLUMN.with(|c| c.replace(key))
+}
+/// Forget the dictionaries kept between chunks; called when a bulk load ends.
 pub fn release() {
-    PREV.with(|p| *p.borrow_mut() = None)
+    PREV.with(|p| *p.borrow_mut() = Vec::new())
 }
 
 /// Bytes of dictionary to train: `PACKMEM_ZSTD_DICT_KB`, 256 KB unless set. One dictionary serves every chunk it
@@ -168,7 +177,12 @@ impl ZBlocks {
             }
             Some(a as f64 / b.max(1) as f64)
         };
-        let reused = PREV.with(|p| p.borrow().as_ref().map(|t| (t.dict.clone(), t.ratio)));
+        let column = COLUMN.with(|c| c.get());
+        let reused = PREV.with(|p| {
+            let p = p.borrow();
+            let t = p.iter().find(|(k, _)| *k == column);
+            t.map(|(_, t)| (t.dict.clone(), t.ratio))
+        });
         let mut dict = None;
         if let Some((d, was)) = reused {
             if ratio_of(&d.bytes).is_some_and(|now| now >= was * 0.92) {
@@ -194,10 +208,18 @@ impl ZBlocks {
                 let d = Dict::new(zstd::dict::from_samples(&samples, dict_bytes()).ok()?)?;
                 let ratio = ratio_of(&d.bytes)?;
                 PREV.with(|p| {
-                    *p.borrow_mut() = Some(Trained {
-                        dict: d.clone(),
-                        ratio,
-                    })
+                    let mut p = p.borrow_mut();
+                    p.retain(|(k, _)| *k != column);
+                    if p.len() >= KEPT {
+                        p.remove(0);
+                    }
+                    p.push((
+                        column,
+                        Trained {
+                            dict: d.clone(),
+                            ratio,
+                        },
+                    ))
                 });
                 d
             }
