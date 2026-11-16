@@ -523,22 +523,26 @@ async function replayTo(s, entry, target) {
   const packs = await PackSet.load(s.l.packs, codec);
   const temp = tempPath(target);
   let bytes = 0;
+  let out = null;
   try {
     await ensureDir(dirname(target));
-    const out = createWriteStream(temp, { flags: "wx", mode: FILE_MODE });
-    const done = new Promise((resolve, reject) => {
-      out.on("finish", resolve);
+    out = createWriteStream(temp, { flags: "wx", mode: FILE_MODE });
+    // "close", not "finish": Windows cannot link or remove a file while it is still open.
+    const closed = new Promise((resolve, reject) => {
+      out.on("close", resolve);
       out.on("error", reject);
     });
+    closed.catch(() => undefined);
     await replay(packs, codec, s.l.skeleton(entry.agent, entry.id, entry.sha256), entry, async (chunk) => {
       bytes += chunk.length;
       if (!out.write(chunk)) await new Promise((r) => out.once("drain", r));
     });
     out.end();
-    await done;
+    await closed;
     await placeExclusive(temp, target);
     return bytes;
   } finally {
+    if (out && !out.closed) await new Promise((resolve) => out.once("close", resolve).destroy());
     await rm(temp, { force: true });
     await packs.close();
   }
