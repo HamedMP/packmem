@@ -2,14 +2,6 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased
-
-### Changed
-- `hint="compact"`: each text column, and each text field of a nested record, keeps its own Zstandard dictionary
-  from chunk to chunk. Before, a chunk first tried the last dictionary its thread had trained, for whatever column,
-  and kept it when it did nearly as well as on the text it was trained on; a field could then be packed with a
-  dictionary trained on its neighbour. No change to the byte format.
-
 ## 0.3.4 - 2026-11-16
 
 ### Added
