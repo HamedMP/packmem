@@ -91,6 +91,6 @@ test("the header carries a format version, and 0.2.0 and 0.3.0 bytes still read"
   const now = new Table(want).toBytes();
   assert.equal(new TextDecoder().decode(now.subarray(0, 4)), "PKMT");
   const newer = Uint8Array.from(now);
-  newer[4]++;
+  newer[4] = 255;
   assert.throws(() => Table.fromBytes(newer), /newer packmem/);
 });

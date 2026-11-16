@@ -247,7 +247,7 @@ def test_byte_header_carries_a_format_version():
     new = packmem.Table(rows).to_bytes()
     assert len(new) <= len(old), "a column of small records must not cost more than it did as JSON text"
     assert new[:4] == b"PKMT" and list(packmem.Table.from_bytes(new)) == rows
-    try: packmem.Table.from_bytes(new[:4] + bytes([new[4] + 2]) + new[5:]); raise AssertionError("expected ValueError")
+    try: packmem.Table.from_bytes(new[:4] + bytes([255]) + new[5:]); raise AssertionError("expected ValueError")
     except ValueError as e: assert "newer packmem" in str(e)
 
 
