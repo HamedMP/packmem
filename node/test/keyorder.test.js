@@ -1,7 +1,7 @@
 // keepKeyOrder: rows read back with their keys as written, and the hidden column that holds the orders stays hidden.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Table, loadJson, loadJsonl, parse } from "../index.js";
@@ -100,4 +100,21 @@ test("the compact and archive hints read back the same rows", () => {
     assert.ok(t.toBytes().length < base.toBytes().length, `${hint} is smaller than balanced`);
   }
   assert.throws(() => new Table(undefined, { hint: "tiny" }), /'compact' or 'archive'/);
+});
+
+test("the compact and archive hints compress long text with zstd in this build", async (t) => {
+  // long, varied text in one column: past 256 KB a chunk's text goes into zstd blocks under both hints
+  const doc = (i) => ({ id: i, body: `${"lorem ipsum dolor sit amet ".repeat(4)}${i} ${(i * 2654435761) % 1e9}`.repeat(3) });
+  const docs = Array.from({ length: 20_000 }, (_, i) => doc(i));
+  const balanced = new Table(docs).toBytes().length;
+  for (const hint of ["compact", "archive"]) {
+    const b = new Table(docs, { hint }).toBytes();
+    assert.deepEqual([...Table.fromBytes(b)], docs, hint);
+    assert.ok(b.length * 2 < balanced, `${hint}: ${b.length} bytes against ${balanced} balanced`);
+  }
+  const wasmFile = new URL("../wasm-dist/packmem_bg.wasm", import.meta.url);
+  if (!existsSync(wasmFile)) return t.skip("build the wasm first to check it refuses zstd text");
+  const { initSync } = await import("../wasm.js");
+  const pm = initSync(readFileSync(wasmFile));
+  assert.throws(() => pm.Table.fromBytes(new Table(docs, { hint: "compact" }).toBytes()), /Zstandard/);
 });
