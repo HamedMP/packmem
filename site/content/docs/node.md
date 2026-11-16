@@ -18,8 +18,16 @@ npm install packmem
 | a Postgres query | `fromPg`, `fromPgCopy`, `fromPgResult`, `fromQuery` (below) |
 
 Parsing happens in Rust, straight into columns. Skip `JSON.parse` to get the memory benefit: once V8 has built
-the objects, the peak memory is spent. Every loader takes `{ hint }`: `"balanced"` (default), `"memory"` or
-`"speed"`.
+the objects, the peak memory is spent. Every loader takes `{ hint }`: `"balanced"` (default), `"memory"`,
+`"speed"`, `"compact"` (zstd on long text, smaller files) or `"archive"` (level 19, long values sharing larger blocks,
+nested values kept as JSON text: smallest, slower to read a single row). The WebAssembly build has no zstd: it can use
+both hints, but cannot read a table whose long text Node or Python compressed with them.
+
+`{ keepKeyOrder: true }` reads each row back with its keys in the order they were written, instead of the table's
+column order, so `JSON.stringify(row)` gives back the line that was loaded. It costs a few bits a row while rows
+share a handful of key orders. Such a table is saved as byte format 6, which Python reads from 0.3.4 and Node and
+the WebAssembly build from 0.4.0. JavaScript itself always lists integer-like keys (`"1"`, `"42"`) first, whatever
+the table stored.
 
 CSV options: `delimiter`, `header` (default true), `names`, `types` per column (`"infer"`, `"text"`, `"int"`,
 `"float"`, `"bool"`, `"json"`) and `emptyIsNull`.

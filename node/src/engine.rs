@@ -7,9 +7,9 @@ use serde_json::Value;
 use std::ops::Deref;
 use std::sync::Arc;
 
-/// The highest byte format this binding reads. Format 6 tables carry a hidden key-order column that rows and column
-/// lists here do not yet leave out, so they are refused like a file from a newer release.
-const READS: u8 = 5;
+/// The highest byte format this binding reads. Format 6 is a table that keeps each row's key order in a hidden column,
+/// which rows, `names` and row replacement here leave out or keep up to date.
+const READS: u8 = 6;
 
 pub type Res<T> = Result<T, String>;
 
@@ -18,7 +18,9 @@ pub fn hint_of(h: Option<&str>) -> Res<Hint> {
         "memory" => Ok(Hint::Memory),
         "balanced" => Ok(Hint::Balanced),
         "speed" => Ok(Hint::Speed),
-        _ => Err("hint must be 'memory', 'balanced' or 'speed'".into()),
+        "compact" => Ok(Hint::Compact),
+        "archive" => Ok(Hint::Archive),
+        _ => Err("hint must be 'memory', 'balanced', 'speed', 'compact' or 'archive'".into()),
     }
 }
 
@@ -245,8 +247,23 @@ impl Engine {
     pub fn len(&self) -> u32 {
         self.t.len() as u32
     }
+    /// Column names, without the hidden one that holds key orders.
     pub fn names(&self) -> Vec<String> {
-        self.t.names().to_vec()
+        let hidden = self.t.key_order_col();
+        self.t.names().iter().enumerate().filter(|(c, _)| Some(*c) != hidden).map(|(_, n)| n.clone()).collect()
+    }
+    /// Remember each row's key order from now on, so rows read back with their keys as written.
+    pub fn keep_key_order(&mut self) -> Res<()> {
+        self.w()?.keep_key_order();
+        Ok(())
+    }
+    /// A rebuilt table of these rows that still keeps key orders when this one does, even before any row has one.
+    fn rebuilt(&self, ids: &[u32]) -> DynTable {
+        let mut t = self.t.take(ids);
+        if self.t.keeps_key_order() {
+            t.keep_key_order()
+        }
+        t
     }
 
     // ---------- loading ----------
@@ -370,14 +387,20 @@ impl Engine {
         self.check(row)?;
         let cells = load::field_cells(text)?;
         let t = self.w()?;
+        let row = row as usize;
         for c in 0..t.names().len() {
             let name = t.names()[c].clone();
-            if !cells.iter().any(|(k, _)| *k == name) {
-                t.set(row as usize, c, Cell::Missing)
+            if !cells.iter().any(|(k, _)| *k == name) && t.get(row, c) != Cell::Missing {
+                t.set(row, c, Cell::Missing)
             }
         }
+        let order: Vec<String> = cells.iter().map(|(k, _)| k.clone()).collect();
         for (k, cell) in cells {
-            t.set_by_name(row as usize, &k, cell)
+            t.set_by_name(row, &k, cell)
+        }
+        if t.keeps_key_order() {
+            let order: Vec<&str> = order.iter().map(String::as_str).collect();
+            t.set_key_order(row, &order)
         }
         Ok(())
     }
@@ -404,7 +427,7 @@ impl Engine {
         }
         self.writable()?;
         let keep: Vec<u32> = (0..len as u32).collect();
-        let t = self.t.take(&keep);
+        let t = self.rebuilt(&keep);
         self.replace(t);
         Ok(())
     }
@@ -419,17 +442,21 @@ impl Engine {
     pub fn reorder(&mut self, ids: &[u32]) -> Res<()> {
         self.check_ids(ids)?;
         self.writable()?;
-        let t = self.t.take(ids);
+        let t = self.rebuilt(ids);
         self.replace(t);
         Ok(())
     }
     pub fn take(&self, ids: &[u32]) -> Res<Engine> {
         self.check_ids(ids)?;
-        Ok(Engine::from_table(self.t.take(ids)))
+        Ok(Engine::from_table(self.rebuilt(ids)))
     }
     pub fn clear(&mut self) -> Res<()> {
         self.writable()?;
-        self.t = Store::Own(DynTable::new(self.t.hint));
+        let mut t = DynTable::new(self.t.hint);
+        if self.t.keeps_key_order() {
+            t.keep_key_order()
+        }
+        self.t = Store::Own(t);
         Ok(())
     }
     pub fn compact(&mut self) {

@@ -258,11 +258,12 @@ export function createApi(NativeTable, { bytes = (u) => u } = {}) {
   class Table extends Rows {
     /**
      * @param {Iterable<object>} [records]
-     * @param {{ hint?: "memory" | "balanced" | "speed" }} [opts]
+     * @param {{ hint?: "memory" | "balanced" | "speed" | "compact" | "archive", keepKeyOrder?: boolean }} [opts]
      */
-    constructor(records, { hint = "balanced" } = {}) {
+    constructor(records, { hint = "balanced", keepKeyOrder = false } = {}) {
       super();
       this._t = new NativeTable(hint);
+      if (keepKeyOrder) this._t.keepKeyOrder();
       /** Bumped on every change, so views know to recompute their matches. */
       this._version = 0;
       if (records) this.extend(records);

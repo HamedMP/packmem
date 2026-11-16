@@ -181,7 +181,8 @@ rows.slice(0, 50); // objects only for the rows on screen
 ```
 
 The byte form is tied to the packmem version that wrote it: send it between matching versions, and keep JSON for
-clients that do not ask for it. Tables saved with Python's `hint="compact"` cannot be read by the WebAssembly build.
+clients that do not ask for it. Tables saved with `hint: "compact"` or `"archive"` (Node) or `hint="compact"` or `"archive"` (Python) cannot be read by the
+WebAssembly build when their long text was compressed.
 
 `packmem/http` does the asking and answering. It has no Node imports, so it runs in Node, Next.js route handlers,
 Workers and browsers:

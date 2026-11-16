@@ -33,6 +33,10 @@ impl WasmTable {
     pub fn names(&self) -> Vec<String> {
         self.e.names()
     }
+    #[wasm_bindgen(js_name = keepKeyOrder)]
+    pub fn keep_key_order(&mut self) -> Result<(), JsError> {
+        self.e.keep_key_order().map_err(err)
+    }
 
     #[wasm_bindgen(js_name = beginBulk)]
     pub fn begin_bulk(&mut self) -> Result<(), JsError> {

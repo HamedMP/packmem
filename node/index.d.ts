@@ -1,6 +1,11 @@
 import type { Readable } from "node:stream";
 
-export type Hint = "memory" | "balanced" | "speed";
+export type Hint = "memory" | "balanced" | "speed" | "compact" | "archive";
+export interface TableOptions {
+  hint?: Hint;
+  /** Read rows back with their keys in the order they were written, not in the table's column order. */
+  keepKeyOrder?: boolean;
+}
 export type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 export type Row = Record<string, Json>;
 
@@ -41,7 +46,7 @@ declare abstract class Rows<R extends Row = Row> implements Iterable<R> {
 }
 
 export declare class Table<R extends Row = Row> extends Rows<R> {
-  constructor(records?: Iterable<R>, opts?: { hint?: Hint });
+  constructor(records?: Iterable<R>, opts?: TableOptions);
   readonly length: number;
   readonly names: string[];
   /** Bytes held by the packed columns. */
@@ -108,11 +113,11 @@ export declare class View<R extends Row = Row> extends Rows<R> {
   rowsJsonBuffer(opts?: { offset?: number; limit?: number }): Buffer;
 }
 
-export declare function loadJsonl<R extends Row = Row>(path: string | URL, opts?: { hint?: Hint }): Table<R>;
-export declare function loadJson<R extends Row = Row>(path: string | URL, opts?: { hint?: Hint }): Table<R>;
+export declare function loadJsonl<R extends Row = Row>(path: string | URL, opts?: TableOptions): Table<R>;
+export declare function loadJson<R extends Row = Row>(path: string | URL, opts?: TableOptions): Table<R>;
 /** An array of records or JSON lines, from text or bytes. */
-export declare function parse<R extends Row = Row>(input: string | Uint8Array, opts?: { hint?: Hint }): Table<R>;
-export declare function from<R extends Row = Row>(records: Iterable<R>, opts?: { hint?: Hint }): Table<R>;
+export declare function parse<R extends Row = Row>(input: string | Uint8Array, opts?: TableOptions): Table<R>;
+export declare function from<R extends Row = Row>(records: Iterable<R>, opts?: TableOptions): Table<R>;
 
 /** Minimal shape of a node-postgres client; `pg.Client`, `pg.PoolClient` fit. */
 /** What `table.share()` returns: plain data, safe to send to a worker thread. */

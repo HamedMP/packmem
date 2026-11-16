@@ -73,6 +73,10 @@ impl NativeTable {
     pub fn names(&self) -> Vec<String> {
         self.e.names()
     }
+    #[napi]
+    pub fn keep_key_order(&mut self) -> Result<()> {
+        self.e.keep_key_order().map_err(err)
+    }
 
     // ---------- loading ----------
 
