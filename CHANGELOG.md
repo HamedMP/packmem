@@ -8,7 +8,11 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - Python: `hint="archive"`, for tables written once and read now and then. As `compact`, with text compressed at
   Zstandard level 19, long values sharing blocks of up to 256 KB, and nested values kept as text instead of split
   into sub-columns. Smaller, several times slower to build, and reading one row decodes larger blocks. The byte
-  format is unchanged: released versions read such a table, and it reopens as `compact`.
+  format is unchanged: released versions read such a table, and it reopens as `compact`. On 200,000 generated
+  agent-log rows with deep nested values (272.9 MB of JSON lines, Linux, one thread, `keep_key_order=True`):
+  53.3 MB against 77.7 MB for `compact` and 48.8 MB for zstd -19 of the whole file; 54.6 s to build against
+  13.0 s; 58.8 µs to read one random row against 6.3 µs; a full scan takes the same 1.2 to 1.3 s, and every row
+  reproduces its line (`benchmarks/archive_hint/`).
 
 ## 0.3.4 - 2026-11-16
 
