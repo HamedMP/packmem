@@ -1,0 +1,32 @@
+{
+ "what": "packmem archive on the author's own Claude Code and Codex history. Rounded sizes only, at the author's request: no counts per agent, no transcript content, ids or paths.",
+ "why_not_on_the_linux_server": "the transcripts are private and were not copied off the machine, so this run is not reproducible by others; bench/agent-history.mjs on synthetic data is the reproducible one",
+ "machine": {
+  "cpu": "Apple M4 Pro",
+  "cores": 12,
+  "os": "macOS",
+  "node": "v24.18.0",
+  "codec": "zstd"
+ },
+ "command": "packmem archive (default: sessions unchanged for 1 day)",
+ "data": {
+  "sessions": "about 450",
+  "raw_bytes": "about 1.0 GB (rounded)",
+  "codex_jsonl_zst": "left as they are"
+ },
+ "archive": {
+  "bytes": "about 210 MB (rounded)",
+  "ratio_vs_jsonl": 4.7,
+  "failed_verification": 0,
+  "seconds": 112,
+  "max_rss_bytes": "about 1.2 GB"
+ },
+ "verify_all": {
+  "seconds": 45
+ },
+ "zstd19_per_file": {
+  "bytes": "about 240 MB (rounded)",
+  "ratio_vs_jsonl": 4.0
+ },
+ "note_on_memory": "max_rss on macOS includes memory the allocator freed but kept (vmmap: MALLOC_*(empty) regions)"
+}

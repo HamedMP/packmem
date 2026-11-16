@@ -32,6 +32,7 @@ export const DOCS: DocPage[] = [
   { slug: "nextjs", group: "Guides", title: "Next.js", description: "A server that holds a table and a client page that reads its bytes." },
   { slug: "format", group: "Guides", title: "Byte format", description: "What toBytes and to_bytes write, and which versions read it." },
   { slug: "examples", group: "Guides", title: "Sample projects", description: "Runnable demos in the repository and what each one shows." },
+  { slug: "agent-history", group: "Guides", title: "Agent history archive", description: "Keep Claude Code and Codex transcripts, compressed, after the agents delete them." },
   { slug: "agents", group: "Guides", title: "For coding agents", description: "llms.txt, a skill file and a brief to hand to your agent." },
 ]
 

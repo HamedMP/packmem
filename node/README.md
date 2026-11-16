@@ -256,6 +256,19 @@ packmem outside its bundle, where it cannot reach Next's copy of React, and a fe
 server anyway. `useRows` calls no React hooks, so it works in both places. `../demos/log-viewer` is a complete app
 built this way, and `../demos/nextjs` has a smaller page (`/browse`).
 
+## Archiving agent history
+
+The package also ships a command that keeps Claude Code and Codex transcripts, compressed and verified, after the
+agents delete them. It never changes the agents' own files.
+
+```sh
+npx packmem archive --dry-run
+npx packmem archive
+```
+
+See [Agent history archive](https://hamedmp.github.io/packmem/docs/agent-history/) for what it reads, where it
+writes, the safety rules and measurements.
+
 ## What to expect
 
 Measured on 336,776 flight records (nycflights13, 104 MB as JSON lines), Apple M4 Pro. Every figure here

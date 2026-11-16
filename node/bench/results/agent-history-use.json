@@ -1,0 +1,34 @@
+{
+ "mode": "use",
+ "env": {
+  "node": "v24.22.0",
+  "platform": "linux-x64",
+  "cpu": "AMD Ryzen 9 7950X3D 16-Core Processor",
+  "cores": 32,
+  "load_start": [
+   11.31,
+   24.15,
+   26.25
+  ],
+  "load_end": [
+   13.06,
+   22.81,
+   25.69
+  ]
+ },
+ "data": {
+  "sessions": 600,
+  "raw_bytes": 358291338
+ },
+ "packmem_tables": {
+  "bytes": 155035318,
+  "query_seconds": 0.12
+ },
+ "zstd19_files": {
+  "bytes": 69449440,
+  "query_seconds": 0.93
+ },
+ "same_answer": true,
+ "rss_growth_note": "process RSS 272 MB above the start of the query phase; run each mode in its own process for peaks",
+ "max_rss_bytes": 762290176
+}

@@ -128,13 +128,15 @@ jobs:
           mkdir smoke && cd smoke && npm init -y > /dev/null
           npm install ../pkg/packmem-*.tgz
           cp ../node/scripts/smoke.mjs . && node smoke.mjs
+          HOME="$RUNNER_TEMP/empty-home" USERPROFILE="$RUNNER_TEMP/empty-home" npx --no-install packmem archive --dry-run
       - name: Install the tarball and run it (Alpine)
         if: matrix.docker
         run: |
           docker run --rm -v "$PWD:/w" -w /w ${{ matrix.docker }} sh -c '
             node -p "process.platform + \"-\" + process.arch" &&
             mkdir smoke && cd smoke && npm init -y > /dev/null &&
-            npm install ../pkg/packmem-*.tgz && cp ../node/scripts/smoke.mjs . && node smoke.mjs'
+            npm install ../pkg/packmem-*.tgz && cp ../node/scripts/smoke.mjs . && node smoke.mjs &&
+            HOME=/tmp/empty-home npx --no-install packmem archive --dry-run'
 
   # The same smoke test under Bun and Deno, which install from npm. Not a gate for publishing: a runtime regression
   # there should be seen, not hold back the npm release.

@@ -23,6 +23,9 @@
   "license": "Apache-2.0",
   "type": "module",
   "main": "./index.js",
+  "bin": {
+    "packmem": "bin/packmem.js"
+  },
   "types": "./index.d.ts",
   "exports": {
     ".": {
@@ -54,6 +57,8 @@
     "http.d.ts",
     "react.js",
     "react.d.ts",
+    "archive/*.js",
+    "bin/packmem.js",
     "wasm-dist/packmem.js",
     "wasm-dist/packmem_bg.wasm",
     "*.node",
@@ -64,7 +69,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test test/table.test.js test/review.test.js test/listops.test.js test/csv.test.js test/load.test.js test/share.test.js test/bytes.test.js test/wasm.test.js test/http.test.js test/react.test.js test/pg.test.js",
+    "test": "node --test test/table.test.js test/review.test.js test/listops.test.js test/csv.test.js test/load.test.js test/share.test.js test/bytes.test.js test/wasm.test.js test/http.test.js test/react.test.js test/pg.test.js test/archive.test.js",
     "build:wasm": "node scripts/build-wasm.mjs",
     "test:browser": "node --test test/browser.test.js test/react-browser.test.js"
   },
