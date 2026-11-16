@@ -20,6 +20,12 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
   long text was compressed with those hints. JavaScript lists integer-like keys first whatever the table stored,
   so a row with such keys does not re-serialise in its written order there.
 
+### Fixed
+- Node: tables saved with `hint="compact"` or `hint="archive"` by Python now load in Node, and Node's own
+  compact and archive hints compress long text with Zstandard. The addon had been built without Zstandard text
+  blocks, so through 0.3.4 Node could not read such a table and its compact hint gave the size of `memory` on
+  long text.
+
 ## 0.3.4 - 2026-11-16
 
 ### Added
