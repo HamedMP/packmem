@@ -863,25 +863,11 @@ impl ListCol {
                 .collect(),
             shapes: sh.shapes.clone(),
             shape_of: PackedInts::encode(&sh.shape_of, hint),
-            cols: {
-                // each field keeps its own text dictionary from chunk to chunk, apart from its siblings'
-                let outer = crate::ztext::column(0);
-                let cols = sh
-                    .tails
-                    .iter()
-                    .enumerate()
-                    .map(|(f, tail)| {
-                        // by name: a field's number can differ from chunk to chunk
-                        let name = sh.names[f].bytes().fold(0xcbf2_9ce4_8422_2325u64, |h, b| {
-                            (h ^ b as u64).wrapping_mul(0x0100_0000_01b3)
-                        });
-                        crate::ztext::column(outer.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ name);
-                        Chunk::seal_at(tail, hint, depth + 1)
-                    })
-                    .collect();
-                crate::ztext::column(outer);
-                cols
-            },
+            cols: sh
+                .tails
+                .iter()
+                .map(|tail| Chunk::seal_at(tail, hint, depth + 1))
+                .collect(),
         })
     }
     /// Offsets that say row `i` is element `i` are dropped: they cost four bytes a row to say nothing.
@@ -1815,22 +1801,14 @@ impl DynTable {
                 .map(|c| std::mem::replace(&mut c.tail, spares.pop().unwrap_or_default()))
                 .collect();
             self.sealers.push_back(std::thread::spawn(move || {
-                let chunks = tails
-                    .iter()
-                    .enumerate()
-                    .map(|(ci, t)| {
-                        crate::ztext::column(ci as u64 + 1);
-                        Chunk::seal(t, h)
-                    })
-                    .collect();
+                let chunks = tails.iter().map(|t| Chunk::seal(t, h)).collect();
                 (chunks, tails)
             }));
             self.epoch += 1
         } else if self.len % CHUNK == 0 {
             self.join_all();
             let (h, keep) = (self.hint, self.bulk);
-            for (ci, c) in self.cols.iter_mut().enumerate() {
-                crate::ztext::column(ci as u64 + 1);
+            for c in &mut self.cols {
                 let ch = c.seal_open(h, keep);
                 c.chunks.push(ch)
             }
@@ -1976,8 +1954,7 @@ impl DynTable {
             return;
         }
         let h = self.hint;
-        for (ci, c) in self.cols.iter_mut().enumerate() {
-            crate::ztext::column(ci as u64 + 1);
+        for c in &mut self.cols {
             c.partial = Some(c.seal_open(h, false))
         }
         self.plen = self.len % CHUNK;
@@ -2345,7 +2322,6 @@ impl DynTable {
         let c = self.col_or_create(name);
         let (h, nfull, plen) = (self.hint, self.len / CHUNK, self.plen);
         let mut t = Tail::default();
-        crate::ztext::column(c as u64 + 1);
         let mut seal = |start: usize, n: usize| {
             t.clear();
             for i in 0..n {

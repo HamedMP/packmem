@@ -6,9 +6,6 @@ use crate::wire::{R, Res, W};
 pub enum ZBlocks {}
 
 pub fn release() {}
-pub fn column(_key: u64) -> u64 {
-    0
-}
 
 impl ZBlocks {
     pub fn build(_items: &[&str]) -> Option<ZBlocks> {
