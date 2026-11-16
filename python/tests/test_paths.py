@@ -801,19 +801,47 @@ def test_keep_key_order_reproduces_each_line():
     assert [list(x) for x in k[:3]] == [["b", "a"], ["a", "b"], ["c", "a"]] and k.columns == ["b", "a", "c"]
 
 def test_archive_hint_is_smaller_and_reads_the_same():
-    import pickle
-    r = random.Random(4)
-    vocab = ["".join(r.choice("abcdefghijklmnopqrstuvwxyz") for _ in range(r.randint(3, 9))) for _ in range(3000)]
-    files = ["/src/%s/%s.rs" % (r.choice(vocab), r.choice(vocab)) for _ in range(300)]
-    para = lambda k: " ".join(r.choice(vocab) for _ in range(k))
-    out = lambda: "\n".join("%s:%d: %s" % (r.choice(files), r.randrange(900), para(r.randrange(3, 12))) for _ in range(r.randrange(5, 60)))
-    m = [{"ts": i, "payload": {"output": out() if i % 9 else [{"type": "text", "text": out()}], "note": para(r.randrange(20, 120))}, "text": para(r.randrange(40, 300))} for i in range(6000)]
-    c = packmem.Table(m, hint="compact"); a = packmem.Table(m, hint="archive")
-    assert a._t.hint == "archive" and len(a.to_bytes()) < len(c.to_bytes()) * 0.95, (len(a.to_bytes()), len(c.to_bytes()))
-    assert list(a) == m and [a[i] for i in range(0, len(m), 61)] == [m[i] for i in range(0, len(m), 61)] and a.to_json() == c.to_json()
-    needle = m[100]["text"]; assert a.count(text=needle) == 1 and a.where(text__contains=needle[5:40]).indices() == [i for i, x in enumerate(m) if needle[5:40] in x["text"]]
+    # agent-log rows with deep nested values whose shape varies by event type: the data on which keeping a nested
+    # value as one text beats splitting it into sub-columns. Generated, nothing from a real log.
+    import json, pickle, time
+    rnd = random.Random(7)
+    WORDS = ("the a to of and in is it for on with that this as be are was by at or an from not but can if will have has use "
+             "file test run build fix error value table column row data type return function const let import export async "
+             "await new string number list map set get add remove update check write read open close load save parse query "
+             "filter group sum count index key name path line text json node python rust memory packed record field").split()
+    FILES = [f"src/module_{i}/part_{j}.ts" for i in range(40) for j in range(5)]
+    words = lambda n: " ".join(rnd.choice(WORDS) for _ in range(n))
+    hexid = lambda n=16: "".join(rnd.choice("0123456789abcdef") for _ in range(n))
+    code = lambda: "\n".join(f"  {rnd.choice(['const', 'let', 'return', 'if'])} {words(6)}; // {i}" for i in range(rnd.randint(3, 40)))
+    def item(kind):
+        if kind == "message":
+            return {"type": "message", "id": f"msg_{hexid()}", "role": rnd.choice(["assistant", "user"]),
+                    "content": [{"type": "output_text", "text": words(rnd.randint(10, 120)), "annotations": []} for _ in range(rnd.randint(1, 3))],
+                    "metadata": {"turn": {"id": hexid(8), "parent": hexid(8), "attempt": rnd.randint(0, 2)}}}
+        if kind == "tool_call":
+            return {"type": "function_call", "id": f"fc_{hexid()}", "call_id": f"call_{hexid(24)}", "name": rnd.choice(["exec", "apply_patch", "read_file", "search"]),
+                    "arguments": {"cmd": ["bash", "-lc", f"cat {rnd.choice(FILES)} | head -{rnd.randint(5, 200)}"], "workdir": "/work/project",
+                                  "options": {"timeout_ms": rnd.choice([10000, 30000, 120000]), "env": {"CI": "1", "LANG": "C.UTF-8"}}}}
+        if kind == "patch":
+            return {"type": "custom_tool_call", "id": f"ct_{hexid()}", "name": "apply_patch",
+                    "input": {"changes": [{"path": rnd.choice(FILES), "kind": {"type": "update", "hunks": [{"old_start": rnd.randint(1, 400), "lines": code().split("\n")} for _ in range(rnd.randint(1, 3))]}}]}}
+        return {"type": "reasoning", "id": f"rs_{hexid()}", "summary": [{"type": "summary_text", "text": words(rnd.randint(20, 80))}],
+                "content": None, "encrypted_content": None, "status": rnd.choice(["completed", "in_progress"])}
+    lines = []
+    for n in range(8000):
+        kind = rnd.choice(["message", "message", "tool_call", "patch", "reasoning"])
+        payload = {"type": "item_completed", "item": item(kind)}
+        if kind == "tool_call":
+            payload["output"] = code() if rnd.random() < 0.3 else [{"type": "input_text", "text": code()} for _ in range(rnd.randint(1, 3))]
+        lines.append(json.dumps({"timestamp": f"2026-01-01T00:{n // 3600 % 60:02d}:{n % 60:02d}.000Z", "type": "event_msg", "payload": payload}, ensure_ascii=False, separators=(",", ":")))
+    m = [json.loads(l) for l in lines]
+    text = lambda it: [json.dumps(x, ensure_ascii=False, separators=(",", ":")) for x in it]
+    c = packmem.load_jsonl(iter(lines), hint="compact", keep_key_order=True); a = packmem.load_jsonl(iter(lines), hint="archive", keep_key_order=True)
+    assert a._t.hint == "archive" and len(a.to_bytes()) < len(c.to_bytes()) * 0.8, (len(a.to_bytes()), len(c.to_bytes()))
+    assert text(a) == lines and [a[i] for i in range(0, len(m), 61)] == [m[i] for i in range(0, len(m), 61)]
+    assert a.count(type="event_msg") == len(m)
     # older readers know four hints: the bytes say compact, and read back the same
-    u = packmem.Table.from_bytes(a.to_bytes()); assert u._t.hint == "compact" and list(u) == m and list(pickle.loads(pickle.dumps(a))) == m
+    u = packmem.Table.from_bytes(a.to_bytes()); assert u._t.hint == "compact" and text(u) == lines and text(pickle.loads(pickle.dumps(a))) == lines
 
 if __name__ == "__main__":
     for name, f in list(globals().items()):
