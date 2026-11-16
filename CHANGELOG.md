@@ -20,9 +20,10 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
   writes only into a new, empty or existing archive folder, and `delete --all` removes only the files it wrote.
   Subcommands: `--dry-run`, `status`, `list`, `verify`, `restore`, `stats`, `delete`. Files are private to the
   user (0600/0700). It uses zstd on Node 22.15 and newer, Brotli before that. On a synthetic 358 MB set the
-  archive is 38.0 MB, against 69.4 MB for zstd -19 on each file (`node/bench/results/agent-history-archive.json`).
+  archive is 38.0 MB, against 69.4 MB for zstd -19 on each file, and building it on Linux peaks at 444 MB of
+  memory (`node/bench/results/agent-history-archive.json`, `agent-history-archive-peak.json`).
   On one person's history of about 1.0 GB, measured on a Mac because the transcripts stay private, it is about
-  210 MB against about 240 MB for zstd -19 on each file, and building it peaked at about 1.2 GB of memory
+  210 MB against about 240 MB for zstd -19 on each file, and building it peaked at about 1.2 GB of memory, part of it freed memory that macOS keeps counted
   (`node/bench/results/agent-history-own-history.json`). Docs: `/docs/agent-history/`.
 
 ## 0.3.3 - 2026-11-15
