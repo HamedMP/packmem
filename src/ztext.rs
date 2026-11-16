@@ -411,7 +411,7 @@ mod tests {
             })
             .collect();
         let refs: Vec<&str> = items.iter().map(|s| s.as_str()).collect();
-        let z = ZBlocks::build(&refs).expect("enough text to train on");
+        let z = ZBlocks::build(&refs, false).expect("enough text to train on");
         let raw: usize = items.iter().map(|s| s.len()).sum();
         assert!(z.bytes() * 2 < raw, "{} of {raw}", z.bytes());
         let mut buf = Vec::new();
@@ -428,7 +428,7 @@ mod tests {
         }
         assert!(ZBlocks::read(&mut R::new(&bytes[..bytes.len() / 2])).is_err());
         assert!(
-            ZBlocks::build(&["a", "b"]).is_none(),
+            ZBlocks::build(&["a", "b"], false).is_none(),
             "nothing to train a dictionary on"
         );
     }
