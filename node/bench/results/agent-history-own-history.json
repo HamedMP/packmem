@@ -28,5 +28,15 @@
   "bytes": "about 240 MB (rounded)",
   "ratio_vs_jsonl": 4.0
  },
- "note_on_memory": "max_rss on macOS includes memory the allocator freed but kept (vmmap: MALLOC_*(empty) regions)"
+ "note_on_memory": "max_rss on macOS includes memory the allocator freed but kept (vmmap: MALLOC_*(empty) regions)",
+ "rerun_on_f732a75": {
+  "sessions": "about 430",
+  "raw_bytes": "about 0.9 GB",
+  "archive_bytes": "about 190 MB",
+  "ratio_vs_jsonl": 4.9,
+  "failed_verification": 0,
+  "seconds": 133,
+  "max_rss_bytes": "about 0.96 GB",
+  "note": "same machine and addon build (0.3.3 darwin), a later state of the same history: some sessions became too recent, others were removed by the agents' cleanup; the zstd baseline was not re-run"
+ }
 }

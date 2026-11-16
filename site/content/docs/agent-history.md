@@ -100,11 +100,15 @@ kept; verifying every session took 45 s. Sessions Codex had already compressed w
 smaller your archive comes out depends on how much your sessions repeat each other: this history is mostly Codex,
 whose sessions share less than the synthetic ones do.
 
+A later run with the current code, on the same machine and a later state of the same history (about 430 sessions,
+about 0.9 GB: some sessions had become too recent, others had been removed by the agents' own cleanup), archived it
+into about 190 MB (4.9x smaller) in 133 s, with a peak of about 0.96 GB. The zstd baseline was not re-run on that set.
+
 ## Limits
 
 - Only Claude Code and Codex for now.
 - Sessions in Codex's own `.jsonl.zst` files are not archived.
-- Archiving is not light on memory: 444 MB for 358 MB of synthetic history on Linux, and about 1.2 GB for about 1 GB
+- Archiving is not light on memory: 444 MB for 358 MB of synthetic history on Linux, and about 1 GB for about 0.9 GB
   of real history on macOS, where the allocator keeps memory it has freed.
 - Reading a full session needs a restore. A later format will store sessions as packmem tables that can be read in
   place.
