@@ -797,6 +797,8 @@ def test_keep_key_order_reproduces_each_line():
     assert list(u[4]) == ["zz", "type", "aa"] and list(u[5]) == list(rows[104]) + ["extra"] and list(u[0]) == ["q", "cwd"] and list(u[-1]) == ["last", "type"]
     u.reverse(); assert list(u[0]) == ["last", "type"] and list(u[-1]) == ["q", "cwd"] and list(u.take([0])[0]) == ["last", "type"]
     assert not any("\0" in c for c in u.columns)
+    with open(os.path.join(os.path.dirname(__file__), "fixtures", "table_key_order.pkm"), "rb") as f: k = packmem.Table.from_bytes(f.read())
+    assert [list(x) for x in k[:3]] == [["b", "a"], ["a", "b"], ["c", "a"]] and k.columns == ["b", "a", "c"]
 
 if __name__ == "__main__":
     for name, f in list(globals().items()):

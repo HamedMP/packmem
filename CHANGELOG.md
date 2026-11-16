@@ -12,7 +12,8 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
   `share` and pickling; a key added later with `update` comes last. Columns and queries are unaffected. It costs
   a few bits a row while rows share a handful of orders, more when nearly every row has its own. A table that
   keeps key orders is written as byte format 6, which 0.3.3 and earlier refuse with "written by a newer
-  packmem"; every other table is still written as format 5.
+  packmem"; every other table is still written as format 5. The Node and WebAssembly builds do not read
+  format 6 yet and refuse it the same way.
 
 ## 0.3.3 - 2026-11-15
 

@@ -7,6 +7,10 @@ use serde_json::Value;
 use std::ops::Deref;
 use std::sync::Arc;
 
+/// The highest byte format this binding reads. Format 6 tables carry a hidden key-order column that rows and column
+/// lists here do not yet leave out, so they are refused like a file from a newer release.
+const READS: u8 = 5;
+
 pub type Res<T> = Result<T, String>;
 
 pub fn hint_of(h: Option<&str>) -> Res<Hint> {
@@ -136,7 +140,7 @@ fn copy_of(t: &DynTable) -> Res<DynTable> {
         Ok(())
     })
     .map_err(|e| e.to_string())?;
-    DynTable::from_bytes(&buf).map_err(|e| e.to_string())
+    DynTable::from_bytes_upto(&buf, READS).map_err(|e| e.to_string())
 }
 
 pub struct Engine {
@@ -173,7 +177,7 @@ impl Engine {
     }
     /// An engine over a table read from its byte form: the packed columns are copied, not re-encoded.
     pub fn from_bytes(b: &[u8]) -> Res<Engine> {
-        Ok(Self::from_table(DynTable::from_bytes(b).map_err(|e| e.to_string())?))
+        Ok(Self::from_table(DynTable::from_bytes_upto(b, READS).map_err(|e| e.to_string())?))
     }
     /// A read-only engine over a table another thread shared.
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]

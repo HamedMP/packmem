@@ -2721,15 +2721,27 @@ impl DynTable {
     }
     /// Read a table by copying its packed columns out of `b`.
     pub fn from_bytes(b: &[u8]) -> Res<DynTable> {
-        Self::read(R::new(b))
+        Self::read(R::new(b), FORMAT)
+    }
+    /// `from_bytes` for a caller that handles formats up to `max` only, and refuses later ones as it would a file
+    /// from a newer release. Format 6 adds rows with a kept key order (`KEY_ORDER`), which a binding has to hide
+    /// from its rows and column lists before it can read such a table.
+    pub fn from_bytes_upto(b: &[u8], max: u8) -> Res<DynTable> {
+        Self::read(R::new(b), max.min(FORMAT))
     }
     /// Open a table whose packed columns stay in `owner`'s bytes (a memory-mapped file) and are read in place: nothing
     /// is copied, and every process mapping the same file shares the same pages. The bytes must not change while the
     /// table, or anything derived from it by reference, is alive.
     pub fn from_backing(owner: std::sync::Arc<dyn crate::buf::Backing>) -> Res<DynTable> {
-        Self::read(R::borrowing(&owner))
+        Self::read(R::borrowing(&owner), FORMAT)
     }
-    fn read(mut r: R) -> Res<DynTable> {
+    pub fn from_backing_upto(
+        owner: std::sync::Arc<dyn crate::buf::Backing>,
+        max: u8,
+    ) -> Res<DynTable> {
+        Self::read(R::borrowing(&owner), max.min(FORMAT))
+    }
+    fn read(mut r: R, max: u8) -> Res<DynTable> {
         let magic = r.take(4)?;
         let format = if magic == MAGIC {
             r.get_u8()?
@@ -2738,9 +2750,9 @@ impl DynTable {
         } else {
             return Err("not packed table data, or written by packmem 0.1".into());
         };
-        if format > FORMAT {
+        if format > max {
             return Err(format!(
-                "written by a newer packmem (format {format}, this build reads up to {FORMAT}): upgrade packmem to read it"
+                "written by a newer packmem (format {format}, this build reads up to {max}): upgrade packmem to read it"
             )
             .into());
         }

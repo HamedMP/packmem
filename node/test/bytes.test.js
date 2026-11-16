@@ -93,4 +93,8 @@ test("the header carries a format version, and 0.2.0 and 0.3.0 bytes still read"
   const newer = Uint8Array.from(now);
   newer[4] = 255;
   assert.throws(() => Table.fromBytes(newer), /newer packmem/);
+  // Python can keep each row's key order (format 6); this binding does not read that yet and must say so
+  const keyed = readFileSync(new URL("../../python/tests/fixtures/table_key_order.pkm", import.meta.url));
+  assert.equal(keyed[4], 6);
+  assert.throws(() => Table.fromBytes(keyed), /newer packmem \(format 6, this build reads up to 5\)/);
 });
