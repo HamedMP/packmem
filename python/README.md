@@ -152,6 +152,10 @@ Everything else behaves the same. The costs: loading is slower, reading a value 
 such a column read the text instead of comparing compressed bytes. Short strings and numbers are stored as with
 `hint="memory"`. Not available in the WebAssembly build, which refuses to open a table saved this way.
 
+`hint="archive"` goes further for tables that are written once and read now and then (unreleased, on `main`):
+Zstandard level 19, long values sharing blocks of up to 256 KB, and nested values kept as text. It builds several
+times slower and a single row costs more to read; whole-table scans do not.
+
 ## Saving and reopening
 
 ```python

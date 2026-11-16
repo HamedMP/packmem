@@ -39,7 +39,7 @@ impl StrPool {
             });
             let ratio = a as f64 / b.max(1) as f64;
             if ratio
-                >= if matches!(hint, Hint::Memory | Hint::Compact) {
+                >= if matches!(hint, Hint::Memory | Hint::Compact | Hint::Archive) {
                     1.05
                 } else {
                     1.3
@@ -49,9 +49,9 @@ impl StrPool {
                 fsst_ratio = ratio
             }
         }
-        if hint == Hint::Compact && raw >= 256 * 1024 {
+        if matches!(hint, Hint::Compact | Hint::Archive) && raw >= 256 * 1024 {
             // long text: Zstandard blocks, if they come out clearly smaller than what FSST is expected to give
-            if let Some(z) = ZBlocks::build(items) {
+            if let Some(z) = ZBlocks::build(items, hint == Hint::Archive) {
                 let other = raw as f64 / fsst_ratio + 4.0 * items.len() as f64;
                 if (z.bytes() as f64) < other * 0.9 {
                     return StrPool {

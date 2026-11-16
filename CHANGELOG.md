@@ -2,6 +2,14 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+### Added
+- Python: `hint="archive"`, for tables written once and read now and then. As `compact`, with text compressed at
+  Zstandard level 19, long values sharing blocks of up to 256 KB, and nested values kept as text instead of split
+  into sub-columns. Smaller, several times slower to build, and reading one row decodes larger blocks. The byte
+  format is unchanged: released versions read such a table, and it reopens as `compact`.
+
 ## 0.3.4 - 2026-11-16
 
 ### Added

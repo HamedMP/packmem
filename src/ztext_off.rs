@@ -8,7 +8,7 @@ pub enum ZBlocks {}
 pub fn release() {}
 
 impl ZBlocks {
-    pub fn build(_items: &[&str]) -> Option<ZBlocks> {
+    pub fn build(_items: &[&str], _archive: bool) -> Option<ZBlocks> {
         None
     }
     pub fn len(&self) -> usize {

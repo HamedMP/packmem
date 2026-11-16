@@ -800,6 +800,21 @@ def test_keep_key_order_reproduces_each_line():
     with open(os.path.join(os.path.dirname(__file__), "fixtures", "table_key_order.pkm"), "rb") as f: k = packmem.Table.from_bytes(f.read())
     assert [list(x) for x in k[:3]] == [["b", "a"], ["a", "b"], ["c", "a"]] and k.columns == ["b", "a", "c"]
 
+def test_archive_hint_is_smaller_and_reads_the_same():
+    import pickle
+    r = random.Random(4)
+    vocab = ["".join(r.choice("abcdefghijklmnopqrstuvwxyz") for _ in range(r.randint(3, 9))) for _ in range(3000)]
+    files = ["/src/%s/%s.rs" % (r.choice(vocab), r.choice(vocab)) for _ in range(300)]
+    para = lambda k: " ".join(r.choice(vocab) for _ in range(k))
+    out = lambda: "\n".join("%s:%d: %s" % (r.choice(files), r.randrange(900), para(r.randrange(3, 12))) for _ in range(r.randrange(5, 60)))
+    m = [{"ts": i, "payload": {"output": out() if i % 9 else [{"type": "text", "text": out()}], "note": para(r.randrange(20, 120))}, "text": para(r.randrange(40, 300))} for i in range(6000)]
+    c = packmem.Table(m, hint="compact"); a = packmem.Table(m, hint="archive")
+    assert a._t.hint == "archive" and len(a.to_bytes()) < len(c.to_bytes()) * 0.95, (len(a.to_bytes()), len(c.to_bytes()))
+    assert list(a) == m and [a[i] for i in range(0, len(m), 61)] == [m[i] for i in range(0, len(m), 61)] and a.to_json() == c.to_json()
+    needle = m[100]["text"]; assert a.count(text=needle) == 1 and a.where(text__contains=needle[5:40]).indices() == [i for i, x in enumerate(m) if needle[5:40] in x["text"]]
+    # older readers know four hints: the bytes say compact, and read back the same
+    u = packmem.Table.from_bytes(a.to_bytes()); assert u._t.hint == "compact" and list(u) == m and list(pickle.loads(pickle.dumps(a))) == m
+
 if __name__ == "__main__":
     for name, f in list(globals().items()):
         if name.startswith("test_"): f(); print("ok", name)

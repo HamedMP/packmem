@@ -13,6 +13,10 @@ pub enum Hint {
     /// cost of decoding a block to read a value and of filters reading the text. Builds without Zstandard treat it
     /// as `Memory`.
     Compact,
+    /// As `Compact`, for data that is written once and read now and then: text is compressed at Zstandard level 19,
+    /// and long values share blocks of up to 256 KB, so a value costs a larger block to read. Several times slower
+    /// to build. A saved table records this as `Compact`.
+    Archive,
 }
 
 fn width(max: u64) -> u8 {
@@ -88,7 +92,7 @@ impl Store {
         let use_bits = w <= 56
             && w < aligned
             && match hint {
-                Hint::Memory | Hint::Compact => true,
+                Hint::Memory | Hint::Compact | Hint::Archive => true,
                 Hint::Balanced => aligned as f64 / w.max(1) as f64 >= 1.34,
                 Hint::Speed => false,
             };
@@ -296,7 +300,7 @@ pub fn estimates(st: &IntStats) -> Vec<(Scheme, f64)> {
 pub fn choose(st: &IntStats, hint: Hint) -> Scheme {
     let pen = |s: Scheme| -> f64 {
         match (hint, s) {
-            (Hint::Memory | Hint::Compact, _) => 1.0,
+            (Hint::Memory | Hint::Compact | Hint::Archive, _) => 1.0,
             (Hint::Balanced, Scheme::Dict) => 1.1,
             (Hint::Balanced, Scheme::BlockFor) => 1.25,
             (Hint::Balanced, Scheme::Rle) => 1.5,

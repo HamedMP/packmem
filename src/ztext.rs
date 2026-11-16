@@ -18,6 +18,8 @@ const BLOCK_VALUES: usize = 64;
 /// text take turns; with one slot each read would decode its block again.
 const CACHED_BLOCKS: usize = 8;
 const MAX_BLOCK_RAW: usize = 1 << 28;
+/// Block size under `Hint::Archive`: long values share a block, which a reader then decodes whole.
+const ARCHIVE_BLOCK_BYTES: usize = 256 << 10;
 
 static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -79,18 +81,25 @@ fn dict_bytes() -> usize {
 }
 /// Raw bytes a block aims for: `PACKMEM_ZSTD_BLOCK`, else `BLOCK_BYTES`. Larger blocks pack a little tighter and
 /// make reading one value slower, since its whole block is decoded.
-fn block_bytes() -> usize {
+fn block_bytes(archive: bool) -> usize {
     std::env::var("PACKMEM_ZSTD_BLOCK")
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
-        .map_or(BLOCK_BYTES, |b| b.clamp(64, 1 << 20))
+        .map_or(
+            if archive {
+                ARCHIVE_BLOCK_BYTES
+            } else {
+                BLOCK_BYTES
+            },
+            |b| b.clamp(64, 1 << 20),
+        )
 }
 
-fn level() -> i32 {
+fn level(archive: bool) -> i32 {
     std::env::var("PACKMEM_ZSTD_LEVEL")
         .ok()
         .and_then(|v| v.parse().ok())
-        .unwrap_or(3)
+        .unwrap_or(if archive { 19 } else { 3 })
 }
 
 fn varint(out: &mut Vec<u8>, mut v: usize) {
@@ -113,9 +122,9 @@ fn raw_block(items: &[&str], out: &mut Vec<u8>) {
 }
 
 /// Split the values into blocks: (first value, one past the last).
-fn blocks(items: &[&str]) -> Vec<(usize, usize)> {
+fn blocks(items: &[&str], archive: bool) -> Vec<(usize, usize)> {
     let mut out = Vec::new();
-    let block_bytes = block_bytes();
+    let block_bytes = block_bytes(archive);
     let (mut a, mut bytes) = (0, 0);
     for (i, s) in items.iter().enumerate() {
         bytes += s.len();
@@ -144,12 +153,12 @@ fn compress(
 
 impl ZBlocks {
     /// Compress `items`, or `None` when a dictionary cannot be trained on them (too little text to learn from).
-    pub fn build(items: &[&str]) -> Option<ZBlocks> {
-        let spans = blocks(items);
+    pub fn build(items: &[&str], archive: bool) -> Option<ZBlocks> {
+        let spans = blocks(items, archive);
         if spans.is_empty() || items.len() > u32::MAX as usize {
             return None;
         }
-        let level = level();
+        let level = level(archive);
         let mut cctx = CCtx::create();
         let (mut raw, mut comp) = (Vec::new(), Vec::new());
         // a sample of blocks, to judge a dictionary by
